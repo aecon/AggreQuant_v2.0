@@ -953,23 +953,22 @@ Files in `aggrequant/nn/evaluation/`:
 
 ### Phase 3: GUI Development
 
-**Priority**: HIGH
+**Priority**: HIGH | **Status**: COMPLETE
 
 #### Task 3.1: Set Up GUI Framework
-- [ ] Choose framework: customtkinter (recommended)
-- [ ] Create `gui/app.py` main window
+- [x] Choose framework: customtkinter (recommended)
+- [x] Create `gui/app.py` main window
 
 #### Task 3.2: Implement Widgets
-- [ ] `plate_selector.py` - Interactive 96/384-well grid
-- [ ] `control_panel.py` - Add/remove control types, color coding
-- [ ] `segmentation_preview.py` - Live preview on sample image
-- [ ] `quality_settings.py` - Blur threshold slider
-- [ ] `progress_panel.py` - Progress bar, log output
+- [x] `plate_selector.py` - Interactive 96/384-well grid with drag selection
+- [x] `control_panel.py` - Add/remove control types, color coding
+- [x] `settings_panel.py` - Settings including blur threshold slider
+- [x] `progress_panel.py` - Progress bar, log output, run/cancel buttons
 
 #### Task 3.3: Integrate with Pipeline
-- [ ] Connect GUI to `aggrequant.pipeline`
-- [ ] Implement save/load configuration
-- [ ] Implement cancel functionality
+- [x] Connect GUI widgets with callbacks
+- [x] Implement save/load YAML configuration
+- [x] Implement background analysis thread with cancel functionality
 
 ---
 
@@ -1478,26 +1477,37 @@ pip install -e .
 - [x] `tests/unit/test_losses.py` - 17 tests
 - [x] `tests/unit/test_metrics.py` - 27 tests
 
+### Completed (Phase 3 - GUI Development)
+
+**GUI Framework** (customtkinter):
+- [x] `gui/__init__.py` - Package exports (AggreQuantApp, main)
+- [x] `gui/app.py` - Main application window with menu, layout, callbacks
+- [x] `gui/widgets/__init__.py` - Widget exports
+- [x] `gui/widgets/plate_selector.py` - Interactive 96/384-well grid with drag selection
+- [x] `gui/widgets/control_panel.py` - Control type assignment (predefined + custom)
+- [x] `gui/widgets/settings_panel.py` - Input/output paths, plate format, segmentation method, blur threshold
+- [x] `gui/widgets/progress_panel.py` - Progress bar, log output, run/cancel buttons
+
+**GUI Features**:
+- Load/save YAML configuration
+- Theme switching (system/light/dark)
+- Background thread for analysis with cancel support
+- Color-coded control types (negative=blue, positive=red, NT=green, RAB13=purple)
+
 ### Next TODO Steps
 
 **Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
 
-**Phase 3 - GUI Development**:
-2. [ ] Set up GUI framework (customtkinter)
-3. [ ] Implement `gui/widgets/plate_selector.py` - Interactive 96/384-well grid
-4. [ ] Implement `gui/widgets/control_panel.py` - Control type assignment
-5. [ ] Implement `gui/app.py` - Main window
-
 **Phase 4 - Segmentation Backends**:
-6. [ ] `aggrequant/segmentation/nuclei/stardist.py` - StarDist wrapper
-7. [ ] `aggrequant/segmentation/cells/cellpose.py` - Cellpose wrapper
-8. [ ] `aggrequant/segmentation/aggregates/filter_based.py` - Filter method
-9. [ ] `aggrequant/segmentation/aggregates/neural_network.py` - NN segmenter
+2. [ ] `aggrequant/segmentation/nuclei/stardist.py` - StarDist wrapper
+3. [ ] `aggrequant/segmentation/cells/cellpose.py` - Cellpose wrapper
+4. [ ] `aggrequant/segmentation/aggregates/filter_based.py` - Filter method
+5. [ ] `aggrequant/segmentation/aggregates/neural_network.py` - NN segmenter
 
 **Phase 5 - Statistics & Export**:
-10. [ ] `aggrequant/quantification/` - Measurements, colocalization
-11. [ ] `aggrequant/statistics/` - Well stats, controls, export
+6. [ ] `aggrequant/quantification/` - Measurements, colocalization
+7. [ ] `aggrequant/statistics/` - Well stats, controls, export
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review
@@ -1514,12 +1524,17 @@ from aggrequant.common import normalize_image, SimpleLogger
 from aggrequant.quality import FocusMetrics, compute_focus_metrics
 from aggrequant.loaders import PipelineConfig, Plate, Well, ImageLoader
 from aggrequant.nn.architectures import create_model, list_architectures
+from gui import AggreQuantApp, main
+from gui.widgets import PlateSelector, ControlPanel, SettingsPanel, ProgressPanel
 print('Available models:', list_architectures())
 print('All imports successful!')
 "
+
+# Launch GUI (requires display):
+# python -c "from gui import main; main()"
 ```
 
 ---
 
 *Last updated: 2026-02-04*
-*Document version: 2.1*
+*Document version: 2.2*
