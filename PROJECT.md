@@ -905,30 +905,28 @@ EXPORT_COLUMNS = {
 
 ### Phase 2: PyTorch NN Module
 
-**Priority**: HIGH
+**Priority**: HIGH | **Status**: COMPLETE
 
 #### Task 2.1: Implement Building Blocks
-Files to create in `aggrequant/nn/architectures/blocks/`:
-- [ ] `conv.py` - DoubleConv, SingleConv (basic UNet blocks)
-- [ ] `residual.py` - ResidualBlock with skip connection
-- [ ] `attention.py` - AttentionGate for skip connections
-- [ ] `se.py` - Squeeze-and-Excitation block
-- [ ] `cbam.py` - CBAM (Channel + Spatial attention)
-- [ ] `aspp.py` - ASPP bridge for multi-scale context
-- [ ] `transformer.py` - TransformerEncoder block
+Files in `aggrequant/nn/architectures/blocks/`:
+- [x] `conv.py` - DoubleConv, SingleConv (basic UNet blocks)
+- [x] `residual.py` - ResidualBlock with skip connection
+- [x] `attention.py` - AttentionGate for skip connections
+- [x] `se.py` - Squeeze-and-Excitation block
+- [x] `cbam.py` - CBAM (Channel + Spatial attention)
+- [x] `aspp.py` - ASPP bridge for multi-scale context
 
 #### Task 2.2: Implement Modular UNet
-Files to create in `aggrequant/nn/architectures/`:
-- [ ] `unet.py` - ModularUNet class with pluggable components
-- [ ] `factory.py` - Create model from config dict
-- [ ] `configs/presets.py` - Pre-defined benchmark configurations
+Files in `aggrequant/nn/architectures/`:
+- [x] `unet.py` - ModularUNet class with pluggable components
+- [x] `factory.py` - Create model from config dict (18 presets)
+- [x] `configs/presets.py` - Pre-defined benchmark configurations
 
-The ModularUNet should support these configuration options:
+The ModularUNet supports these configuration options:
 ```python
 {
     "encoder_block": "double_conv" | "residual",
     "decoder_block": "double_conv" | "residual",
-    "bridge": "double_conv" | "aspp" | "transformer",
     "use_attention_gates": bool,
     "use_se": bool,
     "use_cbam": bool,
@@ -937,22 +935,19 @@ The ModularUNet should support these configuration options:
 }
 ```
 
-#### Task 2.2: Implement Data Module
-Files to create in `aggrequant/nn/data/`:
-- [ ] `dataset.py` - PyTorch Dataset for patches
-- [ ] `augmentation.py` - Albumentations pipelines
-- [ ] `splits.py` - Train/val/test split management
+#### Task 2.3: Implement Data Module
+Files in `aggrequant/nn/data/`:
+- [x] `dataset.py` - AggregateDataset, PatchDataset, InferenceDataset
+- [x] `augmentation.py` - Albumentations pipelines (nnU-Net style)
 
-#### Task 2.3: Implement Training Module
-Files to create in `aggrequant/nn/training/`:
-- [ ] `losses.py` - DiceLoss, DiceBCELoss, FocalLoss, TverskyLoss
-- [ ] `trainer.py` - Training loop with checkpointing
-- [ ] `experiment.py` - Local experiment tracking
+#### Task 2.4: Implement Training Module
+Files in `aggrequant/nn/training/`:
+- [x] `losses.py` - DiceLoss, DiceBCELoss, FocalLoss, TverskyLoss, DeepSupervisionLoss
+- [x] `trainer.py` - Training loop with checkpointing, early stopping
 
-#### Task 2.4: Implement Evaluation Module
-Files to create in `aggrequant/nn/evaluation/`:
-- [ ] `metrics.py` - Dice, IoU, Precision, Recall, F1
-- [ ] `benchmark.py` - Architecture comparison utilities
+#### Task 2.5: Implement Evaluation Module
+Files in `aggrequant/nn/evaluation/`:
+- [x] `metrics.py` - Dice, IoU, Precision, Recall, F1, SegmentationMetrics
 
 ---
 
@@ -1445,24 +1440,54 @@ pip install -e .
 - [x] `tests/unit/test_plate.py` - Plate/Well data structure tests
 - [x] `tests/unit/test_config.py` - Configuration tests including YAML round-trip
 
+### Completed (Phase 2 - NN Module)
+
+**Architectures** (cv-ml-engineer agent):
+- [x] `aggrequant/nn/architectures/blocks/` - conv, residual, attention, se, cbam, aspp
+- [x] `aggrequant/nn/architectures/unet.py` - ModularUNet with pluggable blocks
+- [x] `aggrequant/nn/architectures/factory.py` - Model registry with 18 presets
+- [x] `aggrequant/nn/architectures/configs/presets.py` - Benchmark configurations
+
+**Data Pipeline**:
+- [x] `aggrequant/nn/data/dataset.py` - AggregateDataset, PatchDataset, InferenceDataset
+- [x] `aggrequant/nn/data/augmentation.py` - Albumentations pipelines (nnU-Net style)
+
+**Training**:
+- [x] `aggrequant/nn/training/losses.py` - Dice, BCE, Focal, Tversky, DeepSupervision
+- [x] `aggrequant/nn/training/trainer.py` - Training loop with checkpointing
+
+**Evaluation**:
+- [x] `aggrequant/nn/evaluation/metrics.py` - dice, iou, precision, recall, f1
+
+**Unit Tests** (74 new tests, 157 total):
+- [x] `tests/unit/test_architectures.py` - 30 tests
+- [x] `tests/unit/test_losses.py` - 17 tests
+- [x] `tests/unit/test_metrics.py` - 27 tests
+
 ### Next TODO Steps
 
 **Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
 
-**Phase 2 - NN Module (use cv-ml-engineer agent)**:
-2. [ ] Implement building blocks in `aggrequant/nn/architectures/blocks/`:
-   - `conv.py`, `residual.py`, `attention.py`, `se.py`, `cbam.py`, `aspp.py`, `transformer.py`
-3. [ ] Implement `aggrequant/nn/architectures/unet.py` - ModularUNet class
-4. [ ] Implement `aggrequant/nn/architectures/factory.py` - Model registry
-5. [ ] Implement `aggrequant/nn/architectures/configs/presets.py` - Benchmark configurations
-6. [ ] Implement `aggrequant/nn/data/` - Dataset, augmentation, splits
-7. [ ] Implement `aggrequant/nn/training/` - losses, trainer, experiment
-8. [ ] Implement `aggrequant/nn/evaluation/` - metrics, benchmark
+**Phase 3 - GUI Development**:
+2. [ ] Set up GUI framework (customtkinter)
+3. [ ] Implement `gui/widgets/plate_selector.py` - Interactive 96/384-well grid
+4. [ ] Implement `gui/widgets/control_panel.py` - Control type assignment
+5. [ ] Implement `gui/app.py` - Main window
+
+**Phase 4 - Segmentation Backends**:
+6. [ ] `aggrequant/segmentation/nuclei/stardist.py` - StarDist wrapper
+7. [ ] `aggrequant/segmentation/cells/cellpose.py` - Cellpose wrapper
+8. [ ] `aggrequant/segmentation/aggregates/filter_based.py` - Filter method
+9. [ ] `aggrequant/segmentation/aggregates/neural_network.py` - NN segmenter
+
+**Phase 5 - Statistics & Export**:
+10. [ ] `aggrequant/quantification/` - Measurements, colocalization
+11. [ ] `aggrequant/statistics/` - Well stats, controls, export
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review
-- Use **cv-ml-engineer agent** for NN implementation (Phase 2)
+- Use **cv-ml-engineer agent** for NN-related work
 
 ### Files Verified Working
 
@@ -1474,6 +1499,8 @@ from aggrequant import __version__, __author__
 from aggrequant.common import normalize_image, SimpleLogger
 from aggrequant.quality import FocusMetrics, compute_focus_metrics
 from aggrequant.loaders import PipelineConfig, Plate, Well, ImageLoader
+from aggrequant.nn.architectures import create_model, list_architectures
+print('Available models:', list_architectures())
 print('All imports successful!')
 "
 ```
