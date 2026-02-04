@@ -1,0 +1,85 @@
+# AggreQuant Pipeline Configuration
+# 384-well plate analysis with StarDist, Cellpose, and filter-based segmentation
+#
+# Usage:
+#   python scripts/run_plate_analysis.py configs/plate1_384well.yaml
+#
+# Author: Athena Economides
+# Date: 2026-02-04
+
+# Input data location
+input_dir: "data/plate1"
+plate_format: "384"
+
+# Channel configuration
+# Patterns should match substrings in your image filenames
+channels:
+  - name: DAPI
+    pattern: "390"           # Matches "wv 390" or "C01" depending on your naming
+    purpose: nuclei
+    normalize_method: percentile
+
+  - name: GFP
+    pattern: "473"           # Matches "wv 473" or "C02" for aggregate channel
+    purpose: aggregates
+    normalize_method: percentile
+
+  - name: CellMask
+    pattern: "631"           # Matches "wv 631" or "C03" for cell channel
+    purpose: cells
+    normalize_method: percentile
+
+# Segmentation settings
+segmentation:
+  # Nuclei segmentation (StarDist)
+  nuclei_model: "2D_versatile_fluo"
+  nuclei_prob_thresh: 0.5
+  nuclei_nms_thresh: 0.4
+
+  # Cell segmentation (Cellpose)
+  cell_model: "cyto3"
+  cell_diameter: null        # Auto-detect cell diameter
+  cell_flow_threshold: 0.4
+  cell_cellprob_threshold: 0.0
+
+  # Aggregate segmentation (Filter-based)
+  aggregate_method: "filter"
+  aggregate_model_path: null  # Not needed for filter method
+  aggregate_min_size: 9       # Minimum aggregate size in pixels
+  aggregate_intensity_threshold: 1.6  # Normalized intensity threshold
+
+# Quality control settings
+quality:
+  focus_patch_size: [40, 40]
+  focus_blur_threshold: 15.0
+  focus_reject_threshold: 50.0  # Reject field if >50% patches are blurry
+  min_intensity: 0.0
+  max_saturation_pct: 5.0
+
+# Output settings
+output:
+  output_dir: "output/plate1"
+  save_masks: true
+  save_overlays: true
+  save_statistics: true
+  statistics_format: "both"    # Generate both CSV and Parquet
+
+# Control wells for SSMD calculation
+# Adjust these to match your actual control well positions
+control_wells:
+  negative:
+    - A01
+    - A02
+    - B01
+    - B02
+  NT:
+    - A23
+    - A24
+    - B23
+    - B24
+
+# Processing options
+n_workers: 4
+use_gpu: true
+verbose: true
+debug: false

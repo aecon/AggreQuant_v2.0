@@ -140,15 +140,15 @@ class AggreQuantPipeline:
         if seg_config.aggregate_method == "unet":
             self._log(f"  Loading UNet model: {seg_config.aggregate_model_path}")
             self._aggregate_segmenter = NeuralNetworkSegmenter(
-                model_path=seg_config.aggregate_model_path,
-                min_size=seg_config.aggregate_min_size,
-                use_gpu=self.config.use_gpu,
+                weights_path=seg_config.aggregate_model_path,
+                min_aggregate_area=seg_config.aggregate_min_size,
+                device="cuda" if self.config.use_gpu else "cpu",
             )
         else:
             self._log(f"  Using filter-based aggregate segmentation")
             self._aggregate_segmenter = FilterBasedSegmenter(
-                intensity_threshold=seg_config.aggregate_intensity_threshold,
-                min_size=seg_config.aggregate_min_size,
+                normalized_threshold=seg_config.aggregate_intensity_threshold,
+                min_aggregate_area=seg_config.aggregate_min_size,
             )
 
         self._log("Segmenters initialized.")
