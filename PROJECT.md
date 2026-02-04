@@ -1333,6 +1333,93 @@ aggrequant-gui = "gui.app:main"
 | Albumentations | >=1.3 | Data augmentation |
 | customtkinter | >=5.2 | Modern GUI |
 | Pydantic | >=2.0 | Configuration validation |
+| TensorFlow | >=2.20 | StarDist backend (GPU) |
+
+### 8.3 GPU Installation (StarDist + Cellpose)
+
+StarDist requires TensorFlow with GPU support for optimal performance. Cellpose uses PyTorch (already installed).
+
+#### Prerequisites
+
+| Requirement | Minimum Version | Notes |
+|-------------|-----------------|-------|
+| NVIDIA GPU | CUDA 3.5+ arch | RTX 3090, A100, etc. |
+| NVIDIA Driver | ≥ 525.60.13 | Linux |
+| Python | 3.9 - 3.12 | 3.11 recommended |
+
+#### Installation Steps
+
+**Step 1: Verify GPU and driver**
+```bash
+nvidia-smi
+# Should show: Driver Version: 550.x+, CUDA Version: 12.x
+```
+
+**Step 2: Install TensorFlow with CUDA support**
+```bash
+conda activate AggreQuant
+pip install 'tensorflow[and-cuda]'
+```
+
+This installs TensorFlow 2.20+ with bundled CUDA/cuDNN libraries.
+
+**Step 3: Verify TensorFlow GPU detection**
+```bash
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+# Expected: [PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
+```
+
+**Step 4: Install StarDist**
+```bash
+pip install stardist
+```
+
+This also installs:
+- `csbdeep>=0.8.2` - Neural network backend for StarDist
+- `numba` - JIT compiler for performance
+- `llvmlite` - LLVM bindings for numba
+
+**Step 5: Install Cellpose**
+```bash
+pip install cellpose
+```
+
+Cellpose uses PyTorch (separate from TensorFlow).
+
+#### Verification
+
+```bash
+# Test StarDist
+python -c "from stardist.models import StarDist2D; print('StarDist OK')"
+
+# Test Cellpose
+python -c "from cellpose import models; print('Cellpose OK')"
+
+# Test TensorFlow GPU (for StarDist)
+python -c "import tensorflow as tf; print('TensorFlow GPUs:', len(tf.config.list_physical_devices('GPU')))"
+
+# Test PyTorch GPU (for Cellpose)
+python -c "from cellpose import core; print('Cellpose GPU:', core.use_gpu())"
+```
+
+#### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `No module named 'tensorflow'` | Run `pip install 'tensorflow[and-cuda]'` |
+| TensorFlow GPU not detected | Check `nvidia-smi`, verify driver version |
+| Cellpose GPU not detected | Run `python -c "import torch; print(torch.cuda.is_available())"` |
+| CUDA errors | Ensure driver ≥ 525.60.13 |
+| NumPy conflicts | StarDist may downgrade numpy; this is expected |
+
+#### Installed Versions (AggreQuant Environment)
+
+| Package | Version | Backend |
+|---------|---------|---------|
+| TensorFlow | 2.20.0 | CUDA 12.x (bundled) |
+| StarDist | 0.9.2 | TensorFlow |
+| Cellpose | 4.0.8 | PyTorch |
+| PyTorch | 2.10.0 | CUDA 12.x |
 
 ---
 

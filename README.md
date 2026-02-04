@@ -45,12 +45,38 @@ pip install numpy scikit-image opencv-python-headless tifffile pandas pyarrow py
 pip install -e .
 ```
 
-### Optional Dependencies
+### Segmentation Dependencies (GPU)
+
+StarDist and Cellpose require TensorFlow and PyTorch with GPU support for optimal performance.
+
+**Prerequisites:**
+- NVIDIA GPU with CUDA support
+- NVIDIA Driver ≥ 525.60.13 (Linux)
+
+**Step 1: Install TensorFlow with CUDA support**
+```bash
+pip install 'tensorflow[and-cuda]'
+
+# Verify GPU detection
+python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+```
+
+**Step 2: Install StarDist**
+```bash
+pip install stardist
+```
+
+**Step 3: Install Cellpose** (uses PyTorch)
+```bash
+pip install cellpose
+
+# Verify Cellpose GPU detection
+python -c "from cellpose import core; print('Cellpose GPU:', core.use_gpu())"
+```
+
+### Other Optional Dependencies
 
 ```bash
-# For running the segmentation pipeline (StarDist, Cellpose)
-pip install torch torchvision stardist cellpose
-
 # For training neural networks
 pip install torch torchvision albumentations segmentation-models-pytorch tensorboard
 
