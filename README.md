@@ -139,13 +139,13 @@ pytest tests/
 
 ## Author
 
-**Dr. Athena Economides**
-Prof. Adriano Aguzzi Lab
-Institute of Neuropathology
-University of Zurich & University Hospital Zurich
-Schmelzbergstrasse 12
-CH-8091 Zurich
-Switzerland
+**Athena Economides, PhD**
+Prof. Adriano Aguzzi Lab  
+Institute of Neuropathology  
+University of Zurich & University Hospital Zurich  
+Schmelzbergstrasse 12  
+CH-8091 Zurich  
+Switzerland  
 
 Contact: [athena.economides@uzh.ch](mailto:athena.economides@uzh.ch)
 
