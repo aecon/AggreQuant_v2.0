@@ -3,7 +3,9 @@
 This module provides loss functions commonly used for binary and multi-class
 segmentation, including support for deep supervision.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.training.losses import DiceBCELoss

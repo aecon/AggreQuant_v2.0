@@ -1,7 +1,9 @@
 """
 Common utilities shared across the aggrequant package.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 from .image_utils import (

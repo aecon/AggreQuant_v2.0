@@ -4,7 +4,9 @@ This module provides residual connection blocks inspired by ResNet (He et al., 2
 adapted for UNet encoder/decoder paths. Residual connections help with gradient
 flow and enable training of deeper networks.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import torch

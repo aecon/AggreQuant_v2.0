@@ -6,7 +6,9 @@ This module implements CBAM as described in:
 CBAM sequentially applies channel attention and spatial attention to
 refine feature maps along both dimensions.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import torch

@@ -6,7 +6,9 @@ This module implements SE blocks as described in:
 SE blocks adaptively recalibrate channel-wise feature responses by
 explicitly modeling interdependencies between channels.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import torch

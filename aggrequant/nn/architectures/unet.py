@@ -4,7 +4,9 @@ This module provides a configurable UNet implementation that allows systematic
 benchmarking of different architectural improvements (residual blocks, attention
 gates, SE blocks, CBAM, deep supervision).
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.architectures.unet import ModularUNet

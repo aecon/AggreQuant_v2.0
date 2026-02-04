@@ -3,7 +3,9 @@
 This module provides a simple registry pattern for model selection,
 allowing models to be created by name from configuration dictionaries.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.architectures.factory import create_model, list_architectures

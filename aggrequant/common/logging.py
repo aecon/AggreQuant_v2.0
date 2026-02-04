@@ -1,7 +1,9 @@
 """
 Logging utilities for consistent output across the package.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import logging

@@ -3,7 +3,9 @@
 This module provides modular UNet architectures with pluggable components
 for systematic benchmarking of different architectural improvements.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.architectures import create_model, list_architectures

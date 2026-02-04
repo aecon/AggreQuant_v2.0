@@ -3,7 +3,9 @@
 This module provides modular neural network architectures, training
 infrastructure, and evaluation utilities for aggregate segmentation.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Submodules:
     - architectures: Modular UNet and building blocks

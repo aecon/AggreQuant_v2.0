@@ -3,7 +3,9 @@
 This module provides data augmentation pipelines following nnU-Net best
 practices for microscopy image segmentation.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.data.augmentation import get_training_augmentation

@@ -7,7 +7,9 @@ ASPP captures multi-scale context by applying parallel atrous (dilated)
 convolutions with different dilation rates, useful for the bridge/bottleneck
 of UNet architectures.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import torch

@@ -1095,10 +1095,24 @@ All configurations use `ModularUNet` with different settings:
 
 Based on analysis of existing codebase (`/home/athena/1_CODES/AggreQuant`):
 
-### 7.1 General Style
+### 7.1 File Header
+
+All `.py` files should include the following header in the docstring:
 
 ```python
-# Module-level parameters at top of file
+"""
+Module description here.
+
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
+"""
+```
+
+### 7.2 General Style
+
+```python
+# Module-level parameters at top of file (after imports)
 PATCH_SIZE = 128
 PROBABILITY_THRESHOLD = 0.7
 
@@ -1138,7 +1152,7 @@ def segment_aggregates(image_file, output_files, model, verbose, debug):
     return result
 ```
 
-### 7.2 Key Conventions
+### 7.3 Key Conventions
 
 1. **Naming**: `snake_case` for functions and variables
 2. **Logging**: Use `me = "function_name"` pattern with `print(f"({me}) message")`
@@ -1149,7 +1163,7 @@ def segment_aggregates(image_file, output_files, model, verbose, debug):
 7. **No over-engineering**: Prefer simple functions over complex class hierarchies
 8. **Direct imports**: `import numpy as np`, `import skimage.io`
 
-### 7.3 File Organization
+### 7.4 File Organization
 
 ```python
 # Standard import order:

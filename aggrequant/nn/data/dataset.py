@@ -3,7 +3,9 @@
 This module provides dataset classes for loading image/mask pairs with
 support for patch extraction and integration with albumentations.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 Example:
     >>> from aggrequant.nn.data.dataset import AggregateDataset

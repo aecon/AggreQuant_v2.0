@@ -3,7 +3,9 @@
 This module defines preset configurations for the ModularUNet that allow
 systematic A/B testing of different architectural improvements.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 
 The configurations are organized as follows:
 1. BASELINE: Vanilla UNet as reference

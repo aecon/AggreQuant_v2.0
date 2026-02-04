@@ -1,7 +1,9 @@
 """
 Unit tests for aggrequant.quality.focus module.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import numpy as np

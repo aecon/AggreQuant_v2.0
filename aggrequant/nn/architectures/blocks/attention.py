@@ -7,7 +7,9 @@ This module implements attention gates as described in:
 Attention gates help the network focus on relevant features in skip
 connections by using the decoder features as a gating signal.
 
-Author: Athena Economides
+Original author: Athena Economides
+Refactoring tool: Claude Opus 4.5
+Date: 2026-02-04
 """
 
 import torch
