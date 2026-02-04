@@ -139,7 +139,7 @@ pytest tests/
 
 ## Author
 
-**Athena Economides, PhD**
+**Athena Economides, PhD**  
 Prof. Adriano Aguzzi Lab  
 Institute of Neuropathology  
 University of Zurich & University Hospital Zurich  
