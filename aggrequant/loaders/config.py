@@ -57,6 +57,11 @@ class QualityConfig:
     min_intensity: float = 0.0
     max_saturation_pct: float = 5.0
 
+    def __post_init__(self):
+        # Ensure focus_patch_size is a tuple (YAML loads as list)
+        if isinstance(self.focus_patch_size, list):
+            self.focus_patch_size = tuple(self.focus_patch_size)
+
 
 @dataclass
 class OutputConfig:

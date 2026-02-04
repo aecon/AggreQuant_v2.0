@@ -7,9 +7,14 @@ Author: Athena Economides
 """
 
 import re
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
+
+
+# Sentinel value for unparseable well IDs
+UNKNOWN_WELL_ID = "unknown"
 
 try:
     import tifffile
@@ -198,7 +203,11 @@ def group_files_by_well(
             if match:
                 well_id = f"{match.group(1)}{int(match.group(2)):02d}"
             else:
-                well_id = "unknown"
+                warnings.warn(
+                    f"Could not parse well ID from filename: {f.name} "
+                    f"(parser={filename_parser}). Grouping as '{UNKNOWN_WELL_ID}'."
+                )
+                well_id = UNKNOWN_WELL_ID
 
         if well_id not in wells:
             wells[well_id] = []

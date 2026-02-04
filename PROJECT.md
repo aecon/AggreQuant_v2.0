@@ -889,7 +889,7 @@ EXPORT_COLUMNS = {
 - [x] Implement `compute_focus_metrics()` function
 - [x] Implement `generate_blur_mask()` function
 - [ ] Add visualization utilities (`aggrequant/quality/visualization.py`)
-- [ ] Write unit tests (`tests/unit/test_focus_metrics.py`)
+- [x] Write unit tests (`tests/unit/test_focus_metrics.py`) - 47 tests passing
 
 #### Task 1.3: Implement Loaders Module
 - [x] Port `utils/dataset.py` to `aggrequant/loaders/config.py`
@@ -1431,22 +1431,34 @@ pip install -e .
 - [x] `aggrequant/loaders/images.py` - load_tiff, ImageLoader, parse_operetta_filename, parse_imageexpress_filename
 - [x] `aggrequant/loaders/plate.py` - Plate, Well, FieldOfView, well_id_to_indices, generate_all_well_ids
 
+### Completed (Phase 1 Bug Fixes & Tests)
+
+**Bug Fixes Applied** (from code-reviewer agent):
+- [x] Fixed division by zero in `focus.py` - use percentile normalization
+- [x] Extracted `_prepare_image_for_cv2()` helper to eliminate code duplication
+- [x] Added well ID validation with bounds checking in `plate.py`
+- [x] Added warnings for unparseable filenames in `images.py`
+- [x] Fixed tuple/list inconsistency in `QualityConfig`
+
+**Unit Tests Created** (83 tests, all passing):
+- [x] `tests/unit/test_focus_metrics.py` - Focus module tests
+- [x] `tests/unit/test_plate.py` - Plate/Well data structure tests
+- [x] `tests/unit/test_config.py` - Configuration tests including YAML round-trip
+
 ### Next TODO Steps
 
-**Immediate (Phase 1 completion)**:
+**Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
-2. [ ] Create `tests/unit/test_focus_metrics.py` - Unit tests for focus module
-3. [ ] Use **code-reviewer agent** to review Phase 1 implementation
 
 **Phase 2 - NN Module (use cv-ml-engineer agent)**:
-4. [ ] Implement building blocks in `aggrequant/nn/architectures/blocks/`:
+2. [ ] Implement building blocks in `aggrequant/nn/architectures/blocks/`:
    - `conv.py`, `residual.py`, `attention.py`, `se.py`, `cbam.py`, `aspp.py`, `transformer.py`
-5. [ ] Implement `aggrequant/nn/architectures/unet.py` - ModularUNet class
-6. [ ] Implement `aggrequant/nn/architectures/factory.py` - Model registry
-7. [ ] Implement `aggrequant/nn/architectures/configs/presets.py` - Benchmark configurations
-8. [ ] Implement `aggrequant/nn/data/` - Dataset, augmentation, splits
-9. [ ] Implement `aggrequant/nn/training/` - losses, trainer, experiment
-10. [ ] Implement `aggrequant/nn/evaluation/` - metrics, benchmark
+3. [ ] Implement `aggrequant/nn/architectures/unet.py` - ModularUNet class
+4. [ ] Implement `aggrequant/nn/architectures/factory.py` - Model registry
+5. [ ] Implement `aggrequant/nn/architectures/configs/presets.py` - Benchmark configurations
+6. [ ] Implement `aggrequant/nn/data/` - Dataset, augmentation, splits
+7. [ ] Implement `aggrequant/nn/training/` - losses, trainer, experiment
+8. [ ] Implement `aggrequant/nn/evaluation/` - metrics, benchmark
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review

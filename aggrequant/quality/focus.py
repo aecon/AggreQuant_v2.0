@@ -19,6 +19,33 @@ DEFAULT_PATCH_SIZE = (40, 40)
 DEFAULT_BLUR_THRESHOLD = 15  # for Variance of Laplacian
 
 
+def _prepare_image_for_cv2(image: np.ndarray) -> np.ndarray:
+    """
+    Convert image to uint8 for OpenCV operations.
+
+    Uses percentile normalization to handle outliers and avoid
+    division by zero for constant or zero images.
+
+    Arguments:
+        image: 2D image array (any dtype)
+
+    Returns:
+        uint8 image suitable for cv2 functions
+    """
+    if image.dtype == np.uint8:
+        return image
+
+    # Use percentile normalization for robustness against outliers
+    p1, p99 = np.percentile(image, [1, 99])
+
+    if p99 - p1 > 0:
+        img = np.clip((image.astype(np.float64) - p1) / (p99 - p1), 0, 1)
+        return (img * 255).astype(np.uint8)
+    else:
+        # Constant image (including all zeros)
+        return np.zeros(image.shape, dtype=np.uint8)
+
+
 @dataclass
 class FocusMetrics:
     """
@@ -173,14 +200,8 @@ def compute_focus_metrics(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    if image.dtype == np.uint16:
-        # Convert to uint8 for cv2 functions (scale to 0-255)
-        img = ((image.astype(np.float64) / image.max()) * 255).astype(np.uint8)
-    elif image.dtype == np.uint8:
-        img = image
-    else:
-        # Assume float, scale to uint8
-        img = ((image - image.min()) / (image.max() - image.min() + 1e-8) * 255).astype(np.uint8)
+    # Convert to uint8 for cv2 functions
+    img = _prepare_image_for_cv2(image)
 
     h, w = img.shape
     ph, pw = patch_size
@@ -270,13 +291,8 @@ def generate_blur_mask(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Convert to uint8 if needed
-    if image.dtype == np.uint16:
-        img = ((image.astype(np.float64) / image.max()) * 255).astype(np.uint8)
-    elif image.dtype == np.uint8:
-        img = image
-    else:
-        img = ((image - image.min()) / (image.max() - image.min() + 1e-8) * 255).astype(np.uint8)
+    # Convert to uint8 for cv2 functions
+    img = _prepare_image_for_cv2(image)
 
     h, w = img.shape
     ph, pw = patch_size
@@ -328,13 +344,8 @@ def compute_patch_focus_maps(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Convert to uint8 if needed
-    if image.dtype == np.uint16:
-        img = ((image.astype(np.float64) / image.max()) * 255).astype(np.uint8)
-    elif image.dtype == np.uint8:
-        img = image
-    else:
-        img = ((image - image.min()) / (image.max() - image.min() + 1e-8) * 255).astype(np.uint8)
+    # Convert to uint8 for cv2 functions
+    img = _prepare_image_for_cv2(image)
 
     h, w = img.shape
     ph, pw = patch_size
