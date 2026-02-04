@@ -16,9 +16,7 @@ from typing import Dict, List, Optional, Callable, Set, Tuple
 # Control type colors
 CONTROL_COLORS = {
     "negative": "#3498db",  # Blue
-    "positive": "#e74c3c",  # Red
     "NT": "#2ecc71",        # Green (Non-targeting)
-    "RAB13": "#9b59b6",     # Purple
     "custom": "#f39c12",    # Orange
 }
 
@@ -114,7 +112,7 @@ class PlateSelector(ctk.CTkFrame):
                     text="",
                     width=self.well_size,
                     height=self.well_size,
-                    corner_radius=self.well_size // 2,
+                    corner_radius=0,
                     fg_color=WELL_EMPTY,
                     hover_color=WELL_HOVER,
                     border_width=1,
@@ -150,7 +148,7 @@ class PlateSelector(ctk.CTkFrame):
                 text="",
                 width=16,
                 height=16,
-                corner_radius=8,
+                corner_radius=0,
                 fg_color=color,
                 hover=False,
                 state="disabled"

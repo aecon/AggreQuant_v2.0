@@ -87,6 +87,7 @@ class ProgressPanel(ctk.CTkFrame):
             fg_color="#27ae60",
             hover_color="#1e8449",
             width=120,
+            corner_radius=0,
             command=self._on_run_click
         )
         self.run_button.pack(side="left", padx=5)
@@ -97,6 +98,7 @@ class ProgressPanel(ctk.CTkFrame):
             fg_color="#e74c3c",
             hover_color="#c0392b",
             width=100,
+            corner_radius=0,
             state="disabled",
             command=self._on_cancel_click
         )
@@ -126,6 +128,7 @@ class ProgressPanel(ctk.CTkFrame):
             hover_color="#5d6d7e",
             width=80,
             height=25,
+            corner_radius=0,
             command=self.clear_log
         )
         clear_btn.pack(pady=(0, 10))

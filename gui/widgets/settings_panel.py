@@ -65,13 +65,14 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         input_row = ctk.CTkFrame(input_frame, fg_color="transparent")
         input_row.pack(fill="x")
 
-        self.input_entry = ctk.CTkEntry(input_row, width=200)
+        self.input_entry = ctk.CTkEntry(input_row, width=200, corner_radius=0)
         self.input_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
 
         ctk.CTkButton(
             input_row,
-            text="Browse",
-            width=70,
+            text="...",
+            width=40,
+            corner_radius=0,
             command=self._browse_input
         ).pack(side="left")
 
@@ -84,13 +85,14 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         output_row = ctk.CTkFrame(output_frame, fg_color="transparent")
         output_row.pack(fill="x")
 
-        self.output_entry = ctk.CTkEntry(output_row, width=200)
+        self.output_entry = ctk.CTkEntry(output_row, width=200, corner_radius=0)
         self.output_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
 
         ctk.CTkButton(
             output_row,
-            text="Browse",
-            width=70,
+            text="...",
+            width=40,
+            corner_radius=0,
             command=self._browse_output
         ).pack(side="left")
 
@@ -103,24 +105,14 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         ctk.CTkLabel(plate_frame, text="Plate Format:").pack(anchor="w")
 
         self.plate_format_var = ctk.StringVar(value="96")
-        plate_options = ctk.CTkFrame(plate_frame, fg_color="transparent")
-        plate_options.pack(anchor="w")
-
-        ctk.CTkRadioButton(
-            plate_options,
-            text="96-well",
-            variable=self.plate_format_var,
-            value="96",
-            command=self._on_plate_format_change
-        ).pack(side="left", padx=(0, 20))
-
-        ctk.CTkRadioButton(
-            plate_options,
-            text="384-well",
-            variable=self.plate_format_var,
-            value="384",
-            command=self._on_plate_format_change
-        ).pack(side="left")
+        self.plate_segmented = ctk.CTkSegmentedButton(
+            plate_frame,
+            values=["96-well", "384-well"],
+            command=self._on_plate_format_segmented_change,
+            corner_radius=0
+        )
+        self.plate_segmented.set("96-well")
+        self.plate_segmented.pack(anchor="w", pady=(5, 0))
 
         # ========== Segmentation Section ==========
         self._create_section_header("Segmentation")
@@ -132,32 +124,14 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         ctk.CTkLabel(seg_frame, text="Aggregate Segmentation:").pack(anchor="w")
 
         self.agg_method_var = ctk.StringVar(value="unet")
-        agg_options = ctk.CTkFrame(seg_frame, fg_color="transparent")
-        agg_options.pack(anchor="w", pady=(0, 10))
-
-        ctk.CTkRadioButton(
-            agg_options,
-            text="Neural Network (UNet)",
-            variable=self.agg_method_var,
-            value="unet",
-            command=self._on_settings_change
-        ).pack(anchor="w")
-
-        ctk.CTkRadioButton(
-            agg_options,
-            text="Filter-based",
-            variable=self.agg_method_var,
-            value="filter",
-            command=self._on_settings_change
-        ).pack(anchor="w")
-
-        ctk.CTkRadioButton(
-            agg_options,
-            text="Hybrid",
-            variable=self.agg_method_var,
-            value="hybrid",
-            command=self._on_settings_change
-        ).pack(anchor="w")
+        self.agg_segmented = ctk.CTkSegmentedButton(
+            seg_frame,
+            values=["UNet", "Filter-based"],
+            command=self._on_agg_method_segmented_change,
+            corner_radius=0
+        )
+        self.agg_segmented.set("UNet")
+        self.agg_segmented.pack(anchor="w", pady=(5, 10))
 
         # Model selection (for UNet)
         self.model_frame = ctk.CTkFrame(seg_frame, fg_color="transparent")
@@ -176,6 +150,7 @@ class SettingsPanel(ctk.CTkScrollableFrame):
                 "unet_full",
             ],
             variable=self.model_var,
+            corner_radius=0,
             command=self._on_settings_change
         )
         self.model_dropdown.pack(anchor="w")
@@ -187,7 +162,7 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         quality_frame.pack(fill="x", padx=10, pady=5)
 
         # Blur threshold slider
-        ctk.CTkLabel(quality_frame, text="Blur Threshold (Variance of Laplacian):").pack(anchor="w")
+        ctk.CTkLabel(quality_frame, text="Blur Threshold:").pack(anchor="w")
 
         blur_slider_frame = ctk.CTkFrame(quality_frame, fg_color="transparent")
         blur_slider_frame.pack(fill="x")
@@ -294,6 +269,20 @@ class SettingsPanel(ctk.CTkScrollableFrame):
         self.settings["plate_format"] = self.plate_format_var.get()
         self._on_settings_change()
 
+    def _on_plate_format_segmented_change(self, value):
+        """Handle plate format segmented button change."""
+        plate_format = "96" if value == "96-well" else "384"
+        self.plate_format_var.set(plate_format)
+        self.settings["plate_format"] = plate_format
+        self._on_settings_change()
+
+    def _on_agg_method_segmented_change(self, value):
+        """Handle aggregate method segmented button change."""
+        method = "unet" if value == "UNet" else "filter"
+        self.agg_method_var.set(method)
+        self.settings["aggregate_method"] = method
+        self._on_settings_change()
+
     def _on_blur_threshold_change(self, value):
         """Handle blur threshold slider change."""
         self.blur_value_label.configure(text=f"{value:.1f}")
@@ -340,9 +329,13 @@ class SettingsPanel(ctk.CTkScrollableFrame):
 
         if "plate_format" in settings:
             self.plate_format_var.set(settings["plate_format"])
+            plate_label = "96-well" if settings["plate_format"] == "96" else "384-well"
+            self.plate_segmented.set(plate_label)
 
         if "aggregate_method" in settings:
             self.agg_method_var.set(settings["aggregate_method"])
+            agg_label = "UNet" if settings["aggregate_method"] == "unet" else "Filter-based"
+            self.agg_segmented.set(agg_label)
 
         if "blur_threshold" in settings:
             self.blur_threshold_var.set(settings["blur_threshold"])

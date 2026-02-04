@@ -67,7 +67,7 @@ class ControlPanel(ctk.CTkFrame):
         ).pack(anchor="w", pady=(0, 5))
 
         # Create buttons for predefined types
-        for control_type in ["negative", "positive", "NT", "RAB13"]:
+        for control_type in ["negative", "NT"]:
             color = CONTROL_COLORS.get(control_type, "#95a5a6")
             btn = ctk.CTkButton(
                 predefined_frame,
@@ -75,6 +75,7 @@ class ControlPanel(ctk.CTkFrame):
                 fg_color=color,
                 hover_color=self._darken_color(color),
                 width=120,
+                corner_radius=0,
                 command=lambda t=control_type: self._on_assign_click(t)
             )
             btn.pack(pady=3, fill="x")
@@ -99,7 +100,8 @@ class ControlPanel(ctk.CTkFrame):
         self.custom_entry = ctk.CTkEntry(
             input_frame,
             placeholder_text="Enter name...",
-            width=100
+            width=100,
+            corner_radius=0
         )
         self.custom_entry.pack(side="left", padx=(0, 5))
 
@@ -107,6 +109,7 @@ class ControlPanel(ctk.CTkFrame):
             input_frame,
             text="Add",
             width=50,
+            corner_radius=0,
             command=self._on_add_custom
         )
         add_btn.pack(side="left")
@@ -128,6 +131,7 @@ class ControlPanel(ctk.CTkFrame):
             text="Clear Selection",
             fg_color="#7f8c8d",
             hover_color="#5d6d7e",
+            corner_radius=0,
             command=self._on_clear_selection
         )
         clear_selection_btn.pack(fill="x", pady=2)
@@ -137,6 +141,7 @@ class ControlPanel(ctk.CTkFrame):
             text="Clear All Assignments",
             fg_color="#c0392b",
             hover_color="#922b21",
+            corner_radius=0,
             command=self._on_clear_all
         )
         clear_all_btn.pack(fill="x", pady=2)
@@ -174,6 +179,7 @@ class ControlPanel(ctk.CTkFrame):
                 fg_color=color,
                 hover_color=self._darken_color(color),
                 width=120,
+                corner_radius=0,
                 command=lambda t=custom_name: self._on_assign_click(t)
             )
             btn.pack(pady=2, fill="x")

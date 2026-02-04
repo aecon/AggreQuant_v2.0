@@ -1296,18 +1296,20 @@ aggrequant-gui = "gui.app:main"
 
 ```
 tests/
+├── conftest.py                # Shared fixtures
 ├── unit/
-│   ├── test_focus_metrics.py
-│   ├── test_architectures.py
-│   ├── test_losses.py
-│   ├── test_augmentation.py
-│   ├── test_measurements.py
-│   └── test_exporters.py
+│   ├── test_focus_metrics.py  # Focus quality module (47 tests)
+│   ├── test_plate.py          # Plate/Well data structures
+│   ├── test_config.py         # Configuration management
+│   ├── test_architectures.py  # NN architectures (30 tests)
+│   ├── test_losses.py         # Loss functions (17 tests)
+│   ├── test_metrics.py        # Evaluation metrics (27 tests)
+│   └── test_gui.py            # GUI widgets (50 tests)
 └── integration/
-    ├── test_pipeline.py
-    ├── test_training.py
-    └── test_gui.py
+    └── __init__.py
 ```
+
+**Total: 207+ tests**
 
 ### 9.2 Example Test
 
@@ -1478,10 +1480,16 @@ pip install -e .
 **Evaluation**:
 - [x] `aggrequant/nn/evaluation/metrics.py` - dice, iou, precision, recall, f1
 
-**Unit Tests** (74 new tests, 157 total):
+**Unit Tests** (74 new tests):
 - [x] `tests/unit/test_architectures.py` - 30 tests
 - [x] `tests/unit/test_losses.py` - 17 tests
 - [x] `tests/unit/test_metrics.py` - 27 tests
+
+**GUI Unit Tests** (50 tests):
+- [x] `tests/unit/test_gui.py` - 50 tests for GUI components
+- [x] `tests/conftest.py` - Shared fixtures for all tests
+
+**Total unit tests: 207+**
 
 ### Completed (Phase 3 - GUI Development)
 
@@ -1496,9 +1504,25 @@ pip install -e .
 
 **GUI Features**:
 - Load/save YAML configuration
-- Theme switching (system/light/dark)
+- Light mode only (white background) for clean appearance
 - Background thread for analysis with cancel support
-- Color-coded control types (negative=blue, positive=red, NT=green, RAB13=purple)
+- Color-coded control types: negative (blue), NT (green), custom (orange)
+- Rectangular buttons throughout for consistent visual style
+- Segmented buttons for plate format (96/384-well) and segmentation method (UNet/Filter-based)
+
+**GUI Launcher**:
+- [x] `scripts/run_gui.py` - Launch GUI with `python scripts/run_gui.py`
+
+**GUI Unit Tests** (50 tests):
+- [x] `tests/unit/test_gui.py` - Comprehensive tests for all widgets
+  - TestPlateSelector: 17 tests (initialization, selection, assignments, callbacks)
+  - TestControlPanel: 8 tests (callbacks, custom types, color handling)
+  - TestSettingsPanel: 9 tests (settings get/set, segmented buttons)
+  - TestProgressPanel: 12 tests (state, progress, logging)
+  - TestControlColors: 2 tests (color definitions)
+  - TestWellConstants: 1 test (well state colors)
+  - TestIntegration: 2 tests (component interactions)
+- [x] `tests/conftest.py` - Shared pytest fixtures
 
 ### Completed (Phase 4 - Segmentation Backends)
 
@@ -1581,4 +1605,4 @@ print('All imports successful!')
 ---
 
 *Last updated: 2026-02-04*
-*Document version: 2.4*
+*Document version: 2.5*

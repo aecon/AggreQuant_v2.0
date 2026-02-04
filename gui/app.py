@@ -25,8 +25,8 @@ from .widgets.settings_panel import SettingsPanel
 from .widgets.progress_panel import ProgressPanel
 
 
-# Set appearance
-ctk.set_appearance_mode("system")  # "system", "dark", "light"
+# Set appearance to light mode (white background)
+ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 
@@ -74,6 +74,7 @@ class AggreQuantApp(ctk.CTk):
             file_frame,
             text="📂 Load Config",
             width=100,
+            corner_radius=0,
             command=self._load_config
         ).pack(side="left", padx=2)
 
@@ -81,24 +82,9 @@ class AggreQuantApp(ctk.CTk):
             file_frame,
             text="💾 Save Config",
             width=100,
+            corner_radius=0,
             command=self._save_config
         ).pack(side="left", padx=2)
-
-        # Appearance toggle
-        appearance_frame = ctk.CTkFrame(self.menu_bar, fg_color="transparent")
-        appearance_frame.pack(side="right", padx=10)
-
-        ctk.CTkLabel(appearance_frame, text="Theme:").pack(side="left", padx=5)
-
-        self.appearance_var = ctk.StringVar(value="system")
-        appearance_menu = ctk.CTkOptionMenu(
-            appearance_frame,
-            values=["system", "light", "dark"],
-            variable=self.appearance_var,
-            command=self._change_appearance,
-            width=80
-        )
-        appearance_menu.pack(side="left")
 
     def _create_layout(self):
         """Create the main layout."""
@@ -141,7 +127,7 @@ class AggreQuantApp(ctk.CTk):
             plate_format="96",
             on_selection_change=self._on_selection_change
         )
-        self.plate_selector.pack(expand=True)
+        self.plate_selector.pack(expand=True, fill="both", padx=10, pady=10)
 
         # Progress Panel (bottom)
         self.progress_panel = ProgressPanel(center_panel)
@@ -192,10 +178,6 @@ class AggreQuantApp(ctk.CTk):
         if plate_format != self.plate_selector.plate_format:
             self.plate_selector.set_plate_format(plate_format)
             self.progress_panel.log_info(f"Changed to {plate_format}-well plate")
-
-    def _change_appearance(self, mode: str):
-        """Change application appearance mode."""
-        ctk.set_appearance_mode(mode)
 
     def _load_config(self):
         """Load configuration from YAML file."""
