@@ -974,19 +974,25 @@ Files in `aggrequant/nn/evaluation/`:
 
 ### Phase 4: Segmentation Backends
 
-**Priority**: MEDIUM
+**Priority**: MEDIUM | **Status**: COMPLETE
 
 #### Task 4.1: Port Nuclei Segmentation
-- [ ] Create `aggrequant/segmentation/nuclei/stardist.py`
-- [ ] Wrap StarDist model loading and inference
+- [x] Create `aggrequant/segmentation/nuclei/stardist.py`
+- [x] Wrap StarDist model loading and inference
+- [x] Pre-processing (Gaussian denoise, background normalization)
+- [x] Post-processing (size exclusion, border separation, border exclusion)
 
 #### Task 4.2: Port Cell Segmentation
-- [ ] Create `aggrequant/segmentation/cells/cellpose.py`
-- [ ] Create `aggrequant/segmentation/cells/distance_intensity.py`
+- [x] Create `aggrequant/segmentation/cells/cellpose.py`
+- [x] Create `aggrequant/segmentation/cells/distance_intensity.py`
+- [x] Two-channel input support (cell image + nuclei mask)
+- [x] Watershed-based cell splitting
 
 #### Task 4.3: Port Aggregate Segmentation
-- [ ] Create `aggrequant/segmentation/aggregates/filter_based.py`
-- [ ] Create `aggrequant/segmentation/aggregates/neural_network.py`
+- [x] Create `aggrequant/segmentation/aggregates/filter_based.py`
+- [x] Create `aggrequant/segmentation/aggregates/neural_network.py`
+- [x] Sliding window inference with patch stitching
+- [x] PyTorch model integration
 
 ---
 
@@ -1494,20 +1500,44 @@ pip install -e .
 - Background thread for analysis with cancel support
 - Color-coded control types (negative=blue, positive=red, NT=green, RAB13=purple)
 
+### Completed (Phase 4 - Segmentation Backends)
+
+**Nuclei Segmentation**:
+- [x] `aggrequant/segmentation/nuclei/stardist.py` - StarDistSegmenter
+  - Lazy model loading, pre-processing (Gaussian denoise, background normalization)
+  - Post-processing (size exclusion, border separation, border exclusion)
+  - `segment()` and `segment_with_seeds()` methods
+
+**Cell Segmentation**:
+- [x] `aggrequant/segmentation/cells/cellpose.py` - CellposeSegmenter
+  - Two-channel input support (cell image + nuclei mask)
+  - GPU support, excludes cells without nuclei
+- [x] `aggrequant/segmentation/cells/distance_intensity.py` - DistanceIntensitySegmenter
+  - Classical watershed-based method combining intensity and distance
+
+**Aggregate Segmentation**:
+- [x] `aggrequant/segmentation/aggregates/filter_based.py` - FilterBasedSegmenter
+  - Background normalization, intensity thresholding, morphological cleanup
+- [x] `aggrequant/segmentation/aggregates/neural_network.py` - NeuralNetworkSegmenter
+  - PyTorch model integration, sliding window inference, patch stitching
+
 ### Next TODO Steps
 
 **Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
 
-**Phase 4 - Segmentation Backends**:
-2. [ ] `aggrequant/segmentation/nuclei/stardist.py` - StarDist wrapper
-3. [ ] `aggrequant/segmentation/cells/cellpose.py` - Cellpose wrapper
-4. [ ] `aggrequant/segmentation/aggregates/filter_based.py` - Filter method
-5. [ ] `aggrequant/segmentation/aggregates/neural_network.py` - NN segmenter
-
 **Phase 5 - Statistics & Export**:
-6. [ ] `aggrequant/quantification/` - Measurements, colocalization
-7. [ ] `aggrequant/statistics/` - Well stats, controls, export
+2. [ ] `aggrequant/quantification/measurements.py` - QoI calculations
+3. [ ] `aggrequant/quantification/colocalization.py` - Aggregate-cell colocalization
+4. [ ] `aggrequant/quantification/results.py` - Results container dataclass
+5. [ ] `aggrequant/statistics/well_stats.py` - Field to well aggregation
+6. [ ] `aggrequant/statistics/controls.py` - SSMD, control comparisons
+7. [ ] `aggrequant/statistics/export.py` - CSV, Parquet, Excel export
+
+**Phase 6 - Integration & CLI**:
+8. [ ] `aggrequant/pipeline.py` - Main processing orchestrator
+9. [ ] `aggrequant/cli.py` - CLI entry point
+10. [ ] Documentation and user guide
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review
@@ -1524,6 +1554,10 @@ from aggrequant.common import normalize_image, SimpleLogger
 from aggrequant.quality import FocusMetrics, compute_focus_metrics
 from aggrequant.loaders import PipelineConfig, Plate, Well, ImageLoader
 from aggrequant.nn.architectures import create_model, list_architectures
+from aggrequant.segmentation import (
+    StarDistSegmenter, CellposeSegmenter, DistanceIntensitySegmenter,
+    FilterBasedSegmenter, NeuralNetworkSegmenter
+)
 from gui import AggreQuantApp, main
 from gui.widgets import PlateSelector, ControlPanel, SettingsPanel, ProgressPanel
 print('Available models:', list_architectures())
@@ -1537,4 +1571,4 @@ print('All imports successful!')
 ---
 
 *Last updated: 2026-02-04*
-*Document version: 2.2*
+*Document version: 2.3*
