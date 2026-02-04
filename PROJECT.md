@@ -889,7 +889,7 @@ EXPORT_COLUMNS = {
 - [x] Implement `compute_focus_metrics()` function
 - [x] Implement `generate_blur_mask()` function
 - [ ] Add visualization utilities (`aggrequant/quality/visualization.py`)
-- [x] Write unit tests (`tests/unit/test_focus_metrics.py`) - 47 tests passing
+- [x] Write unit tests (`tests/unit/test_focus_metrics.py`) - 28 tests passing
 
 #### Task 1.3: Implement Loaders Module
 - [x] Port `utils/dataset.py` to `aggrequant/loaders/config.py`
@@ -1044,26 +1044,40 @@ Files in `aggrequant/nn/evaluation/`:
 
 Test all implemented modules to ensure they work correctly before proceeding with real data analysis.
 
-#### Task 7.1: Unit Test Coverage
-- [x] `tests/unit/test_focus_metrics.py` - Focus/blur quality (47 tests)
-- [x] `tests/unit/test_gui.py` - GUI components (50 tests)
-- [ ] `tests/unit/test_loaders.py` - Config, Plate, ImageLoader
-- [ ] `tests/unit/test_segmentation.py` - All segmenters (StarDist, Cellpose, Filter, NN)
-- [ ] `tests/unit/test_quantification.py` - Measurements and results
-- [ ] `tests/unit/test_statistics.py` - Well stats, SSMD, export
-- [ ] `tests/unit/test_nn_architectures.py` - UNet variants and blocks
-- [ ] `tests/unit/test_nn_training.py` - Losses, trainer, metrics
+#### Task 7.1: Unit Tests - Existing (207 tests total)
 
-#### Task 7.2: Integration Tests
+| Test File | Tests | Module Covered | Status |
+|-----------|-------|----------------|--------|
+| `test_focus_metrics.py` | 28 | `quality/focus.py` | ✅ |
+| `test_config.py` | 18 | `loaders/config.py` | ✅ |
+| `test_plate.py` | 37 | `loaders/plate.py` | ✅ |
+| `test_architectures.py` | 30 | `nn/architectures/*` | ✅ |
+| `test_losses.py` | 21 | `nn/training/losses.py` | ✅ |
+| `test_metrics.py` | 23 | `nn/evaluation/metrics.py` | ✅ |
+| `test_gui.py` | 50 | `gui/*` | ✅ |
+
+#### Task 7.2: Unit Tests - Remaining
+
+| Test File | Module to Cover | Status |
+|-----------|-----------------|--------|
+| `test_image_loader.py` | `loaders/images.py` | ❌ |
+| `test_segmentation.py` | `segmentation/nuclei/*`, `segmentation/cells/*`, `segmentation/aggregates/*` | ❌ |
+| `test_quantification.py` | `quantification/measurements.py`, `quantification/results.py` | ❌ |
+| `test_statistics.py` | `statistics/well_stats.py`, `statistics/controls.py`, `statistics/export.py` | ❌ |
+| `test_nn_data.py` | `nn/data/dataset.py`, `nn/data/augmentation.py` | ❌ |
+| `test_trainer.py` | `nn/training/trainer.py` | ❌ |
+| `test_pipeline.py` | `pipeline.py` | ❌ |
+
+#### Task 7.3: Integration Tests
 - [ ] `tests/integration/test_pipeline.py` - Full pipeline with mock data
 - [ ] `tests/integration/test_gui_pipeline.py` - GUI integration with pipeline
 
-#### Task 7.3: Smoke Tests
+#### Task 7.4: Smoke Tests
 - [ ] Verify all imports work (`python -c "from aggrequant import ..."`)
 - [ ] Test CLI scripts (`scripts/run_pipeline.py --help`)
 - [ ] Test GUI launch (`scripts/run_gui.py`)
 
-#### Task 7.4: Real Data Validation
+#### Task 7.5: Real Data Validation
 - [ ] Process sample plate with known results
 - [ ] Compare output statistics to expected values
 - [ ] Validate segmentation quality visually
@@ -1330,18 +1344,18 @@ aggrequant-gui = "gui.app:main"
 tests/
 ├── conftest.py                # Shared fixtures
 ├── unit/
-│   ├── test_focus_metrics.py  # Focus quality module (47 tests)
-│   ├── test_plate.py          # Plate/Well data structures
-│   ├── test_config.py         # Configuration management
+│   ├── test_focus_metrics.py  # Focus quality module (28 tests)
+│   ├── test_plate.py          # Plate/Well data structures (37 tests)
+│   ├── test_config.py         # Configuration management (18 tests)
 │   ├── test_architectures.py  # NN architectures (30 tests)
-│   ├── test_losses.py         # Loss functions (17 tests)
-│   ├── test_metrics.py        # Evaluation metrics (27 tests)
+│   ├── test_losses.py         # Loss functions (21 tests)
+│   ├── test_metrics.py        # Evaluation metrics (23 tests)
 │   └── test_gui.py            # GUI widgets (50 tests)
 └── integration/
     └── __init__.py
 ```
 
-**Total: 207+ tests**
+**Total: 207 tests**
 
 ### 9.2 Example Test
 
