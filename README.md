@@ -25,6 +25,7 @@ For a 384-well plate with 9 fields per well, 10,368 images are processed to quan
 - **Focus Quality Assessment**: Blur detection to exclude out-of-focus regions
 - **Colocalization Analysis**: Characterize aggregate inclusions in cells
 - **Export**: Statistics in Parquet, CSV, or Excel format
+- **GUI**: User-friendly interface for biologists to configure and run analyses
 
 <IMG SRC="graphics/segmentation.jpg" style="float: left; margin-right: 10px;" />
 
@@ -59,31 +60,93 @@ pip install customtkinter
 
 ## Usage
 
-### Quick Start
+### GUI (Recommended for Biologists)
 
-1. Adjust parameters in `applications/setup.yml`
-2. Run analysis:
+Launch the graphical interface:
+
 ```bash
-python main.py
+python scripts/run_gui.py
 ```
 
-### As a Package
+The GUI allows you to:
+- Select input/output directories
+- Choose plate format (96 or 384-well)
+- Assign control wells (NT, negative) by clicking on the plate grid
+- Configure analysis parameters (blur threshold, segmentation method)
+- Monitor analysis progress in real-time
+- Save/load configuration files for reproducibility
+
+### Command Line
+
+Run analysis from a YAML configuration file:
+
+```bash
+python scripts/run_pipeline.py config.yaml
+```
+
+Or specify options directly:
+
+```bash
+python scripts/run_pipeline.py --input /data/plate1 --output /results/plate1 \
+    --plate-format 384 --method unet --blur-threshold 15.0
+```
+
+### As a Python Package
 
 ```python
-from aggrequant.quality import compute_focus_metrics, generate_blur_mask
-from aggrequant.loaders import PipelineConfig, Plate, ImageLoader
-from aggrequant.common import normalize_image
+from aggrequant import run_pipeline_from_config, run_pipeline_from_dict
 
-# Load and assess image quality
-loader = ImageLoader(
-    directory="path/to/images",
-    channel_patterns={"DAPI": "C01", "GFP": "C02", "CellMask": "C03"}
-)
+# Run from config file
+result = run_pipeline_from_config("config.yaml")
 
-# Compute focus metrics
-metrics = compute_focus_metrics(image, patch_size=(40, 40), blur_threshold=15)
-if metrics.is_likely_blurry:
-    print(f"Image is likely blurry: {metrics.pct_patches_blurry:.1f}% patches below threshold")
+# Or run from dict
+config = {
+    "input_dir": "/data/plate1",
+    "output_dir": "/results/plate1",
+    "plate_format": "96",
+    "aggregate_method": "unet",
+    "blur_threshold": 15.0,
+    "control_wells": {"A01": "negative", "A02": "NT"},
+}
+
+result = run_pipeline_from_dict(config)
+
+print(f"Processed {result.total_n_wells_processed} wells")
+print(f"Total cells: {result.total_n_cells}")
+print(f"SSMD: {result.ssmd:.3f}")
+```
+
+### Configuration File Format
+
+Create a YAML configuration file for reproducible analyses:
+
+```yaml
+# config.yaml
+input_dir: /path/to/images
+output_dir: /path/to/output
+plate_format: "96"
+
+# Segmentation settings
+aggregate_method: unet  # or "filter"
+model_path: /path/to/unet_weights.pt  # for unet method
+
+# Quality control
+blur_threshold: 15.0
+blur_reject_pct: 50.0
+
+# Control wells
+control_wells:
+  negative:
+    - A01
+    - A02
+  NT:
+    - A11
+    - A12
+
+# Output options
+save_masks: true
+save_overlays: true
+export_format: parquet  # or "csv", "excel"
 ```
 
 ## Project Structure
@@ -100,13 +163,18 @@ AggreQuant/
 │   │   └── aggregates/      # Filter-based, neural network
 │   ├── quantification/      # QoI calculations
 │   ├── statistics/          # Well stats, export
+│   ├── pipeline.py          # Main pipeline orchestrator
 │   └── nn/                  # Neural network development
 │       ├── architectures/   # Modular UNet with pluggable blocks
 │       ├── data/            # Dataset, augmentation
 │       ├── training/        # Losses, trainer
 │       └── evaluation/      # Metrics, benchmarking
 ├── gui/                     # GUI application
-├── scripts/                 # Development scripts
+│   ├── app.py               # Main application window
+│   └── widgets/             # Custom UI components
+├── scripts/                 # Entry point scripts
+│   ├── run_pipeline.py      # CLI for running analysis
+│   └── run_gui.py           # Launch GUI application
 ├── tests/                   # Unit and integration tests
 ├── PROJECT.md               # Detailed project documentation
 └── pyproject.toml           # Package configuration
@@ -139,13 +207,13 @@ pytest tests/
 
 ## Author
 
-**Athena Economides, PhD**  
-Prof. Adriano Aguzzi Lab  
-Institute of Neuropathology  
-University of Zurich & University Hospital Zurich  
-Schmelzbergstrasse 12  
-CH-8091 Zurich  
-Switzerland  
+**Athena Economides, PhD**
+Prof. Adriano Aguzzi Lab
+Institute of Neuropathology
+University of Zurich & University Hospital Zurich
+Schmelzbergstrasse 12
+CH-8091 Zurich
+Switzerland
 
 Contact: [athena.economides@uzh.ch](mailto:athena.economides@uzh.ch)
 

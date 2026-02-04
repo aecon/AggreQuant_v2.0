@@ -295,37 +295,90 @@ class AggreQuantApp(ctk.CTk):
         """
         Background worker for running analysis.
 
-        This is a placeholder that simulates analysis progress.
-        In the real implementation, this would call the aggrequant pipeline.
+        Runs the AggreQuant pipeline with progress reporting back to GUI.
         """
-        import time
-
         try:
-            # Simulate analysis steps
-            steps = [
-                ("Loading images...", 0.1),
-                ("Segmenting nuclei...", 0.3),
-                ("Segmenting cells...", 0.5),
-                ("Segmenting aggregates...", 0.7),
-                ("Computing statistics...", 0.9),
-                ("Exporting results...", 1.0),
-            ]
+            from aggrequant import run_pipeline_from_dict
 
-            for message, progress in steps:
+            # Build config dict for pipeline
+            config_dict = {
+                "input_dir": settings.get("input_dir"),
+                "output_dir": settings.get("output_dir"),
+                "plate_format": self.plate_selector.plate_format,
+                "aggregate_method": settings.get("aggregate_method", "unet"),
+                "blur_threshold": settings.get("blur_threshold", 15.0),
+                "blur_reject_pct": settings.get("blur_reject_pct", 50.0),
+                "save_masks": settings.get("save_masks", True),
+                "save_overlays": settings.get("save_overlays", True),
+                "control_wells": controls,  # {well_id: control_type}
+                "use_gpu": True,
+            }
+
+            # Progress callback that updates GUI
+            def progress_callback(progress: float, message: str):
                 if self._cancel_requested:
-                    self.after(0, lambda: self.progress_panel.complete(False))
-                    self.after(0, lambda: self.progress_panel.log_warning("Analysis cancelled by user"))
-                    return
+                    raise InterruptedError("Analysis cancelled by user")
+                self.after(0, lambda p=progress, m=message: self._update_progress(p, m))
 
-                self.after(0, lambda m=message, p=progress: self._update_progress(p, m))
-                time.sleep(1)  # Simulate work
+            # Run pipeline
+            result = run_pipeline_from_dict(
+                config_dict,
+                progress_callback=progress_callback,
+                verbose=True,
+            )
 
-            # Complete
+            # Report completion
+            self.after(0, lambda: self.progress_panel.log_info(
+                f"Analysis complete: {result.total_n_wells_processed} wells, "
+                f"{result.total_n_cells} cells detected"
+            ))
+            if result.ssmd is not None:
+                self.after(0, lambda: self.progress_panel.log_info(
+                    f"SSMD: {result.ssmd:.3f}"
+                ))
             self.after(0, lambda: self.progress_panel.complete(True))
 
-        except Exception as e:
-            self.after(0, lambda: self.progress_panel.log_error(f"Analysis failed: {e}"))
+        except InterruptedError:
+            self.after(0, lambda: self.progress_panel.log_warning("Analysis cancelled by user"))
             self.after(0, lambda: self.progress_panel.complete(False))
+
+        except ImportError as e:
+            # Pipeline dependencies not available - fall back to simulation
+            self.after(0, lambda: self.progress_panel.log_warning(
+                f"Pipeline dependencies not fully installed: {e}"
+            ))
+            self.after(0, lambda: self.progress_panel.log_info(
+                "Running in simulation mode..."
+            ))
+            self._run_simulation()
+
+        except Exception as e:
+            self.after(0, lambda err=str(e): self.progress_panel.log_error(f"Analysis failed: {err}"))
+            self.after(0, lambda: self.progress_panel.complete(False))
+
+    def _run_simulation(self):
+        """Run simulated analysis for testing when pipeline is not available."""
+        import time
+
+        steps = [
+            ("Loading images...", 0.1),
+            ("Segmenting nuclei...", 0.3),
+            ("Segmenting cells...", 0.5),
+            ("Segmenting aggregates...", 0.7),
+            ("Computing statistics...", 0.9),
+            ("Exporting results...", 1.0),
+        ]
+
+        for message, progress in steps:
+            if self._cancel_requested:
+                self.after(0, lambda: self.progress_panel.complete(False))
+                return
+
+            self.after(0, lambda m=message, p=progress: self._update_progress(p, m))
+            time.sleep(0.5)
+
+        self.after(0, lambda: self.progress_panel.log_info("Simulation complete"))
+        self.after(0, lambda: self.progress_panel.complete(True))
 
     def _update_progress(self, progress: float, message: str):
         """Update progress from worker thread."""

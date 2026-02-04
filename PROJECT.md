@@ -1557,15 +1557,115 @@ pip install -e .
 - [x] `controls.py` - SSMD, Z-factor, control comparison with interpretation
 - [x] `export.py` - CSV, Parquet, Excel export, plate summary generation
 
+### Completed (Phase 6 - Integration)
+
+**Created Files**:
+
+| File | Description |
+|------|-------------|
+| `aggrequant/pipeline.py` | Main processing orchestrator connecting all components |
+| `scripts/run_pipeline.py` | Command-line script for running the pipeline |
+
+**Updated Files**:
+
+| File | Changes |
+|------|---------|
+| `aggrequant/__init__.py` | Added exports for `AggreQuantPipeline`, `PipelineState`, `run_pipeline_from_config`, `run_pipeline_from_dict` |
+| `gui/app.py` | Integrated real pipeline in `_analysis_worker()`, falls back to simulation if dependencies missing |
+
+**Pipeline Orchestrator** (`aggrequant/pipeline.py`):
+
+Classes and Functions:
+- `AggreQuantPipeline` - Main pipeline class connecting all components
+- `PipelineState` - Dataclass tracking execution progress (wells, fields, errors)
+- `run_pipeline_from_config(path)` - Run pipeline from YAML config file
+- `run_pipeline_from_dict(config_dict)` - Run pipeline from dictionary (for GUI integration)
+
+Features:
+- Progress callbacks for real-time GUI updates
+- Cancellation support via `pipeline.cancel()`
+- Automatic segmentation mask saving
+- SSMD computation when control wells are defined
+- Blur-masked QoI computation
+
+**Pipeline Workflow**:
+
+```
+1. Discover plate structure
+   └── Scan input directory for TIFF images
+   └── Group files by well and field
+
+2. Initialize segmenters
+   └── StarDist for nuclei
+   └── Cellpose for cells
+   └── UNet or Filter-based for aggregates
+
+3. Process each field
+   └── Load 3-channel images (nuclei, cells, aggregates)
+   └── Segment nuclei → cells (using nuclei seeds) → aggregates
+   └── Compute focus quality metrics
+   └── Compute QoI measurements
+   └── Optionally compute blur-masked measurements
+
+4. Aggregate statistics
+   └── Field → Well (weighted by cell count)
+   └── Well → Plate (totals and averages)
+
+5. Compute control statistics
+   └── SSMD between control types
+   └── Z-factor for assay quality
+
+6. Export results
+   └── CSV (well-level, field-level)
+   └── Parquet (efficient storage)
+   └── Summary text file
+   └── Segmentation masks (optional)
+```
+
+**CLI Script** (`scripts/run_pipeline.py`):
+- Supports YAML config files
+- Supports command-line arguments
+- Progress bar display
+- Summary output with cell counts and SSMD
+
+**Usage Examples**:
+
+```bash
+# Run from YAML configuration file
+python scripts/run_pipeline.py config.yaml
+
+# Run with command-line arguments
+python scripts/run_pipeline.py --input /data/plate1 --output /results/plate1
+
+# Specify plate format and segmentation method
+python scripts/run_pipeline.py --input /data/plate1 --output /results \
+    --plate-format 384 --method filter
+
+# Run with custom blur threshold
+python scripts/run_pipeline.py --input /data/plate1 --output /results \
+    --blur-threshold 20.0 --verbose
+
+# From Python code
+from aggrequant import AggreQuantPipeline
+from aggrequant.loaders.config import PipelineConfig
+
+config = PipelineConfig.from_yaml("config.yaml")
+pipeline = AggreQuantPipeline(config, verbose=True)
+result = pipeline.run(progress_callback=my_callback)
+print(f"Processed {result.total_n_wells_processed} wells")
+
+# From GUI - click "Run Analysis" button after selecting input/output directories
+```
+
 ### Next TODO Steps
 
 **Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
 
-**Phase 6 - Integration & CLI**:
-2. [ ] `aggrequant/pipeline.py` - Main processing orchestrator
-3. [ ] `aggrequant/cli.py` - CLI entry point
-4. [ ] Documentation and user guide
+**Remaining Phase 6**:
+2. [ ] `aggrequant/cli.py` - Full CLI entry point with subcommands
+3. [ ] Documentation and user guide
+4. [ ] Integration tests with real data
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review
@@ -1578,6 +1678,7 @@ pip install -e .
 conda activate AggreQuant
 python -c "
 from aggrequant import __version__, __author__
+from aggrequant import AggreQuantPipeline, run_pipeline_from_dict
 from aggrequant.common import normalize_image, SimpleLogger
 from aggrequant.quality import FocusMetrics, compute_focus_metrics
 from aggrequant.loaders import PipelineConfig, Plate, Well, ImageLoader
@@ -1599,10 +1700,13 @@ print('All imports successful!')
 "
 
 # Launch GUI (requires display):
-# python -c "from gui import main; main()"
+# python scripts/run_gui.py
+
+# Run pipeline from command line:
+# python scripts/run_pipeline.py --input /path/to/images --output /path/to/output
 ```
 
 ---
 
 *Last updated: 2026-02-04*
-*Document version: 2.5*
+*Document version: 2.6*
