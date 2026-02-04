@@ -998,17 +998,17 @@ Files in `aggrequant/nn/evaluation/`:
 
 ### Phase 5: Statistics and Export
 
-**Priority**: MEDIUM
+**Priority**: MEDIUM | **Status**: COMPLETE
 
 #### Task 5.1: Implement Quantification
-- [ ] Port `processing/quantification.py` to `aggrequant/quantification/measurements.py`
-- [ ] Add blur-masked QoI computation
-- [ ] Create `results.py` dataclass container
+- [x] Port `processing/quantification.py` to `aggrequant/quantification/measurements.py`
+- [x] Add blur-masked QoI computation
+- [x] Create `results.py` dataclass container (FieldResult, WellResult, PlateResult)
 
 #### Task 5.2: Implement Statistics
-- [ ] Create `aggrequant/statistics/well_stats.py`
-- [ ] Create `aggrequant/statistics/controls.py` (SSMD)
-- [ ] Create `aggrequant/statistics/export.py` (CSV, Parquet)
+- [x] Create `aggrequant/statistics/well_stats.py` - Field to well aggregation
+- [x] Create `aggrequant/statistics/controls.py` - SSMD, Z-factor, control comparison
+- [x] Create `aggrequant/statistics/export.py` - CSV, Parquet, Excel export
 
 ---
 
@@ -1521,23 +1521,27 @@ pip install -e .
 - [x] `aggrequant/segmentation/aggregates/neural_network.py` - NeuralNetworkSegmenter
   - PyTorch model integration, sliding window inference, patch stitching
 
+### Completed (Phase 5 - Statistics & Export)
+
+**Quantification Module** (`aggrequant/quantification/`):
+- [x] `results.py` - FieldResult, WellResult, PlateResult dataclasses
+- [x] `measurements.py` - compute_field_measurements(), compute_masked_measurements()
+  - QoI: % aggregate-positive cells, aggregate count, area ratios, ambiguous aggregates
+
+**Statistics Module** (`aggrequant/statistics/`):
+- [x] `well_stats.py` - aggregate_field_to_well(), weighted aggregation
+- [x] `controls.py` - SSMD, Z-factor, control comparison with interpretation
+- [x] `export.py` - CSV, Parquet, Excel export, plate summary generation
+
 ### Next TODO Steps
 
 **Remaining Phase 1**:
 1. [ ] Create `aggrequant/quality/visualization.py` - Focus map visualization utilities
 
-**Phase 5 - Statistics & Export**:
-2. [ ] `aggrequant/quantification/measurements.py` - QoI calculations
-3. [ ] `aggrequant/quantification/colocalization.py` - Aggregate-cell colocalization
-4. [ ] `aggrequant/quantification/results.py` - Results container dataclass
-5. [ ] `aggrequant/statistics/well_stats.py` - Field to well aggregation
-6. [ ] `aggrequant/statistics/controls.py` - SSMD, control comparisons
-7. [ ] `aggrequant/statistics/export.py` - CSV, Parquet, Excel export
-
 **Phase 6 - Integration & CLI**:
-8. [ ] `aggrequant/pipeline.py` - Main processing orchestrator
-9. [ ] `aggrequant/cli.py` - CLI entry point
-10. [ ] Documentation and user guide
+2. [ ] `aggrequant/pipeline.py` - Main processing orchestrator
+3. [ ] `aggrequant/cli.py` - CLI entry point
+4. [ ] Documentation and user guide
 
 **Agent Usage**:
 - Use **code-reviewer agent** for all refactoring tasks and code review
@@ -1558,6 +1562,12 @@ from aggrequant.segmentation import (
     StarDistSegmenter, CellposeSegmenter, DistanceIntensitySegmenter,
     FilterBasedSegmenter, NeuralNetworkSegmenter
 )
+from aggrequant.quantification import (
+    FieldResult, WellResult, PlateResult, compute_field_measurements
+)
+from aggrequant.statistics import (
+    aggregate_field_to_well, compute_ssmd, export_to_csv
+)
 from gui import AggreQuantApp, main
 from gui.widgets import PlateSelector, ControlPanel, SettingsPanel, ProgressPanel
 print('Available models:', list_architectures())
@@ -1571,4 +1581,4 @@ print('All imports successful!')
 ---
 
 *Last updated: 2026-02-04*
-*Document version: 2.3*
+*Document version: 2.4*
