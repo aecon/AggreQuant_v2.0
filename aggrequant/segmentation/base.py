@@ -1,0 +1,88 @@
+"""
+Base classes and protocols for segmentation backends.
+
+Author: Athena Economides
+"""
+
+from abc import ABC, abstractmethod
+from typing import Protocol, runtime_checkable
+import numpy as np
+
+
+@runtime_checkable
+class Segmenter(Protocol):
+    """
+    Protocol defining the interface all segmenters must implement.
+
+    This allows for duck typing - any class with these methods can be used
+    as a segmenter, regardless of inheritance.
+    """
+
+    @property
+    def name(self) -> str:
+        """Human-readable name for logging."""
+        ...
+
+    def segment(self, image: np.ndarray) -> np.ndarray:
+        """
+        Segment an image and return labeled mask.
+
+        Arguments:
+            image: Input image (2D grayscale)
+
+        Returns:
+            labels: Instance segmentation labels (uint16 or uint32)
+                    0 = background, 1+ = individual objects
+        """
+        ...
+
+
+class BaseSegmenter(ABC):
+    """
+    Abstract base class for segmenters.
+
+    Provides common functionality and enforces the interface.
+    """
+
+    def __init__(self, verbose: bool = False, debug: bool = False):
+        """
+        Initialize segmenter.
+
+        Arguments:
+            verbose: Print progress messages
+            debug: Print detailed debug information
+        """
+        self.verbose = verbose
+        self.debug = debug
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Human-readable name for logging."""
+        pass
+
+    @abstractmethod
+    def segment(self, image: np.ndarray) -> np.ndarray:
+        """
+        Segment an image and return labeled mask.
+
+        Arguments:
+            image: Input image (2D grayscale)
+
+        Returns:
+            labels: Instance segmentation labels
+        """
+        pass
+
+    def _log(self, message: str):
+        """Print message if verbose is enabled."""
+        if self.verbose:
+            print(f"({self.name}) {message}")
+
+    def _debug(self, message: str):
+        """Print message if debug is enabled."""
+        if self.debug:
+            print(f"({self.name}) [DEBUG] {message}")
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name='{self.name}')"
