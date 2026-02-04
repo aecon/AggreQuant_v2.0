@@ -42,8 +42,8 @@ env/
 htmlcov/
 
 # Data and outputs (large files)
-data/
-experiments/
+/data/
+/experiments/
 weights/*.keras
 weights/*.pt
 weights/*.pth
