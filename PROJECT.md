@@ -1032,9 +1032,41 @@ Files in `aggrequant/nn/evaluation/`:
 - [ ] Create user guide
 
 #### Task 6.4: Testing
-- [ ] Unit tests for each module
+- [x] Unit tests for GUI module (50 tests)
 - [ ] Integration tests
 - [ ] Test with real data
+
+---
+
+### Phase 7: Comprehensive Testing
+
+**Priority**: HIGH | **Status**: IN PROGRESS
+
+Test all implemented modules to ensure they work correctly before proceeding with real data analysis.
+
+#### Task 7.1: Unit Test Coverage
+- [x] `tests/unit/test_focus_metrics.py` - Focus/blur quality (47 tests)
+- [x] `tests/unit/test_gui.py` - GUI components (50 tests)
+- [ ] `tests/unit/test_loaders.py` - Config, Plate, ImageLoader
+- [ ] `tests/unit/test_segmentation.py` - All segmenters (StarDist, Cellpose, Filter, NN)
+- [ ] `tests/unit/test_quantification.py` - Measurements and results
+- [ ] `tests/unit/test_statistics.py` - Well stats, SSMD, export
+- [ ] `tests/unit/test_nn_architectures.py` - UNet variants and blocks
+- [ ] `tests/unit/test_nn_training.py` - Losses, trainer, metrics
+
+#### Task 7.2: Integration Tests
+- [ ] `tests/integration/test_pipeline.py` - Full pipeline with mock data
+- [ ] `tests/integration/test_gui_pipeline.py` - GUI integration with pipeline
+
+#### Task 7.3: Smoke Tests
+- [ ] Verify all imports work (`python -c "from aggrequant import ..."`)
+- [ ] Test CLI scripts (`scripts/run_pipeline.py --help`)
+- [ ] Test GUI launch (`scripts/run_gui.py`)
+
+#### Task 7.4: Real Data Validation
+- [ ] Process sample plate with known results
+- [ ] Compare output statistics to expected values
+- [ ] Validate segmentation quality visually
 
 ---
 
