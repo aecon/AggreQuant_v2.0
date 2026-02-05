@@ -6,6 +6,8 @@ Usage:
     python scripts/run_segmentation.py
 
 Edit CONFIG_PATH below to point to your YAML config file.
+
+Author: Athena Economides, 2026, UZH
 """
 
 import sys

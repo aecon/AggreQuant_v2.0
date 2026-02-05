@@ -2,6 +2,8 @@
 Simple segmentation pipeline for AggreQuant.
 
 Segments nuclei, cells, and aggregates from microscopy images.
+
+Author: Athena Economides, 2026, UZH
 """
 
 from pathlib import Path
