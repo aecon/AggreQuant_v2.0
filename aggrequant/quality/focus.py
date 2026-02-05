@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Tuple, Dict
 
 from aggrequant.common.logging import get_logger
+from aggrequant.common.image_utils import normalize_image, to_uint8
 
 logger = get_logger(__name__)
 
@@ -42,14 +43,8 @@ def _prepare_image_for_cv2(image: np.ndarray) -> np.ndarray:
         return image
 
     # Use percentile normalization for robustness against outliers
-    p1, p99 = np.percentile(image, [1, 99])
-
-    if p99 - p1 > 0:
-        img = np.clip((image.astype(np.float64) - p1) / (p99 - p1), 0, 1)
-        return (img * 255).astype(np.uint8)
-    else:
-        # Constant image (including all zeros)
-        return np.zeros(image.shape, dtype=np.uint8)
+    normalized = normalize_image(image, method="percentile", percentile_low=1.0, percentile_high=99.0)
+    return to_uint8(normalized)
 
 
 @dataclass
