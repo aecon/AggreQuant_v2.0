@@ -11,14 +11,13 @@ Refactoring tool: Claude Opus 4.5
 Date: 2026-02-04
 """
 
-from .base import Segmenter, BaseSegmenter
+from .base import BaseSegmenter
 from .nuclei import StarDistSegmenter
 from .cells import CellposeSegmenter
 from .aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
 
 __all__ = [
-    # Base classes
-    "Segmenter",
+    # Base class
     "BaseSegmenter",
     # Nuclei
     "StarDistSegmenter",

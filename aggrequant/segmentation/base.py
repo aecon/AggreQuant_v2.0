@@ -7,38 +7,9 @@ Date: 2026-02-04
 """
 
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable
 import numpy as np
 
 from aggrequant.common.logging import get_logger
-
-
-@runtime_checkable
-class Segmenter(Protocol):
-    """
-    Protocol defining the interface all segmenters must implement.
-
-    This allows for duck typing - any class with these methods can be used
-    as a segmenter, regardless of inheritance.
-    """
-
-    @property
-    def name(self) -> str:
-        """Human-readable name for logging."""
-        ...
-
-    def segment(self, image: np.ndarray) -> np.ndarray:
-        """
-        Segment an image and return labeled mask.
-
-        Arguments:
-            image: Input image (2D grayscale)
-
-        Returns:
-            labels: Instance segmentation labels (uint16 or uint32)
-                    0 = background, 1+ = individual objects
-        """
-        ...
 
 
 class BaseSegmenter(ABC):
