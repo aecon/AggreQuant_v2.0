@@ -1,25 +1,23 @@
 """Modular UNet architecture with pluggable components.
 
 This module provides a configurable UNet implementation that allows systematic
-benchmarking of different architectural improvements (residual blocks, attention
-gates, SE blocks, CBAM, deep supervision).
-
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+testing of different architectural improvements. Start with baseline UNet
+(Ronneberger 2015) and incrementally add modules to test their effect.
 
 Example:
-    >>> from aggrequant.nn.architectures.unet import ModularUNet
-    >>> model = ModularUNet(
-    ...     in_channels=1,
-    ...     out_channels=1,
-    ...     encoder_block="residual",
-    ...     use_attention_gates=True,
-    ... )
-    >>> x = torch.randn(1, 1, 256, 256)
-    >>> out = model(x)
-    >>> out.shape
-    torch.Size([1, 1, 256, 256])
+    >>> from aggrequant.nn.architectures import UNet
+    >>>
+    >>> # Baseline UNet
+    >>> model = UNet()
+    >>>
+    >>> # Add residual connections
+    >>> model = UNet(encoder_block="residual", decoder_block="residual")
+    >>>
+    >>> # Add attention gates
+    >>> model = UNet(use_attention_gates=True)
+    >>>
+    >>> # Combine modules
+    >>> model = UNet(encoder_block="residual", use_attention_gates=True)
 """
 
 import torch
@@ -191,47 +189,69 @@ class DecoderBlock(nn.Module):
 
 
 class ModularUNet(nn.Module):
-    """Configurable UNet with pluggable modules for benchmarking.
+    """UNet with optional architectural improvements for benchmarking.
 
-    This implementation allows systematic A/B testing of individual architectural
-    improvements by enabling/disabling specific modules via configuration.
+    Start with baseline UNet (Ronneberger 2015) and incrementally add modules
+    to test their effect on segmentation performance.
+
+    Cookbook - Common Configurations:
+    ---------------------------------
+    >>> from aggrequant.nn.architectures import UNet
+    >>>
+    >>> # 1. Baseline UNet (Ronneberger 2015) - standard double conv blocks
+    >>> model = UNet()
+    >>>
+    >>> # 2. ResUNet - residual connections for better gradient flow
+    >>> model = UNet(encoder_block="residual", decoder_block="residual")
+    >>>
+    >>> # 3. Attention UNet - attention gates on skip connections
+    >>> model = UNet(use_attention_gates=True)
+    >>>
+    >>> # 4. SE-UNet - squeeze-and-excitation channel attention
+    >>> model = UNet(use_se=True)
+    >>>
+    >>> # 5. CBAM-UNet - channel + spatial attention
+    >>> model = UNet(use_cbam=True)
+    >>>
+    >>> # 6. ASPP bridge - dilated convolutions for multi-scale context
+    >>> model = UNet(bridge_type="aspp")
+    >>>
+    >>> # 7. Deep supervision - auxiliary outputs for training
+    >>> model = UNet(use_deep_supervision=True)
+    >>>
+    >>> # Combine any modules for A/B testing:
+    >>> model = UNet(
+    ...     encoder_block="residual",
+    ...     decoder_block="residual",
+    ...     use_attention_gates=True,
+    ...     use_se=True,
+    ... )
 
     Arguments:
-        in_channels: Number of input channels (default: 1 for grayscale)
-        out_channels: Number of output channels (default: 1 for binary segmentation)
-        features: List of feature counts per encoder level (default: [64, 128, 256, 512])
-        encoder_block: Block type for encoder ("double_conv" or "residual")
-        decoder_block: Block type for decoder ("double_conv" or "residual")
-        bridge_type: Bridge/bottleneck type ("double_conv", "residual", or "aspp")
-        use_attention_gates: Add attention gates to skip connections
-        use_se: Add SE blocks after conv blocks
-        use_cbam: Add CBAM blocks (mutually exclusive with SE)
-        use_deep_supervision: Return multi-scale outputs for deep supervision loss
-        se_reduction: Reduction ratio for SE/CBAM blocks (default: 16)
-        upsample_mode: Upsampling mode ("transpose" or "bilinear")
+        in_channels: Input channels (default: 1 for grayscale microscopy)
+        out_channels: Output channels (default: 1 for binary segmentation)
+        features: Channel sizes per encoder level (default: [64, 128, 256, 512])
+        encoder_block: "double_conv" (default) or "residual"
+        decoder_block: "double_conv" (default) or "residual"
+        bridge_type: "double_conv" (default), "residual", or "aspp"
+        use_attention_gates: Add attention gates on skip connections
+        use_se: Add Squeeze-and-Excitation channel attention
+        use_cbam: Add CBAM attention (mutually exclusive with use_se)
+        use_deep_supervision: Return multi-scale outputs for training
+        se_reduction: Reduction ratio for SE/CBAM (default: 16)
+        upsample_mode: "transpose" (default) or "bilinear"
 
     Returns:
-        During training with deep_supervision: tuple of (main_output, [deep_outputs])
-        Otherwise: main output tensor of shape (B, out_channels, H, W)
-
-    Example:
-        >>> model = ModularUNet(
-        ...     in_channels=1,
-        ...     out_channels=1,
-        ...     encoder_block="residual",
-        ...     use_attention_gates=True,
-        ...     use_se=True,
-        ... )
-        >>> x = torch.randn(2, 1, 256, 256)
-        >>> out = model(x)
-        >>> out.shape
-        torch.Size([2, 1, 256, 256])
+        If use_deep_supervision and training: tuple of (main_output, [aux_outputs])
+        Otherwise: output tensor of shape (B, out_channels, H, W)
 
     References:
-        - Ronneberger et al., "U-Net: Convolutional Networks for Biomedical
-          Image Segmentation" (2015)
-        - Oktay et al., "Attention U-Net" (2018)
-        - He et al., "Deep Residual Learning" (2016)
+        - Ronneberger et al., "U-Net" (2015) - baseline architecture
+        - He et al., "Deep Residual Learning" (2016) - residual blocks
+        - Oktay et al., "Attention U-Net" (2018) - attention gates
+        - Hu et al., "Squeeze-and-Excitation Networks" (2018) - SE blocks
+        - Woo et al., "CBAM" (2018) - channel + spatial attention
+        - Chen et al., "DeepLab" (2017) - ASPP dilated convolutions
     """
 
     def __init__(

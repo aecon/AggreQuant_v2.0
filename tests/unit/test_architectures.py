@@ -1,21 +1,13 @@
 """Unit tests for neural network architectures.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Tests the modular UNet architecture with different configurations.
 """
 
 import pytest
 import torch
 import torch.nn as nn
 
-from aggrequant.nn.architectures import (
-    ModularUNet,
-    create_model,
-    list_architectures,
-    BENCHMARK_CONFIGS,
-    get_config,
-)
+from aggrequant.nn.architectures import UNet, ModularUNet
 from aggrequant.nn.architectures.blocks import (
     DoubleConv,
     ResidualBlock,
@@ -72,19 +64,19 @@ class TestBuildingBlocks:
         assert out.shape == x.shape
 
 
-class TestModularUNet:
-    """Test ModularUNet architecture."""
+class TestUNet:
+    """Test UNet architecture with different configurations."""
 
     def test_baseline_forward(self):
         """Baseline UNet should produce correct output shape."""
-        model = ModularUNet(in_channels=1, out_channels=1)
+        model = UNet(in_channels=1, out_channels=1)
         x = torch.randn(2, 1, 256, 256)
         out = model(x)
         assert out.shape == (2, 1, 256, 256)
 
     def test_residual_forward(self):
         """Residual UNet should produce correct output shape."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             encoder_block="residual",
@@ -96,7 +88,7 @@ class TestModularUNet:
 
     def test_attention_forward(self):
         """UNet with attention gates should produce correct output shape."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_attention_gates=True,
@@ -107,7 +99,7 @@ class TestModularUNet:
 
     def test_se_forward(self):
         """UNet with SE blocks should produce correct output shape."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_se=True,
@@ -118,7 +110,7 @@ class TestModularUNet:
 
     def test_cbam_forward(self):
         """UNet with CBAM should produce correct output shape."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_cbam=True,
@@ -127,14 +119,25 @@ class TestModularUNet:
         out = model(x)
         assert out.shape == (2, 1, 256, 256)
 
+    def test_aspp_bridge_forward(self):
+        """UNet with ASPP bridge should produce correct output shape."""
+        model = UNet(
+            in_channels=1,
+            out_channels=1,
+            bridge_type="aspp",
+        )
+        x = torch.randn(2, 1, 256, 256)
+        out = model(x)
+        assert out.shape == (2, 1, 256, 256)
+
     def test_se_cbam_mutually_exclusive(self):
         """SE and CBAM should be mutually exclusive."""
         with pytest.raises(ValueError):
-            ModularUNet(use_se=True, use_cbam=True)
+            UNet(use_se=True, use_cbam=True)
 
     def test_deep_supervision_training(self):
         """Deep supervision should return tuple during training."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_deep_supervision=True,
@@ -150,7 +153,7 @@ class TestModularUNet:
 
     def test_deep_supervision_eval(self):
         """Deep supervision should return single tensor during eval."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_deep_supervision=True,
@@ -163,7 +166,7 @@ class TestModularUNet:
 
     def test_custom_features(self):
         """UNet should work with custom feature sizes."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             features=[32, 64, 128, 256],
@@ -174,112 +177,121 @@ class TestModularUNet:
 
     def test_multichannel_input(self):
         """UNet should handle multi-channel input."""
-        model = ModularUNet(in_channels=3, out_channels=1)
+        model = UNet(in_channels=3, out_channels=1)
         x = torch.randn(2, 3, 256, 256)
         out = model(x)
         assert out.shape == (2, 1, 256, 256)
 
     def test_multichannel_output(self):
         """UNet should handle multi-channel output."""
-        model = ModularUNet(in_channels=1, out_channels=3)
+        model = UNet(in_channels=1, out_channels=3)
         x = torch.randn(2, 1, 256, 256)
         out = model(x)
         assert out.shape == (2, 3, 256, 256)
 
     def test_non_power_of_two_input(self):
         """UNet should handle non-power-of-two input sizes."""
-        model = ModularUNet(in_channels=1, out_channels=1)
+        model = UNet(in_channels=1, out_channels=1)
         x = torch.randn(2, 1, 200, 200)
         out = model(x)
         assert out.shape == (2, 1, 200, 200)
 
     def test_count_parameters(self):
         """count_parameters should return positive integer."""
-        model = ModularUNet()
+        model = UNet()
         params = model.count_parameters()
         assert params > 0
         assert isinstance(params, int)
 
 
-class TestModelFactory:
-    """Test model factory functions."""
+class TestUNetConfigurations:
+    """Test various UNet module combinations for A/B testing."""
 
-    def test_list_architectures(self):
-        """list_architectures should return non-empty list."""
-        archs = list_architectures()
-        assert isinstance(archs, list)
-        assert len(archs) > 0
-        assert "unet_baseline" in archs
-
-    def test_create_model_baseline(self):
-        """create_model should create baseline UNet."""
-        model = create_model("unet_baseline", in_channels=1, out_channels=1)
-        assert isinstance(model, ModularUNet)
-
-    def test_create_model_residual(self):
-        """create_model should create residual UNet."""
-        model = create_model("unet_residual", in_channels=1, out_channels=1)
-        assert isinstance(model, ModularUNet)
-
-    def test_create_model_unknown(self):
-        """create_model should raise error for unknown architecture."""
-        with pytest.raises(ValueError):
-            create_model("unknown_architecture")
-
-    def test_create_model_overrides(self):
-        """create_model should accept override kwargs."""
-        model = create_model(
-            "unet_baseline",
-            in_channels=3,
-            out_channels=2,
-            features=[32, 64, 128, 256],
+    def test_residual_with_attention(self):
+        """Residual + attention gates should work together."""
+        model = UNet(
+            encoder_block="residual",
+            decoder_block="residual",
+            use_attention_gates=True,
         )
-        x = torch.randn(1, 3, 128, 128)
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
         out = model(x)
-        assert out.shape == (1, 2, 128, 128)
+        assert out.shape == (1, 1, 64, 64)
 
+    def test_residual_with_se(self):
+        """Residual + SE should work together."""
+        model = UNet(
+            encoder_block="residual",
+            decoder_block="residual",
+            use_se=True,
+        )
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
-class TestBenchmarkConfigs:
-    """Test benchmark configurations."""
+    def test_residual_with_cbam(self):
+        """Residual + CBAM should work together."""
+        model = UNet(
+            encoder_block="residual",
+            decoder_block="residual",
+            use_cbam=True,
+        )
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
-    def test_benchmark_configs_not_empty(self):
-        """BENCHMARK_CONFIGS should contain configurations."""
-        assert len(BENCHMARK_CONFIGS) > 0
+    def test_attention_with_se(self):
+        """Attention gates + SE should work together."""
+        model = UNet(
+            use_attention_gates=True,
+            use_se=True,
+        )
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
-    def test_get_config(self):
-        """get_config should return configuration dict."""
-        config = get_config("unet_baseline")
-        assert isinstance(config, dict)
-        assert "encoder_block" in config
+    def test_full_configuration(self):
+        """All modules together (except CBAM) should work."""
+        model = UNet(
+            encoder_block="residual",
+            decoder_block="residual",
+            bridge_type="aspp",
+            use_attention_gates=True,
+            use_se=True,
+            use_deep_supervision=True,
+        )
+        model.eval()
+        x = torch.randn(1, 1, 256, 256)
+        out = model(x)
+        assert out.shape == (1, 1, 256, 256)
 
-    def test_get_config_unknown(self):
-        """get_config should raise error for unknown config."""
-        with pytest.raises(KeyError):
-            get_config("unknown_config")
+    def test_lightweight_config(self):
+        """Lightweight UNet with reduced features should work."""
+        model = UNet(features=[32, 64, 128, 256])
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
-    def test_all_configs_create_valid_models(self):
-        """All benchmark configs should create valid models."""
-        # Configs that require larger input sizes due to ASPP or 5 pooling levels
-        large_configs = {"unet_aspp", "unet_deep", "unet_deep_res_attention"}
+    def test_bilinear_upsampling(self):
+        """Bilinear upsampling mode should work."""
+        model = UNet(upsample_mode="bilinear")
+        model.eval()
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
-        for name in BENCHMARK_CONFIGS:
-            model = create_model(name, in_channels=1, out_channels=1)
-            model.eval()  # Use eval mode to avoid BatchNorm issues with small batches
-
-            if name in large_configs:
-                # These need larger input due to ASPP dilations or 5 pooling levels
-                x = torch.randn(1, 1, 256, 256)
-                out = model(x)
-                if isinstance(out, tuple):
-                    out = out[0]
-                assert out.shape == (1, 1, 256, 256), f"Failed for {name}"
-            else:
-                x = torch.randn(1, 1, 64, 64)
-                out = model(x)
-                # Handle deep supervision
-                if isinstance(out, tuple):
-                    out = out[0]
-                assert out.shape == (1, 1, 64, 64), f"Failed for {name}"
+    def test_deep_unet(self):
+        """Deeper UNet with 5 levels should work."""
+        model = UNet(features=[64, 128, 256, 512, 1024])
+        model.eval()
+        x = torch.randn(1, 1, 256, 256)
+        out = model(x)
+        assert out.shape == (1, 1, 256, 256)
 
 
 class TestGradientFlow:
@@ -287,7 +299,7 @@ class TestGradientFlow:
 
     def test_baseline_gradient_flow(self):
         """Gradients should flow through baseline UNet."""
-        model = ModularUNet(in_channels=1, out_channels=1)
+        model = UNet(in_channels=1, out_channels=1)
         x = torch.randn(1, 1, 64, 64, requires_grad=True)
         out = model(x)
         loss = out.sum()
@@ -297,7 +309,7 @@ class TestGradientFlow:
 
     def test_deep_supervision_gradient_flow(self):
         """Gradients should flow through deep supervision outputs."""
-        model = ModularUNet(
+        model = UNet(
             in_channels=1,
             out_channels=1,
             use_deep_supervision=True,
@@ -314,6 +326,21 @@ class TestGradientFlow:
         loss.backward()
         assert x.grad is not None
         assert not torch.isnan(x.grad).any()
+
+
+class TestBackwardCompatibility:
+    """Ensure ModularUNet alias works."""
+
+    def test_modular_unet_alias(self):
+        """ModularUNet should be an alias for UNet."""
+        assert ModularUNet is UNet
+
+    def test_modular_unet_instantiation(self):
+        """ModularUNet should instantiate correctly."""
+        model = ModularUNet(in_channels=1, out_channels=1)
+        x = torch.randn(1, 1, 64, 64)
+        out = model(x)
+        assert out.shape == (1, 1, 64, 64)
 
 
 if __name__ == "__main__":

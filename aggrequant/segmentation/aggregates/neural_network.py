@@ -3,16 +3,12 @@ Neural network-based aggregate segmentation.
 
 Uses PyTorch UNet models for semantic segmentation with
 sliding window inference and patch stitching.
-
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
 """
 
 import numpy as np
 import skimage.morphology
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Any
 
 import torch
 import torch.nn as nn
@@ -55,7 +51,7 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         self,
         model: Optional[nn.Module] = None,
         weights_path: Optional[Union[str, Path]] = None,
-        model_name: str = "unet_baseline",
+        unet_config: Optional[Dict[str, Any]] = None,
         patch_size: int = PATCH_SIZE,
         stride: int = STRIDE,
         batch_size: int = BATCH_SIZE,
@@ -72,7 +68,7 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         Arguments:
             model: Pre-loaded PyTorch model (if None, will load from weights_path)
             weights_path: Path to model weights file
-            model_name: Model architecture name (for factory)
+            unet_config: UNet configuration dict (e.g., {"encoder_block": "residual"})
             patch_size: Size of input patches
             stride: Stride between patches (smaller = more overlap)
             batch_size: Batch size for inference
@@ -82,12 +78,18 @@ class NeuralNetworkSegmenter(BaseSegmenter):
             device: Device to use ('cuda', 'cpu', or None for auto)
             verbose: Print progress messages
             debug: Print detailed debug information
+
+        Example:
+            >>> segmenter = NeuralNetworkSegmenter(
+            ...     weights_path="model.pt",
+            ...     unet_config={"encoder_block": "residual", "use_attention_gates": True},
+            ... )
         """
         super().__init__(verbose=verbose, debug=debug)
 
         self._model = model
         self.weights_path = Path(weights_path) if weights_path else None
-        self.model_name = model_name
+        self.unet_config = unet_config or {}
         self.patch_size = patch_size
         self.stride = stride
         self.batch_size = batch_size
@@ -112,14 +114,14 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         return self._model
 
     def _load_model(self) -> nn.Module:
-        """Load model from weights or create new."""
-        from aggrequant.nn.architectures import create_model
+        """Load model from weights."""
+        from aggrequant.nn.architectures import UNet
 
         if self.weights_path and self.weights_path.exists():
             self._log(f"Loading model from {self.weights_path}")
 
-            # Create model architecture
-            model = create_model(self.model_name, in_channels=1, out_channels=1)
+            # Create model architecture with config
+            model = UNet(in_channels=1, out_channels=1, **self.unet_config)
 
             # Load weights
             checkpoint = torch.load(self.weights_path, map_location=self.device)
