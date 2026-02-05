@@ -54,6 +54,7 @@ from .evaluation import (
     iou_score,
     evaluate_model,
 )
+from .utils import get_device
 
 __all__ = [
     # Version
@@ -75,4 +76,6 @@ __all__ = [
     "dice_score",
     "iou_score",
     "evaluate_model",
+    # Utilities
+    "get_device",
 ]

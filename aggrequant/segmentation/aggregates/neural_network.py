@@ -22,6 +22,7 @@ from aggrequant.common.image_utils import (
     remove_small_holes_compat,
     remove_small_objects_compat,
 )
+from aggrequant.nn.utils import get_device
 
 
 # Default parameters
@@ -95,10 +96,7 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         self.min_aggregate_area = min_aggregate_area
 
         # Auto-select device
-        if device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        else:
-            self.device = torch.device(device)
+        self.device = get_device(device)
 
         self._debug(f"Using device: {self.device}")
 

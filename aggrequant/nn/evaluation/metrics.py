@@ -19,6 +19,7 @@ import numpy as np
 from typing import Union, Optional, Tuple
 
 from aggrequant.common.logging import get_logger
+from aggrequant.nn.utils import get_device
 
 logger = get_logger(__name__)
 
@@ -461,8 +462,7 @@ def evaluate_model(
         >>> metrics = evaluate_model(model, test_loader)
         >>> print(f"Test Dice: {metrics['dice']:.4f}")
     """
-    if device is None:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = get_device(device)
 
     model = model.to(device)
     model.eval()

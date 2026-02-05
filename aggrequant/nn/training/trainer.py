@@ -28,6 +28,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
 from aggrequant.common.logging import get_logger
+from aggrequant.nn.utils import get_device
 
 logger = get_logger(__name__)
 
@@ -137,10 +138,7 @@ class Trainer:
         self.debug = debug
 
         # Auto-detect device
-        if device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        else:
-            self.device = device
+        self.device = get_device(device)
 
         # Move model to device
         self.model = self.model.to(self.device)
