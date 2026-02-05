@@ -13,7 +13,6 @@ from .pipeline import (
     AggreQuantPipeline,
     PipelineState,
     run_pipeline_from_config,
-    run_pipeline_from_dict,
 )
 
 __all__ = [
@@ -22,5 +21,4 @@ __all__ = [
     "AggreQuantPipeline",
     "PipelineState",
     "run_pipeline_from_config",
-    "run_pipeline_from_dict",
 ]

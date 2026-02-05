@@ -298,7 +298,7 @@ class AggreQuantApp(ctk.CTk):
         Runs the AggreQuant pipeline with progress reporting back to GUI.
         """
         try:
-            from aggrequant import run_pipeline_from_dict
+            from gui.pipeline_runner import run_pipeline_from_dict
 
             # Build config dict for pipeline
             config_dict = {
