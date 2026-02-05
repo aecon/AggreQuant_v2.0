@@ -15,6 +15,10 @@ import skimage.morphology
 from typing import Optional
 
 from ..base import BaseSegmenter
+from aggrequant.common.image_utils import (
+    remove_small_holes_compat,
+    remove_small_objects_compat,
+)
 
 
 # Default parameters
@@ -108,29 +112,16 @@ class FilterBasedSegmenter(BaseSegmenter):
         self._debug(f"Initial connected components: {labels.max()}")
 
         # Step 5: Remove small holes
-        # Note: Using area_threshold for skimage < 0.26, will auto-convert to max_size
-        try:
-            no_holes = skimage.morphology.remove_small_holes(
-                segmented.astype(bool), max_size=self.small_hole_area, connectivity=2
-            )
-        except TypeError:
-            # Fallback for older skimage versions
-            no_holes = skimage.morphology.remove_small_holes(
-                segmented.astype(bool), area_threshold=self.small_hole_area, connectivity=2
-            )
+        no_holes = remove_small_holes_compat(
+            segmented, area_threshold=self.small_hole_area, connectivity=2
+        )
         labels = skimage.morphology.label(no_holes, connectivity=2)
         self._debug(f"After removing small holes: {labels.max()}")
 
         # Step 6: Remove small objects
-        try:
-            no_small = skimage.morphology.remove_small_objects(
-                labels, max_size=self.min_aggregate_area, connectivity=2
-            )
-        except TypeError:
-            # Fallback for older skimage versions
-            no_small = skimage.morphology.remove_small_objects(
-                labels, min_size=self.min_aggregate_area, connectivity=2
-            )
+        no_small = remove_small_objects_compat(
+            labels, min_size=self.min_aggregate_area, connectivity=2
+        )
         labels = skimage.morphology.label(no_small, connectivity=2)
         self._debug(f"After removing small objects: {labels.max()}")
 

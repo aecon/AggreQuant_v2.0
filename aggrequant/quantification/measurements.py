@@ -9,12 +9,12 @@ Date: 2026-02-04
 """
 
 import numpy as np
-import skimage.morphology
 from typing import Optional, Tuple, Dict
 from dataclasses import dataclass
 
 from .results import FieldResult
 from aggrequant.common.logging import get_logger
+from aggrequant.common.image_utils import remove_small_holes_compat
 
 logger = get_logger(__name__)
 
@@ -52,14 +52,9 @@ def compute_aggregate_mask_inside_cells(
     mask = (aggregate_labels > 0).astype(np.uint8)
 
     # Fill small holes in aggregate mask
-    try:
-        mask = skimage.morphology.remove_small_holes(
-            mask.astype(bool), max_size=SMALL_HOLE_AREA_THRESHOLD, connectivity=2
-        ).astype(np.uint8)
-    except TypeError:
-        mask = skimage.morphology.remove_small_holes(
-            mask.astype(bool), area_threshold=SMALL_HOLE_AREA_THRESHOLD, connectivity=2
-        ).astype(np.uint8)
+    mask = remove_small_holes_compat(
+        mask, area_threshold=SMALL_HOLE_AREA_THRESHOLD, connectivity=2
+    ).astype(np.uint8)
 
     # Exclude regions outside cells
     mask[cell_labels == 0] = 0
