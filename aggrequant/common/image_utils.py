@@ -25,6 +25,36 @@ except ImportError:
     HAS_SKIMAGE = False
 
 
+# Supported image file extensions
+SUPPORTED_IMAGE_EXTENSIONS = (".tif",)
+
+
+def find_image_files(
+    directory: Union[str, Path],
+    recursive: bool = False,
+) -> List[Path]:
+    """
+    Find all supported image files in a directory.
+
+    Arguments:
+        directory: Directory to search
+        recursive: If True, search subdirectories recursively
+
+    Returns:
+        Sorted list of image file paths
+    """
+    directory = Path(directory)
+    if not directory.is_dir():
+        raise ValueError(f"Not a directory: {directory}")
+
+    image_files = []
+    for ext in SUPPORTED_IMAGE_EXTENSIONS:
+        pattern = f"**/*{ext}" if recursive else f"*{ext}"
+        image_files.extend(directory.glob(pattern))
+
+    return sorted(image_files)
+
+
 def load_image(path: Union[str, Path]) -> np.ndarray:
     """
     Load an image from disk.

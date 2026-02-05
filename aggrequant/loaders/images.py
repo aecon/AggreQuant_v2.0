@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from aggrequant.common.logging import get_logger
-from aggrequant.common.image_utils import load_image, load_image_stack
+from aggrequant.common.image_utils import load_image, load_image_stack, find_image_files
 
 logger = get_logger(__name__)
 
@@ -157,7 +157,7 @@ def find_channel_files(
     Returns:
         List of matching file paths
     """
-    all_files = list(directory.glob("**/*.tif*"))
+    all_files = find_image_files(directory, recursive=True)
 
     matches = []
     for f in all_files:
@@ -308,9 +308,9 @@ class ImageLoader:
 
     def _discover_files(self):
         """Scan directory and organize files."""
-        all_files = list(self.directory.glob("**/*.tif*"))
+        all_files = find_image_files(self.directory, recursive=True)
         if self.verbose:
-            logger.info(f"Found {len(all_files)} TIFF files")
+            logger.info(f"Found {len(all_files)} image files")
 
         self.files_by_well = group_files_by_well(all_files, self.filename_parser)
         if self.verbose:

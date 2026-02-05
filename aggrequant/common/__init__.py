@@ -7,6 +7,8 @@ Date: 2026-02-04
 """
 
 from .image_utils import (
+    SUPPORTED_IMAGE_EXTENSIONS,
+    find_image_files,
     load_image,
     load_image_stack,
     normalize_image,
@@ -32,6 +34,8 @@ from .cli_utils import (
 
 __all__ = [
     # Image utilities
+    "SUPPORTED_IMAGE_EXTENSIONS",
+    "find_image_files",
     "load_image",
     "load_image_stack",
     "normalize_image",

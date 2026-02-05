@@ -27,6 +27,7 @@ from torch.utils.data import Dataset
 # Import common utilities
 from aggrequant.common.image_utils import (
     load_image,
+    find_image_files,
     normalize_image as _normalize_image_common,
 )
 from aggrequant.common.logging import get_logger
@@ -284,15 +285,11 @@ class PatchDataset(Dataset):
         self.percentile_low = percentile_low
         self.percentile_high = percentile_high
 
-        # Find all patches (support multiple formats)
-        patterns = ["*.tif", "*.tiff", "*.png", "*.npy"]
-        self.image_files = []
-        for pattern in patterns:
-            self.image_files.extend(self.image_dir.glob(pattern))
-        self.image_files = sorted(self.image_files)
+        # Find all image patches
+        self.image_files = find_image_files(self.image_dir)
 
         if len(self.image_files) == 0:
-            raise ValueError(f"No patch files found in {self.image_dir}")
+            raise ValueError(f"No image files found in {self.image_dir}")
 
     def __len__(self) -> int:
         return len(self.image_files)
@@ -301,13 +298,8 @@ class PatchDataset(Dataset):
         img_path = self.image_files[idx]
         mask_path = self.mask_dir / img_path.name
 
-        # Handle numpy files
-        if img_path.suffix == '.npy':
-            image = np.load(img_path)
-            mask = np.load(mask_path)
-        else:
-            image = load_image(img_path)
-            mask = load_image(mask_path)
+        image = load_image(img_path)
+        mask = load_image(mask_path)
 
         # Ensure 2D
         if image.ndim == 3:
@@ -363,11 +355,7 @@ class InferenceDataset(Dataset):
         if isinstance(image_paths, (str, Path)):
             path = Path(image_paths)
             if path.is_dir():
-                patterns = ["*.tif", "*.tiff", "*.png"]
-                self.image_paths = []
-                for pattern in patterns:
-                    self.image_paths.extend(path.glob(pattern))
-                self.image_paths = sorted(self.image_paths)
+                self.image_paths = find_image_files(path)
             else:
                 self.image_paths = [path]
         else:
