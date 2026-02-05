@@ -62,8 +62,6 @@ def main():
     cell_seg = CellposeSegmenter(
         model_type=config.segmentation.cell_model,
         gpu=config.use_gpu,
-        flow_threshold=config.segmentation.cell_flow_threshold,
-        cellprob_threshold=config.segmentation.cell_cellprob_threshold,
         verbose=config.verbose,
     )
     agg_seg = FilterBasedSegmenter(

@@ -36,9 +36,7 @@ class SegmentationConfig:
     nuclei_max_area: int = 15000
 
     # Cell segmentation (Cellpose)
-    cell_model: str = "cyto2"
-    cell_flow_threshold: float = 0.4
-    cell_cellprob_threshold: float = 0.0
+    cell_model: str = "cyto3"
 
     # Aggregate segmentation
     aggregate_method: str = "unet"  # "unet", "filter", "hybrid"
@@ -179,8 +177,6 @@ class PipelineConfig:
                 "nuclei_min_area": self.segmentation.nuclei_min_area,
                 "nuclei_max_area": self.segmentation.nuclei_max_area,
                 "cell_model": self.segmentation.cell_model,
-                "cell_flow_threshold": self.segmentation.cell_flow_threshold,
-                "cell_cellprob_threshold": self.segmentation.cell_cellprob_threshold,
                 "aggregate_method": self.segmentation.aggregate_method,
                 "aggregate_model_path": str(self.segmentation.aggregate_model_path) if self.segmentation.aggregate_model_path else None,
                 "aggregate_min_size": self.segmentation.aggregate_min_size,
