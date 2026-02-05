@@ -16,6 +16,7 @@ from .config import (
 )
 from .images import (
     load_tiff,
+    load_image,
     load_image_stack,
     parse_operetta_filename,
     parse_imageexpress_filename,
@@ -45,6 +46,7 @@ __all__ = [
     "create_default_config",
     # Images
     "load_tiff",
+    "load_image",
     "load_image_stack",
     "parse_operetta_filename",
     "parse_imageexpress_filename",

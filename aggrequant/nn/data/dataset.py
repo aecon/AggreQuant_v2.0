@@ -23,35 +23,15 @@ from typing import List, Tuple, Optional, Callable, Dict, Any, Union
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import skimage.io
 
-# Import normalize_image from common utilities
-from aggrequant.common.image_utils import normalize_image as _normalize_image_common
+# Import common utilities
+from aggrequant.common.image_utils import (
+    load_image,
+    normalize_image as _normalize_image_common,
+)
 from aggrequant.common.logging import get_logger
 
 logger = get_logger(__name__)
-
-# Try to import tifffile for better TIFF support
-try:
-    import tifffile
-    HAS_TIFFFILE = True
-except ImportError:
-    HAS_TIFFFILE = False
-
-
-def load_image(path: Union[str, Path]) -> np.ndarray:
-    """Load an image from disk.
-
-    Arguments:
-        path: Path to image file (TIFF, PNG, etc.)
-
-    Returns:
-        Image as numpy array (H, W) or (H, W, C)
-    """
-    path = str(path)
-    if HAS_TIFFFILE and path.lower().endswith(('.tif', '.tiff')):
-        return tifffile.imread(path)
-    return skimage.io.imread(path)
 
 
 def normalize_image(

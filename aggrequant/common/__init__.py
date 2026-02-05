@@ -7,6 +7,8 @@ Date: 2026-02-04
 """
 
 from .image_utils import (
+    load_image,
+    load_image_stack,
     normalize_image,
     to_uint8,
     to_float32,
@@ -28,6 +30,8 @@ from .cli_utils import (
 
 __all__ = [
     # Image utilities
+    "load_image",
+    "load_image_stack",
     "normalize_image",
     "to_uint8",
     "to_float32",

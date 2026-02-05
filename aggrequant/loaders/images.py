@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from aggrequant.common.logging import get_logger
+from aggrequant.common.image_utils import load_image, load_image_stack
 
 logger = get_logger(__name__)
 
@@ -22,16 +23,14 @@ logger = get_logger(__name__)
 # Sentinel value for unparseable well IDs
 UNKNOWN_WELL_ID = "unknown"
 
-try:
-    import tifffile
-    HAS_TIFFFILE = True
-except ImportError:
-    HAS_TIFFFILE = False
 
-
+# Backward compatibility alias
 def load_tiff(path: Path) -> np.ndarray:
     """
     Load a TIFF image file.
+
+    This is a backward-compatibility alias for load_image().
+    New code should use load_image() from aggrequant.common.image_utils.
 
     Arguments:
         path: Path to TIFF file
@@ -39,34 +38,7 @@ def load_tiff(path: Path) -> np.ndarray:
     Returns:
         Image as numpy array
     """
-    if not HAS_TIFFFILE:
-        raise ImportError("tifffile is required: pip install tifffile")
-
-    return tifffile.imread(path)
-
-
-def load_image_stack(
-    paths: List[Path],
-    dtype: Optional[np.dtype] = None
-) -> np.ndarray:
-    """
-    Load multiple images into a stack.
-
-    Arguments:
-        paths: List of paths to load
-        dtype: Output dtype (None = keep original)
-
-    Returns:
-        3D array of shape (n_images, height, width)
-    """
-    images = []
-    for p in paths:
-        img = load_tiff(p)
-        if dtype is not None:
-            img = img.astype(dtype)
-        images.append(img)
-
-    return np.stack(images, axis=0)
+    return load_image(path)
 
 
 def parse_operetta_filename(filename: str) -> Dict[str, str]:

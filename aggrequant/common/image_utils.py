@@ -1,12 +1,95 @@
 """
-Image utility functions for normalization and type conversion.
+Image utility functions for loading, normalization and type conversion.
 
 Original author: Athena Economides
 Refactoring tool: Claude Opus 4.5
 Date: 2026-02-04
 """
 
+from pathlib import Path
+from typing import Union, List
 import numpy as np
+
+# Optional imports for image loading
+try:
+    import tifffile
+    HAS_TIFFFILE = True
+except ImportError:
+    HAS_TIFFFILE = False
+
+try:
+    import skimage.io
+    HAS_SKIMAGE = True
+except ImportError:
+    HAS_SKIMAGE = False
+
+
+def load_image(path: Union[str, Path]) -> np.ndarray:
+    """
+    Load an image from disk.
+
+    Supports TIFF files (via tifffile) and other common formats (via skimage).
+    For TIFF files, tifffile is preferred as it handles microscopy metadata better.
+
+    Arguments:
+        path: Path to image file (TIFF, PNG, JPEG, etc.)
+
+    Returns:
+        Image as numpy array (H, W) or (H, W, C)
+
+    Raises:
+        ImportError: If no suitable image loading library is available
+        FileNotFoundError: If the file doesn't exist
+    """
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Image file not found: {path}")
+
+    path_str = str(path)
+    is_tiff = path_str.lower().endswith(('.tif', '.tiff'))
+
+    # Prefer tifffile for TIFF files
+    if is_tiff and HAS_TIFFFILE:
+        return tifffile.imread(path_str)
+
+    # Fall back to skimage for other formats or if tifffile unavailable
+    if HAS_SKIMAGE:
+        return skimage.io.imread(path_str)
+
+    # If only tifffile is available and it's a TIFF
+    if is_tiff and HAS_TIFFFILE:
+        return tifffile.imread(path_str)
+
+    raise ImportError(
+        "No image loading library available. "
+        "Install tifffile (pip install tifffile) or "
+        "scikit-image (pip install scikit-image)"
+    )
+
+
+def load_image_stack(
+    paths: List[Union[str, Path]],
+    dtype: type = None
+) -> np.ndarray:
+    """
+    Load multiple images into a stack.
+
+    Arguments:
+        paths: List of paths to load
+        dtype: Output dtype (None = keep original)
+
+    Returns:
+        3D array of shape (n_images, height, width)
+    """
+    images = []
+    for p in paths:
+        img = load_image(p)
+        if dtype is not None:
+            img = img.astype(dtype)
+        images.append(img)
+
+    return np.stack(images, axis=0)
 
 
 def normalize_image(
