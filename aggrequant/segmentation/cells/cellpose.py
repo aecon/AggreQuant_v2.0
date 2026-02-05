@@ -38,6 +38,7 @@ class CellposeSegmenter(BaseSegmenter):
         self,
         model_type: str = "cyto2",
         gpu: bool = True,
+        diameter: Optional[float] = None,
         min_nucleus_area: int = MIN_NUCLEUS_AREA,
         flow_threshold: float = FLOW_THRESHOLD,
         cellprob_threshold: float = CELLPROB_THRESHOLD,
@@ -50,6 +51,7 @@ class CellposeSegmenter(BaseSegmenter):
         Arguments:
             model_type: Cellpose model type (default: 'cyto2')
             gpu: Whether to use GPU
+            diameter: Expected cell diameter in pixels (None for auto-detect)
             min_nucleus_area: Minimum nucleus area for validation
             flow_threshold: Flow threshold for Cellpose
             cellprob_threshold: Cell probability threshold
@@ -60,6 +62,7 @@ class CellposeSegmenter(BaseSegmenter):
 
         self.model_type = model_type
         self.gpu = gpu
+        self.diameter = diameter
         self.min_nucleus_area = min_nucleus_area
         self.flow_threshold = flow_threshold
         self.cellprob_threshold = cellprob_threshold
@@ -135,7 +138,7 @@ class CellposeSegmenter(BaseSegmenter):
         """Segment using only the cell channel."""
         masks, _, _, _ = self.model.eval(
             image,
-            diameter=None,
+            diameter=self.diameter,
             channels=[0, 0],  # Grayscale
             resample=True,
             flow_threshold=self.flow_threshold,
@@ -159,7 +162,7 @@ class CellposeSegmenter(BaseSegmenter):
         # channels=[1,2] means: channel 1 is cytoplasm, channel 2 is nuclei
         masks, _, _, _ = self.model.eval(
             input_image,
-            diameter=None,
+            diameter=self.diameter,
             channels=[1, 2],
             resample=True,
             flow_threshold=self.flow_threshold,

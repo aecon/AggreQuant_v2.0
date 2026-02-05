@@ -36,7 +36,7 @@ class SegmentationConfig:
     nuclei_max_area: int = 15000
 
     # Cell segmentation (Cellpose)
-    cell_model: str = "cyto3"
+    cell_model: str = "cyto2"
     cell_diameter: Optional[float] = None  # Auto-detect if None
     cell_flow_threshold: float = 0.4
     cell_cellprob_threshold: float = 0.0
