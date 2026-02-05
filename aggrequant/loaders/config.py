@@ -37,7 +37,6 @@ class SegmentationConfig:
 
     # Cell segmentation (Cellpose)
     cell_model: str = "cyto2"
-    cell_diameter: Optional[float] = None  # Auto-detect if None
     cell_flow_threshold: float = 0.4
     cell_cellprob_threshold: float = 0.0
 
@@ -180,7 +179,6 @@ class PipelineConfig:
                 "nuclei_min_area": self.segmentation.nuclei_min_area,
                 "nuclei_max_area": self.segmentation.nuclei_max_area,
                 "cell_model": self.segmentation.cell_model,
-                "cell_diameter": self.segmentation.cell_diameter,
                 "cell_flow_threshold": self.segmentation.cell_flow_threshold,
                 "cell_cellprob_threshold": self.segmentation.cell_cellprob_threshold,
                 "aggregate_method": self.segmentation.aggregate_method,

@@ -12,8 +12,6 @@ Date: 2026-02-04
 import numpy as np
 import skimage.filters
 import skimage.morphology
-from typing import Optional, Tuple
-
 from ..base import BaseSegmenter
 
 
@@ -34,7 +32,7 @@ class StarDistSegmenter(BaseSegmenter):
     The pipeline:
     1. Pre-processing: Gaussian denoise + background normalization
     2. Inference: StarDist predict_instances
-    3. Post-processing: Size exclusion, border separation, border exclusion
+    3. Post-processing: Size exclusion, border separation
     """
 
     def __init__(
@@ -44,7 +42,6 @@ class StarDistSegmenter(BaseSegmenter):
         sigma_background: float = SIGMA_BACKGROUND,
         min_area: int = MIN_NUCLEUS_AREA,
         max_area: int = MAX_NUCLEUS_AREA,
-        exclude_border: bool = True,
         verbose: bool = False,
         debug: bool = False,
     ):
@@ -57,7 +54,6 @@ class StarDistSegmenter(BaseSegmenter):
             sigma_background: Gaussian sigma for background estimation
             min_area: Minimum nucleus area in pixels
             max_area: Maximum nucleus area in pixels
-            exclude_border: Whether to exclude nuclei touching image borders
             verbose: Print progress messages
             debug: Print detailed debug information
         """
@@ -68,7 +64,6 @@ class StarDistSegmenter(BaseSegmenter):
         self.sigma_background = sigma_background
         self.min_area = min_area
         self.max_area = max_area
-        self.exclude_border = exclude_border
 
         self._model = None
 
@@ -109,50 +104,11 @@ class StarDistSegmenter(BaseSegmenter):
         labels = self._postprocess_size_exclusion(labels)
         labels = self._postprocess_increase_borders(labels)
 
-        if self.exclude_border:
-            labels = self._postprocess_border_exclusion(labels)
-
         # Relabel to ensure consecutive labels
         labels = skimage.morphology.label(labels > 0).astype(np.uint16)
 
         self._log(f"Final count: {labels.max()} nuclei")
         return labels
-
-    def segment_with_seeds(self, image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Segment nuclei and return both labels and seed mask.
-
-        The seed mask excludes border-touching nuclei and is used
-        for cell segmentation (watershed seeds).
-
-        Arguments:
-            image: Input grayscale image (2D array)
-
-        Returns:
-            all_labels: All nuclei labels (including border-touching)
-            seeds: Binary mask of non-border nuclei (for watershed)
-        """
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
-
-        # Pre-processing
-        preprocessed = self._preprocess(image)
-
-        # StarDist inference
-        labels = self._segment_stardist(preprocessed)
-        self._debug(f"StarDist detected {labels.max()} nuclei")
-
-        # Post-processing (size exclusion)
-        labels = self._postprocess_size_exclusion(labels)
-
-        # Increase borders
-        all_labels = self._postprocess_increase_borders(labels)
-
-        # Create seeds (non-border nuclei)
-        seeds_labels = self._postprocess_border_exclusion(all_labels.copy())
-        seeds = (seeds_labels > 0).astype(np.uint8)
-
-        self._log(f"Detected {all_labels.max()} nuclei, {seeds_labels.max()} non-border")
-        return all_labels.astype(np.uint16), seeds
 
     def _preprocess(self, image: np.ndarray) -> np.ndarray:
         """
@@ -183,7 +139,7 @@ class StarDistSegmenter(BaseSegmenter):
         from csbdeep.utils import normalize
 
         labels, _ = self.model.predict_instances(
-            normalize(image),
+            normalize(image), # normalizes to [0,1] range using percentiles.
             predict_kwargs=dict(verbose=False)
         )
         return labels
@@ -221,24 +177,3 @@ class StarDistSegmenter(BaseSegmenter):
         objects[fat_edges] = 0
 
         return objects
-
-    def _postprocess_border_exclusion(self, labels: np.ndarray) -> np.ndarray:
-        """Remove nuclei touching the image border."""
-        # Get labels on each edge
-        border_labels = set()
-        border_labels.update(np.unique(labels[0, :]))      # Top
-        border_labels.update(np.unique(labels[-1, :]))     # Bottom
-        border_labels.update(np.unique(labels[:, 0]))      # Left
-        border_labels.update(np.unique(labels[:, -1]))     # Right
-
-        # Remove background from set
-        border_labels.discard(0)
-
-        # Remove border-touching nuclei
-        for label_id in border_labels:
-            labels[labels == label_id] = 0
-
-        if border_labels:
-            self._debug(f"Excluded {len(border_labels)} border-touching nuclei")
-
-        return labels

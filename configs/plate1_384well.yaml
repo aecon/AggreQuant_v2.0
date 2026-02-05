@@ -39,7 +39,6 @@ segmentation:
 
   # Cell segmentation (Cellpose)
   cell_model: "cyto2"
-  cell_diameter: null        # Auto-detect cell diameter
   cell_flow_threshold: 0.4
   cell_cellprob_threshold: 0.0
 

@@ -133,8 +133,6 @@ class AggreQuantPipeline:
         self._cell_segmenter = CellposeSegmenter(
             model_type=seg_config.cell_model,
             gpu=self.config.use_gpu,
-            diameter=seg_config.cell_diameter,
-            min_nucleus_area=seg_config.nuclei_min_area,
             flow_threshold=seg_config.cell_flow_threshold,
             cellprob_threshold=seg_config.cell_cellprob_threshold,
         )

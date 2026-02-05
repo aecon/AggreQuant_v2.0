@@ -37,12 +37,13 @@ class BaseSegmenter(ABC):
         pass
 
     @abstractmethod
-    def segment(self, image: np.ndarray) -> np.ndarray:
+    def segment(self, image: np.ndarray, **kwargs) -> np.ndarray:
         """
         Segment an image and return labeled mask.
 
         Arguments:
             image: Input image (2D grayscale)
+            **kwargs: Additional arguments for subclasses
 
         Returns:
             labels: Instance segmentation labels

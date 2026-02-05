@@ -10,13 +10,11 @@ Date: 2026-02-04
 """
 
 import numpy as np
-from typing import Optional
 
 from ..base import BaseSegmenter
 
 
 # Default parameters
-MIN_NUCLEUS_AREA = 300
 FLOW_THRESHOLD = 0.4
 CELLPROB_THRESHOLD = 0.0
 
@@ -31,15 +29,14 @@ class CellposeSegmenter(BaseSegmenter):
     The pipeline:
     1. Create 2-channel input [cells, nuclei_mask]
     2. Run Cellpose eval
-    3. Post-processing: Ensure cells contain nuclei
+    3. Match cells to nuclei (relabel cells to match nucleus IDs)
+    4. Exclude border-touching cells
     """
 
     def __init__(
         self,
         model_type: str = "cyto2",
         gpu: bool = True,
-        diameter: Optional[float] = None,
-        min_nucleus_area: int = MIN_NUCLEUS_AREA,
         flow_threshold: float = FLOW_THRESHOLD,
         cellprob_threshold: float = CELLPROB_THRESHOLD,
         verbose: bool = False,
@@ -51,8 +48,6 @@ class CellposeSegmenter(BaseSegmenter):
         Arguments:
             model_type: Cellpose model type (default: 'cyto2')
             gpu: Whether to use GPU
-            diameter: Expected cell diameter in pixels (None for auto-detect)
-            min_nucleus_area: Minimum nucleus area for validation
             flow_threshold: Flow threshold for Cellpose
             cellprob_threshold: Cell probability threshold
             verbose: Print progress messages
@@ -62,8 +57,6 @@ class CellposeSegmenter(BaseSegmenter):
 
         self.model_type = model_type
         self.gpu = gpu
-        self.diameter = diameter
-        self.min_nucleus_area = min_nucleus_area
         self.flow_threshold = flow_threshold
         self.cellprob_threshold = cellprob_threshold
 
@@ -82,70 +75,32 @@ class CellposeSegmenter(BaseSegmenter):
             self._model = Cellpose(gpu=self.gpu, model_type=self.model_type)
         return self._model
 
-    def segment(self, image: np.ndarray, nuclei_labels: Optional[np.ndarray] = None) -> np.ndarray:
+    def segment(self, image: np.ndarray, nuclei_labels: np.ndarray) -> np.ndarray:
         """
         Segment cells in the input image.
 
         Arguments:
             image: Input cell image (2D grayscale)
-            nuclei_labels: Optional nuclei labels for better segmentation
+            nuclei_labels: Nuclei labels from nuclei segmentation
 
         Returns:
             labels: Instance segmentation labels (uint16)
                     0 = background, 1+ = individual cells
+                    Cell labels match their corresponding nucleus labels
         """
         self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
 
-        if nuclei_labels is None:
-            # Segment without nuclei information
-            return self._segment_single_channel(image)
+        # Run Cellpose with nuclei information
+        cell_labels = self._segment_with_nuclei(image, nuclei_labels)
 
-        return self._segment_with_nuclei(image, nuclei_labels)
+        # Match cells to nuclei (relabel cells to match nucleus IDs)
+        labels = self._match_cells_to_nuclei(cell_labels, nuclei_labels)
 
-    def segment_with_seeds(
-        self,
-        image: np.ndarray,
-        nuclei_labels: np.ndarray,
-        seeds: np.ndarray
-    ) -> np.ndarray:
-        """
-        Segment cells ensuring each cell contains a nucleus.
-
-        Arguments:
-            image: Input cell image (2D grayscale)
-            nuclei_labels: All nuclei labels
-            seeds: Binary mask of non-border nuclei
-
-        Returns:
-            labels: Cell labels where each cell contains a nucleus
-        """
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
-
-        # Get cell segmentation
-        labels = self._segment_with_nuclei(image, nuclei_labels)
-
-        # Add cells where there was a nucleus but no cell detected
-        idx = (seeds == 1) & (labels == 0)
-        labels[idx] = 1
-
-        # Remove cells without nuclei
-        labels = self._exclude_cells_without_nucleus(labels, seeds)
+        # Remove cells touching borders
+        labels = self._postprocess_border_exclusion(labels)
 
         self._log(f"Final count: {labels.max()} cells")
         return labels.astype(np.uint16)
-
-    def _segment_single_channel(self, image: np.ndarray) -> np.ndarray:
-        """Segment using only the cell channel."""
-        masks, _, _, _ = self.model.eval(
-            image,
-            diameter=self.diameter,
-            channels=[0, 0],  # Grayscale
-            resample=True,
-            flow_threshold=self.flow_threshold,
-            cellprob_threshold=self.cellprob_threshold,
-            do_3D=False,
-        )
-        return masks.astype(np.uint16)
 
     def _segment_with_nuclei(self, image: np.ndarray, nuclei_labels: np.ndarray) -> np.ndarray:
         """Segment using both cell and nuclei channels."""
@@ -162,7 +117,7 @@ class CellposeSegmenter(BaseSegmenter):
         # channels=[1,2] means: channel 1 is cytoplasm, channel 2 is nuclei
         masks, _, _, _ = self.model.eval(
             input_image,
-            diameter=self.diameter,
+            diameter=None,
             channels=[1, 2],
             resample=True,
             flow_threshold=self.flow_threshold,
@@ -173,26 +128,55 @@ class CellposeSegmenter(BaseSegmenter):
         self._debug(f"Cellpose detected {masks.max()} cells")
         return masks
 
-    def _exclude_cells_without_nucleus(
-        self,
-        labels: np.ndarray,
-        seeds: np.ndarray
-    ) -> np.ndarray:
-        """Remove cells that don't contain a nucleus."""
-        all_labels = np.unique(labels[labels > 0])
-        removed = 0
+    def _postprocess_border_exclusion(self, labels: np.ndarray) -> np.ndarray:
+        """Remove cells touching the image border."""
+        border_labels = set()
+        border_labels.update(np.unique(labels[0, :]))      # Top
+        border_labels.update(np.unique(labels[-1, :]))     # Bottom
+        border_labels.update(np.unique(labels[:, 0]))      # Left
+        border_labels.update(np.unique(labels[:, -1]))     # Right
 
-        for label_id in all_labels:
-            idx = labels == label_id
-            nucleus_area = np.sum(seeds[idx])
+        border_labels.discard(0)
 
-            # Cell must have sufficient nucleus area
-            if nucleus_area < 0.8 * self.min_nucleus_area:
-                labels[idx] = 0
-                removed += 1
-                self._debug(f"Removed cell {label_id}: nucleus area {nucleus_area}")
+        for label_id in border_labels:
+            labels[labels == label_id] = 0
 
-        if removed > 0:
-            self._log(f"Removed {removed} cells without nuclei")
+        if border_labels:
+            self._debug(f"Excluded {len(border_labels)} border-touching cells")
 
         return labels
+
+    def _match_cells_to_nuclei(
+        self,
+        cell_labels: np.ndarray,
+        nuclei_labels: np.ndarray
+    ) -> np.ndarray:
+        """
+        Relabel cells to match their corresponding nucleus IDs.
+
+        For each nucleus:
+        - Find the cell with most overlap and assign it the nucleus ID
+        - If no cell overlaps, use nucleus pixels as the cell
+        """
+        output = np.zeros_like(cell_labels)
+
+        for nuc_id in np.unique(nuclei_labels):
+            if nuc_id == 0:
+                continue
+
+            nuc_mask = nuclei_labels == nuc_id
+
+            # Find cells overlapping with this nucleus
+            overlapping = cell_labels[nuc_mask]
+            overlapping = overlapping[overlapping > 0]
+
+            if len(overlapping) > 0:
+                # Use the cell with most overlap
+                best_cell = np.bincount(overlapping).argmax()
+                output[cell_labels == best_cell] = nuc_id
+            else:
+                # No cell detected - use nucleus pixels as cell
+                output[nuc_mask] = nuc_id
+                self._debug(f"No cell for nucleus {nuc_id}, using nucleus mask")
+
+        return output
