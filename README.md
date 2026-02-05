@@ -39,7 +39,7 @@ conda create -n AggreQuant python=3.11
 conda activate AggreQuant
 
 # Install core dependencies
-pip install numpy scikit-image opencv-python-headless tifffile pandas pyarrow pyyaml pydantic click tqdm matplotlib
+pip install numpy scikit-image tifffile pandas pyarrow pyyaml pydantic click tqdm matplotlib
 
 # Install the package in development mode
 pip install -e .

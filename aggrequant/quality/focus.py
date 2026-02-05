@@ -11,13 +11,13 @@ Date: 2026-02-04
 Ported from: /home/athena/1_CODES/Vangelis_aSyn_aggregate_detection/bluriness.py
 """
 
-import cv2
 import numpy as np
+import skimage.filters
 from dataclasses import dataclass
 from typing import Tuple, Dict
 
 from aggrequant.common.logging import get_logger
-from aggrequant.common.image_utils import normalize_image, to_uint8
+from aggrequant.common.image_utils import normalize_image
 
 logger = get_logger(__name__)
 
@@ -26,25 +26,20 @@ DEFAULT_PATCH_SIZE = (40, 40)
 DEFAULT_BLUR_THRESHOLD = 15  # for Variance of Laplacian
 
 
-def _prepare_image_for_cv2(image: np.ndarray) -> np.ndarray:
+def _prepare_image(image: np.ndarray) -> np.ndarray:
     """
-    Convert image to uint8 for OpenCV operations.
+    Prepare image for focus metric computation.
 
-    Uses percentile normalization to handle outliers and avoid
-    division by zero for constant or zero images.
+    Uses percentile normalization to handle outliers and ensure
+    consistent metric values across different image types.
 
     Arguments:
         image: 2D image array (any dtype)
 
     Returns:
-        uint8 image suitable for cv2 functions
+        Normalized float32 image in [0, 1] range
     """
-    if image.dtype == np.uint8:
-        return image
-
-    # Use percentile normalization for robustness against outliers
-    normalized = normalize_image(image, method="percentile", percentile_low=1.0, percentile_high=99.0)
-    return to_uint8(normalized)
+    return normalize_image(image, method="percentile", percentile_low=1.0, percentile_high=99.0)
 
 
 @dataclass
@@ -97,7 +92,7 @@ def variance_of_laplacian(patch: np.ndarray) -> float:
     Returns:
         Variance of the Laplacian response
     """
-    lap = cv2.Laplacian(patch.astype(np.float64), cv2.CV_64F)
+    lap = skimage.filters.laplace(patch.astype(np.float64))
     return float(lap.var())
 
 
@@ -111,7 +106,7 @@ def laplace_energy(patch: np.ndarray) -> float:
     Returns:
         Mean of squared Laplacian values
     """
-    lap = cv2.Laplacian(patch.astype(np.float64), cv2.CV_64F)
+    lap = skimage.filters.laplace(patch.astype(np.float64))
     return float(np.mean(lap * lap))
 
 
@@ -125,10 +120,8 @@ def sobel_metric(patch: np.ndarray) -> float:
     Returns:
         Mean gradient magnitude
     """
-    patch_float = patch.astype(np.float64)
-    sobelx = cv2.Sobel(patch_float, cv2.CV_64F, 1, 0, ksize=3)
-    sobely = cv2.Sobel(patch_float, cv2.CV_64F, 0, 1, ksize=3)
-    mag = np.sqrt(sobelx**2 + sobely**2)
+    # skimage.filters.sobel returns the magnitude directly
+    mag = skimage.filters.sobel(patch.astype(np.float64))
     return float(np.mean(mag))
 
 
@@ -199,8 +192,8 @@ def compute_focus_metrics(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Convert to uint8 for cv2 functions
-    img = _prepare_image_for_cv2(image)
+    # Normalize image for consistent metric computation
+    img = _prepare_image(image)
 
     h, w = img.shape
     ph, pw = patch_size
@@ -288,8 +281,8 @@ def generate_blur_mask(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Convert to uint8 for cv2 functions
-    img = _prepare_image_for_cv2(image)
+    # Normalize image for consistent metric computation
+    img = _prepare_image(image)
 
     h, w = img.shape
     ph, pw = patch_size
@@ -339,8 +332,8 @@ def compute_patch_focus_maps(
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Convert to uint8 for cv2 functions
-    img = _prepare_image_for_cv2(image)
+    # Normalize image for consistent metric computation
+    img = _prepare_image(image)
 
     h, w = img.shape
     ph, pw = patch_size

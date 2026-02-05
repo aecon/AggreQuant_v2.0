@@ -152,19 +152,18 @@ Vangelis_aSyn_aggregate_detection/
 
 def variance_of_laplacian(patch):
     """PRIMARY METRIC - most reliable for blur detection"""
-    lap = cv2.Laplacian(patch, cv2.CV_64F)
+    lap = skimage.filters.laplace(patch.astype(np.float64))
     return lap.var()
 
 def laplace_energy(patch):
     """Mean of squared Laplacian"""
-    lap = cv2.Laplacian(patch, cv2.CV_64F)
+    lap = skimage.filters.laplace(patch.astype(np.float64))
     return np.mean(lap * lap)
 
 def sobel_metric(patch):
     """Gradient magnitude"""
-    sobelx = cv2.Sobel(patch, cv2.CV_64F, 1, 0, ksize=3)
-    sobely = cv2.Sobel(patch, cv2.CV_64F, 0, 1, ksize=3)
-    return np.mean(np.sqrt(sobelx**2 + sobely**2))
+    mag = skimage.filters.sobel(patch.astype(np.float64))
+    return np.mean(mag)
 
 def brenner_metric(patch):
     """Sum of squared pixel differences (2 pixels apart)"""
@@ -1260,7 +1259,6 @@ dependencies = [
     # Image processing
     "numpy>=1.24",
     "scikit-image>=0.21",
-    "opencv-python-headless>=4.8",
     "tifffile>=2023.7",
 
     # Data handling
@@ -1528,8 +1526,8 @@ All development should be done in this directory. The refactored code will repla
 conda activate AggreQuant
 
 # The environment uses Python 3.11 and has core dependencies installed:
-# numpy, scikit-image, opencv-python-headless, tifffile, pandas,
-# pyarrow, pyyaml, pydantic, click, tqdm, matplotlib
+# numpy, scikit-image, tifffile, pandas, pyarrow, pyyaml, pydantic,
+# click, tqdm, matplotlib
 
 # To install additional dependencies (e.g., for NN training):
 pip install torch torchvision albumentations segmentation-models-pytorch
@@ -1565,7 +1563,7 @@ pip install -e .
 
 **Environment Setup**:
 - [x] Conda environment `AggreQuant` created with Python 3.11
-- [x] Core dependencies installed (numpy, scikit-image, opencv-python-headless, tifffile, pandas, pyarrow, pyyaml, pydantic, click, tqdm, matplotlib)
+- [x] Core dependencies installed (numpy, scikit-image, tifffile, pandas, pyarrow, pyyaml, pydantic, click, tqdm, matplotlib)
 
 **Phase 1 - Core Package (mostly complete)**:
 - [x] `aggrequant/__init__.py` - Package init with version and author
@@ -1584,7 +1582,7 @@ pip install -e .
 
 **Bug Fixes Applied** (from code-reviewer agent):
 - [x] Fixed division by zero in `focus.py` - use percentile normalization
-- [x] Extracted `_prepare_image_for_cv2()` helper to eliminate code duplication
+- [x] Extracted `_prepare_image()` helper to eliminate code duplication
 - [x] Added well ID validation with bounds checking in `plate.py`
 - [x] Added warnings for unparseable filenames in `images.py`
 - [x] Fixed tuple/list inconsistency in `QualityConfig`
