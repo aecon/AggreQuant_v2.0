@@ -113,7 +113,6 @@ class AggreQuantPipeline:
         from .segmentation import (
             StarDistSegmenter,
             CellposeSegmenter,
-            DistanceIntensitySegmenter,
             FilterBasedSegmenter,
             NeuralNetworkSegmenter,
         )

@@ -3,7 +3,7 @@ Segmentation backends for AggreQuant.
 
 Provides segmenters for:
 - Nuclei (StarDist)
-- Cells (Cellpose, Distance-Intensity watershed)
+- Cells (Cellpose)
 - Aggregates (Filter-based, Neural Network)
 
 Original author: Athena Economides
@@ -13,7 +13,7 @@ Date: 2026-02-04
 
 from .base import Segmenter, BaseSegmenter
 from .nuclei import StarDistSegmenter
-from .cells import CellposeSegmenter, DistanceIntensitySegmenter
+from .cells import CellposeSegmenter
 from .aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
 
 __all__ = [
@@ -24,7 +24,6 @@ __all__ = [
     "StarDistSegmenter",
     # Cells
     "CellposeSegmenter",
-    "DistanceIntensitySegmenter",
     # Aggregates
     "FilterBasedSegmenter",
     "NeuralNetworkSegmenter",

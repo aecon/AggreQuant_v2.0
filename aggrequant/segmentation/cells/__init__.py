@@ -7,6 +7,5 @@ Date: 2026-02-04
 """
 
 from .cellpose import CellposeSegmenter
-from .distance_intensity import DistanceIntensitySegmenter
 
-__all__ = ["CellposeSegmenter", "DistanceIntensitySegmenter"]
+__all__ = ["CellposeSegmenter"]
