@@ -66,9 +66,9 @@ python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU')
 pip install stardist
 ```
 
-**Step 3: Install Cellpose** (uses PyTorch)
+**Step 3: Install Cellpose** (uses PyTorch, v3 API required)
 ```bash
-pip install cellpose
+pip install "cellpose>=3.0,<4.0"
 
 # Verify Cellpose GPU detection
 python -c "from cellpose import core; print('Cellpose GPU:', core.use_gpu())"

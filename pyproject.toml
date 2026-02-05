@@ -52,7 +52,7 @@ pipeline = [
     "torch>=2.0",
     "torchvision>=0.15",
     "stardist>=0.8",
-    "cellpose>=3.0",
+    "cellpose>=3.0,<4.0",  # v3 API required
 ]
 
 # For training neural networks

@@ -116,7 +116,7 @@ AggreQuant/
 | Structure | Method | Implementation |
 |-----------|--------|----------------|
 | Nuclei | StarDist 2D | Pre-trained `2D_versatile_fluo` model |
-| Cells | Cellpose | Pre-trained `cyto2` model |
+| Cells | Cellpose | Pre-trained `cyto3` model (v3 API) |
 | Cells | Distance-Intensity | Custom algorithmic (CellProfiler-inspired) |
 | Aggregates | UNet | Custom trained, TensorFlow/Keras |
 | Aggregates | Filter-based | Normalized intensity thresholding |
@@ -1283,7 +1283,7 @@ pipeline = [
     "torch>=2.0",
     "torchvision>=0.15",
     "stardist>=0.8",
-    "cellpose>=3.0",
+    "cellpose>=3.0,<4.0",  # v3 API required
 ]
 
 # For training neural networks
@@ -1327,7 +1327,7 @@ aggrequant-gui = "gui.app:main"
 | PyTorch | >=2.0 | Deep learning framework |
 | segmentation-models-pytorch | >=0.3 | Pre-built architectures |
 | StarDist | >=0.8 | Nuclei segmentation |
-| Cellpose | >=3.0 | Cell segmentation |
+| Cellpose | >=3.0,<4.0 | Cell segmentation (v3 API) |
 | Albumentations | >=1.3 | Data augmentation |
 | customtkinter | >=5.2 | Modern GUI |
 | Pydantic | >=2.0 | Configuration validation |
@@ -1416,7 +1416,7 @@ python -c "from cellpose import core; print('Cellpose GPU:', core.use_gpu())"
 |---------|---------|---------|
 | TensorFlow | 2.20.0 | CUDA 12.x (bundled) |
 | StarDist | 0.9.2 | TensorFlow |
-| Cellpose | 4.0.8 | PyTorch |
+| Cellpose | 3.1.1.1 | PyTorch (v3 API) |
 | PyTorch | 2.10.0 | CUDA 12.x |
 
 ---
