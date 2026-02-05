@@ -38,9 +38,7 @@ segmentation:
   nuclei_max_area: 15000          # Maximum nucleus area in pixels
 
   # Cell segmentation (Cellpose)
-  cell_model: "cyto2"
-  cell_flow_threshold: 0.4
-  cell_cellprob_threshold: 0.0
+  # Uses cyto3 model by default
 
   # Aggregate segmentation (Filter-based)
   aggregate_method: "filter"
@@ -82,4 +80,3 @@ control_wells:
 n_workers: 4
 use_gpu: true
 verbose: true
-debug: false
