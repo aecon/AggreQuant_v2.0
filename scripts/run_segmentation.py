@@ -53,7 +53,10 @@ def main():
 
     # Initialize segmenters
     nuclei_seg = StarDistSegmenter(
-        model_name=config.segmentation.nuclei_model,
+        sigma_denoise=config.segmentation.nuclei_sigma_denoise,
+        sigma_background=config.segmentation.nuclei_sigma_background,
+        min_area=config.segmentation.nuclei_min_area,
+        max_area=config.segmentation.nuclei_max_area,
         verbose=config.verbose,
     )
     cell_seg = CellposeSegmenter(

@@ -8,7 +8,7 @@
 # Date: 2026-02-04
 
 # Input data location
-input_dir: "data/plate1"
+input_dir: "/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/20230509_Dalila_Elena_GE_InCell_Plate_1_2001261754_1"
 plate_format: "384"
 
 # Channel configuration
@@ -31,10 +31,11 @@ channels:
 
 # Segmentation settings
 segmentation:
-  # Nuclei segmentation (StarDist)
-  nuclei_model: "2D_versatile_fluo"
-  nuclei_prob_thresh: 0.5
-  nuclei_nms_thresh: 0.4
+  # Nuclei segmentation (StarDist with 2D_versatile_fluo model)
+  nuclei_sigma_denoise: 2.0       # Gaussian sigma for denoising
+  nuclei_sigma_background: 50.0   # Gaussian sigma for background estimation
+  nuclei_min_area: 300            # Minimum nucleus area in pixels
+  nuclei_max_area: 15000          # Maximum nucleus area in pixels
 
   # Cell segmentation (Cellpose)
   cell_model: "cyto3"

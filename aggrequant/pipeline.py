@@ -120,11 +120,12 @@ class AggreQuantPipeline:
         seg_config = self.config.segmentation
 
         # Nuclei segmenter (StarDist)
-        self._log(f"  Loading StarDist model: {seg_config.nuclei_model}")
+        self._log("  Loading StarDist model: 2D_versatile_fluo")
         self._nuclei_segmenter = StarDistSegmenter(
-            model_name=seg_config.nuclei_model,
-            prob_thresh=seg_config.nuclei_prob_thresh,
-            nms_thresh=seg_config.nuclei_nms_thresh,
+            sigma_denoise=seg_config.nuclei_sigma_denoise,
+            sigma_background=seg_config.nuclei_sigma_background,
+            min_area=seg_config.nuclei_min_area,
+            max_area=seg_config.nuclei_max_area,
         )
 
         # Cell segmenter (Cellpose)

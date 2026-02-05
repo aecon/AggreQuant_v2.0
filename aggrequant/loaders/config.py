@@ -30,9 +30,10 @@ class ChannelConfig:
 class SegmentationConfig:
     """Configuration for segmentation parameters."""
     # Nuclei segmentation (StarDist)
-    nuclei_model: str = "2D_versatile_fluo"
-    nuclei_prob_thresh: float = 0.5
-    nuclei_nms_thresh: float = 0.4
+    nuclei_sigma_denoise: float = 2.0
+    nuclei_sigma_background: float = 50.0
+    nuclei_min_area: int = 300
+    nuclei_max_area: int = 15000
 
     # Cell segmentation (Cellpose)
     cell_model: str = "cyto3"
@@ -174,9 +175,10 @@ class PipelineConfig:
                 for ch in self.channels
             ],
             "segmentation": {
-                "nuclei_model": self.segmentation.nuclei_model,
-                "nuclei_prob_thresh": self.segmentation.nuclei_prob_thresh,
-                "nuclei_nms_thresh": self.segmentation.nuclei_nms_thresh,
+                "nuclei_sigma_denoise": self.segmentation.nuclei_sigma_denoise,
+                "nuclei_sigma_background": self.segmentation.nuclei_sigma_background,
+                "nuclei_min_area": self.segmentation.nuclei_min_area,
+                "nuclei_max_area": self.segmentation.nuclei_max_area,
                 "cell_model": self.segmentation.cell_model,
                 "cell_diameter": self.segmentation.cell_diameter,
                 "cell_flow_threshold": self.segmentation.cell_flow_threshold,

@@ -62,7 +62,7 @@ def print_config_summary(config: "PipelineConfig") -> None:
         print(f"    - {ch.name}: pattern='{ch.pattern}', purpose={ch.purpose}")
     print()
     print("  Segmentation:")
-    print(f"    - Nuclei:     {config.segmentation.nuclei_model}")
+    print("    - Nuclei:     StarDist (2D_versatile_fluo)")
     print(f"    - Cells:      {config.segmentation.cell_model}")
     print(f"    - Aggregates: {config.segmentation.aggregate_method}")
     print()
