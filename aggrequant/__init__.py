@@ -9,16 +9,10 @@ This package provides tools for:
 __version__ = "2.0.0"
 __author__ = "Athena Economides"
 
-from .pipeline import (
-    AggreQuantPipeline,
-    PipelineState,
-    run_pipeline_from_config,
-)
+from .pipeline import SegmentationPipeline
 
 __all__ = [
     "__version__",
     "__author__",
-    "AggreQuantPipeline",
-    "PipelineState",
-    "run_pipeline_from_config",
+    "SegmentationPipeline",
 ]
