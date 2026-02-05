@@ -3,9 +3,7 @@ Image loading utilities for microscopy data.
 
 Supports TIFF, ND2, and common HCS image formats.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import re

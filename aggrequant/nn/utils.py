@@ -1,8 +1,6 @@
 """PyTorch utility functions.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-05
+Author: Athena Economides, 2026, UZH
 """
 
 from typing import Optional, Union

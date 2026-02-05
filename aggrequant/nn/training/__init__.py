@@ -3,9 +3,7 @@
 This module provides loss functions and training loops for
 segmentation model training.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.training import DiceBCELoss, Trainer

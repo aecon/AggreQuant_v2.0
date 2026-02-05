@@ -4,9 +4,7 @@ Unit tests for GUI components.
 Tests widget logic, state management, and data flow without requiring
 a display. Uses fixtures to manage tkinter root window lifecycle.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import pytest

@@ -3,9 +3,7 @@
 This module provides PyTorch datasets and data augmentation pipelines
 for aggregate segmentation training.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.data import AggregateDataset, get_training_augmentation

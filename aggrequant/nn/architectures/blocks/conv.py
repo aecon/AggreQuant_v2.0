@@ -3,9 +3,7 @@
 This module provides the fundamental building blocks used in the encoder
 and decoder paths of UNet-style networks.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import torch

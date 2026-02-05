@@ -3,9 +3,7 @@
 This module provides pluggable components that can be swapped via configuration
 to enable systematic benchmarking of different UNet variants.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 
 Available blocks:
 

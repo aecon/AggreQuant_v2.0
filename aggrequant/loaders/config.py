@@ -1,9 +1,7 @@
 """
 Configuration schema and validation for the analysis pipeline.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 from dataclasses import dataclass, field

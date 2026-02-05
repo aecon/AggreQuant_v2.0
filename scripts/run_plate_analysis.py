@@ -18,9 +18,7 @@ Usage:
     # Dry run (validate config without processing):
     python scripts/run_plate_analysis.py configs/plate1_384well.yaml --dry-run
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import sys

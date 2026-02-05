@@ -4,9 +4,7 @@ StarDist-based nuclei segmentation.
 Wraps the pre-trained StarDist 2D model for nuclei detection
 in fluorescence microscopy images.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import numpy as np

@@ -4,9 +4,7 @@ CLI utility functions for AggreQuant scripts.
 Provides progress bars, configuration summaries, and result formatting
 for command-line tools.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 from typing import Callable, Optional, TYPE_CHECKING

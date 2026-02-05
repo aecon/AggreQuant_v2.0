@@ -3,9 +3,7 @@
 This module provides a standard PyTorch training loop with checkpointing,
 metrics logging, and support for deep supervision.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.training.trainer import Trainer

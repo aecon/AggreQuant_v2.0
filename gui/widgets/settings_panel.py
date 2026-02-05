@@ -4,9 +4,7 @@ Settings panel widget for configuring analysis parameters.
 Provides controls for segmentation methods, quality thresholds,
 and output options.
 
-Original author: Athena Economides
-Refactoring tool: Claude Opus 4.5
-Date: 2026-02-04
+Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk
