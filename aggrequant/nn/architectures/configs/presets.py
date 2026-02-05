@@ -22,6 +22,10 @@ Example:
 
 from typing import Dict, Any
 
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 # Base configuration that all presets inherit from
 _BASE_CONFIG: Dict[str, Any] = {
     "in_channels": 1,
@@ -264,12 +268,12 @@ def get_config_description(name: str) -> str:
 
 def print_configs() -> None:
     """Print all available configurations with descriptions."""
-    print("Available Benchmark Configurations:")
-    print("=" * 60)
+    logger.info("Available Benchmark Configurations:")
+    logger.info("=" * 60)
     for name in BENCHMARK_CONFIGS:
         desc = get_config_description(name)
-        print(f"  {name:30s} - {desc}")
-    print("=" * 60)
+        logger.info(f"  {name:30s} - {desc}")
+    logger.info("=" * 60)
 
 
 # Exported configurations for easy access

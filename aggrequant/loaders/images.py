@@ -14,6 +14,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 # Sentinel value for unparseable well IDs
 UNKNOWN_WELL_ID = "unknown"
@@ -133,6 +137,38 @@ def parse_imageexpress_filename(filename: str) -> Dict[str, str]:
     return {}
 
 
+def parse_incell_filename(filename: str) -> Dict[str, str]:
+    """
+    Parse GE InCell Analyzer microscope filename format.
+
+    Expected format: A - 01(fld 1 wv 390 - Blue).tif
+    Where:
+        - A - 01: well (row letter - column number)
+        - fld 1: field of view
+        - wv 390: wavelength/channel
+
+    Arguments:
+        filename: Filename to parse
+
+    Returns:
+        Dictionary with parsed components
+    """
+    # Pattern for InCell format: "A - 01(fld 1 wv 390 - Blue).tif"
+    # Also handles: "A - 01(fld 01 wv 390 - Blue).tif" with zero-padded field
+    pattern = r"([A-P])\s*-\s*(\d+)\(fld\s*(\d+)\s+wv\s+(\d+)"
+    match = re.search(pattern, filename, re.IGNORECASE)
+
+    if match:
+        return {
+            "row": match.group(1).upper(),
+            "col": match.group(2),
+            "field": match.group(3),
+            "wavelength": match.group(4),
+        }
+
+    return {}
+
+
 def find_channel_files(
     directory: Path,
     channel_pattern: str,
@@ -179,14 +215,18 @@ def group_files_by_well(
     for f in files:
         # Try to extract well info
         if filename_parser == "auto":
-            # Try Operetta first, then ImageXpress
+            # Try Operetta first, then InCell, then ImageXpress
             info = parse_operetta_filename(f.name)
+            if not info:
+                info = parse_incell_filename(f.name)
             if not info:
                 info = parse_imageexpress_filename(f.name)
         elif filename_parser == "operetta":
             info = parse_operetta_filename(f.name)
         elif filename_parser == "imageexpress":
             info = parse_imageexpress_filename(f.name)
+        elif filename_parser == "incell":
+            info = parse_incell_filename(f.name)
         else:
             info = {}
 
@@ -194,10 +234,16 @@ def group_files_by_well(
         if "well" in info:
             well_id = info["well"]
         elif "row" in info and "col" in info:
-            # Convert row/col numbers to well ID (e.g., row=1, col=2 -> "A02")
-            row_num = int(info["row"])
+            # Row can be a letter (InCell) or number (Operetta)
+            row_val = info["row"]
             col_num = int(info["col"])
-            row_letter = chr(ord('A') + row_num - 1)
+            if row_val.isalpha():
+                # InCell format: row is already a letter
+                row_letter = row_val.upper()
+            else:
+                # Operetta format: row is a number (1-indexed)
+                row_num = int(row_val)
+                row_letter = chr(ord('A') + row_num - 1)
             well_id = f"{row_letter}{col_num:02d}"
         else:
             # Fallback: try to extract from filename
@@ -236,12 +282,17 @@ def group_files_by_field(files: List[Path]) -> Dict[str, List[Path]]:
         if "field" in info:
             field_id = info["field"]
         else:
-            # Try to extract field/site from filename
-            match = re.search(r"[fs](\d+)", f.name.lower())
-            if match:
-                field_id = match.group(1)
+            # Try InCell format
+            info = parse_incell_filename(f.name)
+            if "field" in info:
+                field_id = info["field"]
             else:
-                field_id = "1"
+                # Try to extract field/site from filename
+                match = re.search(r"[fs](\d+)", f.name.lower())
+                if match:
+                    field_id = match.group(1)
+                else:
+                    field_id = "1"
 
         if field_id not in fields:
             fields[field_id] = []
@@ -285,15 +336,13 @@ class ImageLoader:
 
     def _discover_files(self):
         """Scan directory and organize files."""
-        me = "ImageLoader._discover_files"
-
         all_files = list(self.directory.glob("**/*.tif*"))
         if self.verbose:
-            print(f"({me}) Found {len(all_files)} TIFF files")
+            logger.info(f"Found {len(all_files)} TIFF files")
 
         self.files_by_well = group_files_by_well(all_files, self.filename_parser)
         if self.verbose:
-            print(f"({me}) Organized into {len(self.files_by_well)} wells")
+            logger.info(f"Organized into {len(self.files_by_well)} wells")
 
     @property
     def wells(self) -> List[str]:
@@ -324,8 +373,6 @@ class ImageLoader:
         Returns:
             Tuple of (list of images, list of file paths)
         """
-        me = "ImageLoader.load_well_channel"
-
         if channel not in self.channel_patterns:
             raise ValueError(f"Unknown channel '{channel}'. Known: {list(self.channel_patterns.keys())}")
 
@@ -336,7 +383,7 @@ class ImageLoader:
         channel_files = [f for f in well_files if pattern.lower() in f.name.lower()]
 
         if self.verbose:
-            print(f"({me}) Loading {len(channel_files)} images for {well}/{channel}")
+            logger.info(f"Loading {len(channel_files)} images for {well}/{channel}")
 
         images = [load_tiff(f) for f in channel_files]
         return images, channel_files

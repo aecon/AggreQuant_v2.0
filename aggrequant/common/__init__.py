@@ -16,7 +16,14 @@ from .image_utils import (
 from .logging import (
     setup_logging,
     get_logger,
-    SimpleLogger,
+)
+from .cli_utils import (
+    create_progress_bar,
+    print_config_summary,
+    print_results_summary,
+    print_section_header,
+    print_key_value,
+    ProgressCallback,
 )
 
 __all__ = [
@@ -29,5 +36,11 @@ __all__ = [
     # Logging
     "setup_logging",
     "get_logger",
-    "SimpleLogger",
+    # CLI utilities
+    "create_progress_bar",
+    "print_config_summary",
+    "print_results_summary",
+    "print_section_header",
+    "print_key_value",
+    "ProgressCallback",
 ]

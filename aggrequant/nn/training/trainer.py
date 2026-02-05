@@ -27,6 +27,10 @@ from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 try:
     from tqdm import tqdm
     HAS_TQDM = True
@@ -122,8 +126,6 @@ class Trainer:
         verbose: bool = True,
         debug: bool = False,
     ) -> None:
-        me = "Trainer.__init__"
-
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -155,9 +157,9 @@ class Trainer:
         self.history = TrainingHistory()
 
         if verbose:
-            print(f"({me}) Training on device: {self.device}")
+            logger.info(f"Training on device: {self.device}")
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            print(f"({me}) Model parameters: {params:,}")
+            logger.info(f"Model parameters: {params:,}")
 
     def train_epoch(self) -> Tuple[float, Dict[str, float]]:
         """Train for one epoch.
@@ -271,10 +273,8 @@ class Trainer:
         Returns:
             TrainingHistory object with training metrics
         """
-        me = "Trainer.fit"
-
         if self.verbose:
-            print(f"({me}) Training for {epochs} epochs...")
+            logger.info(f"Training for {epochs} epochs...")
 
         patience_counter = 0
         start_time = time.time()
@@ -315,7 +315,7 @@ class Trainer:
             else:
                 patience_counter += 1
 
-            # Print progress
+            # Log progress
             if self.verbose:
                 val_str = f", val_loss: {val_loss:.4f}" if self.val_loader else ""
                 metrics_str = ", ".join(
@@ -323,7 +323,7 @@ class Trainer:
                 )
                 if metrics_str:
                     metrics_str = ", " + metrics_str
-                print(
+                logger.info(
                     f"Epoch {self.current_epoch}/{epochs} - "
                     f"loss: {train_loss:.4f}{val_str}{metrics_str} - "
                     f"lr: {current_lr:.2e}"
@@ -339,8 +339,8 @@ class Trainer:
             # Early stopping
             if early_stopping_patience is not None and patience_counter >= early_stopping_patience:
                 if self.verbose:
-                    print(
-                        f"({me}) Early stopping at epoch {self.current_epoch} "
+                    logger.info(
+                        f"Early stopping at epoch {self.current_epoch} "
                         f"(no improvement for {early_stopping_patience} epochs)"
                     )
                 break
@@ -348,8 +348,8 @@ class Trainer:
         # Training complete
         total_time = time.time() - start_time
         if self.verbose:
-            print(
-                f"({me}) Training complete in {total_time:.1f}s. "
+            logger.info(
+                f"Training complete in {total_time:.1f}s. "
                 f"Best val_loss: {self.history.best_val_loss:.4f} "
                 f"at epoch {self.history.best_epoch}"
             )
@@ -383,7 +383,7 @@ class Trainer:
         torch.save(checkpoint, self.checkpoint_dir / filename)
 
         if self.debug:
-            print(f"Saved checkpoint: {self.checkpoint_dir / filename}")
+            logger.debug(f"Saved checkpoint: {self.checkpoint_dir / filename}")
 
     def load_checkpoint(self, path: Union[str, Path]) -> None:
         """Load model checkpoint.
@@ -391,8 +391,6 @@ class Trainer:
         Arguments:
             path: Path to checkpoint file
         """
-        me = "Trainer.load_checkpoint"
-
         checkpoint = torch.load(path, map_location=self.device)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -404,7 +402,7 @@ class Trainer:
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
         if self.verbose:
-            print(f"({me}) Loaded checkpoint from epoch {self.current_epoch}")
+            logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
 
 
 def train_model(

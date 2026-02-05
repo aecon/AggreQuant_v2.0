@@ -14,6 +14,9 @@ from typing import Optional, Tuple, Dict
 from dataclasses import dataclass
 
 from .results import FieldResult
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # Default parameters
@@ -95,8 +98,6 @@ def compute_field_measurements(
         result: FieldResult with all measurements
         diagnostics: Dictionary with diagnostic images/data
     """
-    me = "compute_field_measurements"
-
     # Create aggregate mask inside cells
     mask_agg = compute_aggregate_mask_inside_cells(aggregate_labels, cell_labels)
 
@@ -104,7 +105,7 @@ def compute_field_measurements(
     labels_agg_inside = skimage.morphology.label(mask_agg, connectivity=2)
 
     if debug:
-        print(f"({me}) Aggregates inside cells: {labels_agg_inside.max()}")
+        logger.debug(f"Aggregates inside cells: {labels_agg_inside.max()}")
 
     # Cell mask
     mask_cell = (cell_labels > 0).astype(np.uint8)
@@ -117,7 +118,7 @@ def compute_field_measurements(
     n_aggregates = len(unique_aggregates)
 
     if verbose:
-        print(f"({me}) Found {n_cells} cells, {n_aggregates} aggregates inside cells")
+        logger.info(f"Found {n_cells} cells, {n_aggregates} aggregates inside cells")
 
     # Initialize tracking arrays
     aggregates_per_cell = np.zeros(n_cells)  # Number of aggregates per cell

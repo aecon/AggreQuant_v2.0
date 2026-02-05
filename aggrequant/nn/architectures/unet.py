@@ -252,8 +252,6 @@ class ModularUNet(nn.Module):
     ) -> None:
         super().__init__()
 
-        me = "ModularUNet.__init__"
-
         # Default features if not provided
         if features is None:
             features = [64, 128, 256, 512]
@@ -264,7 +262,7 @@ class ModularUNet(nn.Module):
 
         # Validate configuration
         if use_se and use_cbam:
-            raise ValueError(f"({me}) use_se and use_cbam are mutually exclusive")
+            raise ValueError("use_se and use_cbam are mutually exclusive")
 
         # Build encoder path
         self.encoders = nn.ModuleList()

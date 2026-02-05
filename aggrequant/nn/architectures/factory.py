@@ -60,12 +60,10 @@ def create_model(name: str, **kwargs) -> nn.Module:
         >>> model = create_model('unet_baseline', in_channels=1, out_channels=1)
         >>> model = create_model('unet_residual', in_channels=3, out_channels=2)
     """
-    me = "create_model"
-
     if name not in ARCHITECTURES:
         available = list(ARCHITECTURES.keys())
         raise ValueError(
-            f"({me}) Unknown architecture: '{name}'. "
+            f"Unknown architecture: '{name}'. "
             f"Available architectures: {available}"
         )
 

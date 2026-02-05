@@ -16,6 +16,10 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Tuple, Dict
 
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 # Default parameters
 DEFAULT_PATCH_SIZE = (40, 40)
 DEFAULT_BLUR_THRESHOLD = 15  # for Variance of Laplacian
@@ -196,8 +200,6 @@ def compute_focus_metrics(
     Returns:
         FocusMetrics dataclass with all computed metrics
     """
-    me = "compute_focus_metrics"
-
     # Ensure image is suitable for processing
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
@@ -218,7 +220,7 @@ def compute_focus_metrics(
         raise ValueError(f"Image size {h}x{w} too small for patch size {patch_size}")
 
     if verbose:
-        print(f"({me}) Image size: {h}x{w}, patch grid: {len(ys)}x{len(xs)} = {n_patches} patches")
+        logger.info(f"Image size: {h}x{w}, patch grid: {len(ys)}x{len(xs)} = {n_patches} patches")
 
     # Storage for per-patch metrics
     var_lap_values = []
@@ -251,8 +253,8 @@ def compute_focus_metrics(
     pct_area_blurry = blurry_patch_area / (h * w) * 100
 
     if debug:
-        print(f"({me}) Variance Laplacian: mean={np.mean(var_lap):.2f}, min={np.min(var_lap):.2f}")
-        print(f"({me}) Blurry patches: {n_blurry}/{n_patches} ({pct_blurry:.1f}%)")
+        logger.debug(f"Variance Laplacian: mean={np.mean(var_lap):.2f}, min={np.min(var_lap):.2f}")
+        logger.debug(f"Blurry patches: {n_blurry}/{n_patches} ({pct_blurry:.1f}%)")
 
     return FocusMetrics(
         variance_laplacian_mean=float(np.mean(var_lap)),
@@ -288,8 +290,6 @@ def generate_blur_mask(
     Returns:
         blur_mask: boolean array, True where image is blurry
     """
-    me = "generate_blur_mask"
-
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
@@ -316,7 +316,7 @@ def generate_blur_mask(
 
     if verbose:
         n_patches = len(ys) * len(xs)
-        print(f"({me}) Masked {n_blurry}/{n_patches} patches as blurry")
+        logger.info(f"Masked {n_blurry}/{n_patches} patches as blurry")
 
     return blur_mask
 
@@ -341,8 +341,6 @@ def compute_patch_focus_maps(
         ys: list of patch y coordinates
         xs: list of patch x coordinates
     """
-    me = "compute_patch_focus_maps"
-
     if len(image.shape) != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
@@ -359,7 +357,7 @@ def compute_patch_focus_maps(
     n_x = len(xs)
 
     if verbose:
-        print(f"({me}) Computing focus maps: {n_y}x{n_x} patches")
+        logger.info(f"Computing focus maps: {n_y}x{n_x} patches")
 
     # Initialize maps
     maps = {

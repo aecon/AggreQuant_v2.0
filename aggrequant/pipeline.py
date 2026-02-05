@@ -16,7 +16,10 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any, Callable, Tuple
 import numpy as np
 
+from .common.logging import get_logger
 from .loaders.config import PipelineConfig, ChannelConfig
+
+logger = get_logger(__name__)
 from .loaders.images import ImageLoader, group_files_by_field, load_tiff
 from .loaders.plate import Plate, Well, FieldOfView, well_id_to_indices
 from .quality.focus import compute_focus_metrics, generate_blur_mask
@@ -93,19 +96,18 @@ class AggreQuantPipeline:
         self.plate_result: Optional[PlateResult] = None
 
     def _log(self, message: str):
-        """Print message if verbose mode enabled."""
+        """Log message if verbose mode enabled."""
         if self.verbose:
-            print(f"[AggreQuantPipeline] {message}")
+            logger.info(message)
 
     def _debug(self, message: str):
-        """Print message if debug mode enabled."""
+        """Log debug message if debug mode enabled."""
         if self.debug:
-            print(f"[AggreQuantPipeline:DEBUG] {message}")
+            logger.debug(message)
 
     def _init_segmenters(self):
         """Initialize segmentation backends."""
-        me = "_init_segmenters"
-        self._log(f"Initializing segmenters...")
+        self._log("Initializing segmenters...")
 
         # Import here to allow lazy loading
         from .segmentation import (
@@ -167,8 +169,6 @@ class AggreQuantPipeline:
         Returns:
             Tuple of (ImageLoader, dict mapping well_id -> field_id -> file_list)
         """
-        me = "_discover_plate_structure"
-
         # Build channel patterns from config
         channel_patterns = {}
         for ch in self.config.channels:
@@ -216,8 +216,6 @@ class AggreQuantPipeline:
         Returns:
             FieldResult or None if processing failed
         """
-        me = "_process_field"
-
         try:
             # Load images for each channel
             images = {}
@@ -413,7 +411,6 @@ class AggreQuantPipeline:
         Returns:
             PlateResult with all analysis results
         """
-        me = "run"
         self._log("Starting AggreQuant pipeline...")
 
         self.state = PipelineState(is_running=True, start_time=time.time())

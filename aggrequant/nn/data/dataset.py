@@ -25,6 +25,12 @@ import torch
 from torch.utils.data import Dataset
 import skimage.io
 
+# Import normalize_image from common utilities
+from aggrequant.common.image_utils import normalize_image as _normalize_image_common
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 # Try to import tifffile for better TIFF support
 try:
     import tifffile
@@ -55,6 +61,10 @@ def normalize_image(
 ) -> np.ndarray:
     """Normalize image to [0, 1] range using percentile scaling.
 
+    This is a convenience wrapper around the common normalize_image function
+    that uses percentile-based normalization by default, which is preferred
+    for neural network training.
+
     Arguments:
         image: Input image
         percentile_low: Lower percentile for clipping
@@ -63,15 +73,12 @@ def normalize_image(
     Returns:
         Normalized image in [0, 1] range as float32
     """
-    image = image.astype(np.float32)
-    p_low = np.percentile(image, percentile_low)
-    p_high = np.percentile(image, percentile_high)
-
-    if p_high - p_low < 1e-6:
-        return np.zeros_like(image, dtype=np.float32)
-
-    image = (image - p_low) / (p_high - p_low)
-    return np.clip(image, 0, 1).astype(np.float32)
+    return _normalize_image_common(
+        image,
+        method="percentile",
+        percentile_low=percentile_low,
+        percentile_high=percentile_high,
+    )
 
 
 class AggregateDataset(Dataset):
@@ -120,8 +127,6 @@ class AggregateDataset(Dataset):
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
-        me = "AggregateDataset.__init__"
-
         self.image_dir = Path(image_dir)
         self.mask_dir = Path(mask_dir)
         self.patch_size = patch_size
@@ -138,7 +143,7 @@ class AggregateDataset(Dataset):
 
         if len(self.image_files) == 0:
             raise ValueError(
-                f"({me}) No images found in {self.image_dir} "
+                f"No images found in {self.image_dir} "
                 f"matching pattern '{image_pattern}'"
             )
 
@@ -156,16 +161,16 @@ class AggregateDataset(Dataset):
             if mask_path.exists():
                 self.pairs.append((img_path, mask_path))
             elif verbose:
-                print(f"({me}) Warning: No mask found for {img_path.name}")
+                logger.warning(f"No mask found for {img_path.name}")
 
         if len(self.pairs) == 0:
             raise ValueError(
-                f"({me}) No image-mask pairs found. "
-                f"Check mask_dir and mask_suffix settings."
+                "No image-mask pairs found. "
+                "Check mask_dir and mask_suffix settings."
             )
 
         if verbose:
-            print(f"({me}) Found {len(self.pairs)} image-mask pairs")
+            logger.info(f"Found {len(self.pairs)} image-mask pairs")
 
         # Calculate total length
         if patch_size is not None:
@@ -218,8 +223,6 @@ class AggregateDataset(Dataset):
         Returns:
             Tuple of (image_tensor, mask_tensor)
         """
-        me = "AggregateDataset.__getitem__"
-
         # Determine which image-mask pair to load
         if self.patch_size is not None:
             pair_idx = idx // self.patches_per_image
@@ -233,7 +236,7 @@ class AggregateDataset(Dataset):
         mask = load_image(mask_path)
 
         if self.debug:
-            print(f"({me}) Loaded {img_path.name}: shape={image.shape}, dtype={image.dtype}")
+            logger.debug(f"Loaded {img_path.name}: shape={image.shape}, dtype={image.dtype}")
 
         # Ensure 2D
         if image.ndim == 3:
@@ -294,8 +297,6 @@ class PatchDataset(Dataset):
         percentile_low: float = 1.0,
         percentile_high: float = 99.0,
     ) -> None:
-        me = "PatchDataset.__init__"
-
         self.image_dir = Path(image_dir)
         self.mask_dir = Path(mask_dir)
         self.transform = transform
@@ -311,7 +312,7 @@ class PatchDataset(Dataset):
         self.image_files = sorted(self.image_files)
 
         if len(self.image_files) == 0:
-            raise ValueError(f"({me}) No patch files found in {self.image_dir}")
+            raise ValueError(f"No patch files found in {self.image_dir}")
 
     def __len__(self) -> int:
         return len(self.image_files)
@@ -378,8 +379,6 @@ class InferenceDataset(Dataset):
         patch_size: Optional[int] = None,
         stride: Optional[int] = None,
     ) -> None:
-        me = "InferenceDataset.__init__"
-
         # Handle directory input
         if isinstance(image_paths, (str, Path)):
             path = Path(image_paths)
@@ -395,7 +394,7 @@ class InferenceDataset(Dataset):
             self.image_paths = [Path(p) for p in image_paths]
 
         if len(self.image_paths) == 0:
-            raise ValueError(f"({me}) No images found")
+            raise ValueError("No images found")
 
         self.normalize = normalize
         self.percentile_low = percentile_low

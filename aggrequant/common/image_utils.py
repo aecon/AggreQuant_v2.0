@@ -9,7 +9,12 @@ Date: 2026-02-04
 import numpy as np
 
 
-def normalize_image(image: np.ndarray, method: str = "minmax") -> np.ndarray:
+def normalize_image(
+    image: np.ndarray,
+    method: str = "minmax",
+    percentile_low: float = 1.0,
+    percentile_high: float = 99.0,
+) -> np.ndarray:
     """
     Normalize image to [0, 1] range.
 
@@ -17,8 +22,10 @@ def normalize_image(image: np.ndarray, method: str = "minmax") -> np.ndarray:
         image: Input image (any dtype)
         method: Normalization method
             - "minmax": Scale to [0, 1] using min/max
-            - "percentile": Use 1st and 99th percentile for robustness
+            - "percentile": Use percentile clipping for robustness
             - "zscore": Zero mean, unit std, then scale to [0, 1]
+        percentile_low: Lower percentile for "percentile" method (default: 1.0)
+        percentile_high: Upper percentile for "percentile" method (default: 99.0)
 
     Returns:
         Normalized image as float32 in [0, 1]
@@ -34,10 +41,10 @@ def normalize_image(image: np.ndarray, method: str = "minmax") -> np.ndarray:
             img = np.zeros_like(img)
 
     elif method == "percentile":
-        p1 = np.percentile(img, 1)
-        p99 = np.percentile(img, 99)
-        if p99 - p1 > 0:
-            img = np.clip((img - p1) / (p99 - p1), 0, 1)
+        p_low = np.percentile(img, percentile_low)
+        p_high = np.percentile(img, percentile_high)
+        if p_high - p_low > 1e-6:
+            img = np.clip((img - p_low) / (p_high - p_low), 0, 1)
         else:
             img = np.zeros_like(img)
 

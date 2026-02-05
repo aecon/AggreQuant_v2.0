@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Optional
 
 
+# Module-level flag to track if logging has been configured
+_logging_configured = False
+
+
 def setup_logging(
     level: str = "INFO",
     log_file: Optional[Path] = None,
@@ -28,6 +32,8 @@ def setup_logging(
     Returns:
         Configured root logger
     """
+    global _logging_configured
+
     if format_string is None:
         format_string = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 
@@ -59,6 +65,7 @@ def setup_logging(
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
+    _logging_configured = True
     return logger
 
 
@@ -71,45 +78,24 @@ def get_logger(name: str) -> logging.Logger:
 
     Returns:
         Logger instance
+
+    Note:
+        If logging hasn't been configured via setup_logging(),
+        a basic configuration will be applied automatically.
     """
-    return logging.getLogger(f"aggrequant.{name}")
+    global _logging_configured
 
+    logger = logging.getLogger(f"aggrequant.{name}")
 
-class SimpleLogger:
-    """
-    Simple logger that follows the existing codebase style.
+    # Ensure at least basic logging is configured
+    if not _logging_configured:
+        root_logger = logging.getLogger("aggrequant")
+        if not root_logger.handlers:
+            # Set up minimal default logging
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(logging.Formatter("[%(levelname)s] %(name)s: %(message)s"))
+            root_logger.addHandler(handler)
+            root_logger.setLevel(logging.INFO)
+        _logging_configured = True
 
-    Uses print statements with function name prefix for compatibility
-    with the existing verbose/debug pattern.
-    """
-
-    def __init__(self, name: str, verbose: bool = False, debug: bool = False):
-        """
-        Initialize simple logger.
-
-        Arguments:
-            name: Logger name (usually function or module name)
-            verbose: Enable verbose output
-            debug: Enable debug output
-        """
-        self.name = name
-        self.verbose = verbose
-        self.debug = debug
-
-    def msg(self, message: str):
-        """Print message if verbose is enabled."""
-        if self.verbose:
-            print(f"({self.name}) {message}")
-
-    def dbg(self, message: str):
-        """Print message if debug is enabled."""
-        if self.debug:
-            print(f"({self.name}) [DEBUG] {message}")
-
-    def err(self, message: str):
-        """Print error message (always shown)."""
-        print(f"({self.name}) [ERROR] {message}")
-
-    def warn(self, message: str):
-        """Print warning message (always shown)."""
-        print(f"({self.name}) [WARNING] {message}")
+    return logger

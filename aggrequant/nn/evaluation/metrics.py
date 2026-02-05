@@ -18,6 +18,10 @@ import torch.nn.functional as F
 import numpy as np
 from typing import Union, Optional, Tuple
 
+from aggrequant.common.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def dice_score(
     predictions: torch.Tensor,
@@ -488,9 +492,9 @@ def evaluate_model(
         avg_metrics[key] = np.mean([m[key] for m in all_metrics])
 
     if verbose:
-        print("Evaluation Results:")
+        logger.info("Evaluation Results:")
         for key, value in avg_metrics.items():
-            print(f"  {key}: {value:.4f}")
+            logger.info(f"  {key}: {value:.4f}")
 
     return avg_metrics
 

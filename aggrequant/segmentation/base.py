@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 from typing import Protocol, runtime_checkable
 import numpy as np
 
+from aggrequant.common.logging import get_logger
+
 
 @runtime_checkable
 class Segmenter(Protocol):
@@ -77,14 +79,16 @@ class BaseSegmenter(ABC):
         pass
 
     def _log(self, message: str):
-        """Print message if verbose is enabled."""
+        """Log message if verbose is enabled."""
         if self.verbose:
-            print(f"({self.name}) {message}")
+            logger = get_logger(f"segmentation.{self.name}")
+            logger.info(message)
 
     def _debug(self, message: str):
-        """Print message if debug is enabled."""
+        """Log debug message if debug is enabled."""
         if self.debug:
-            print(f"({self.name}) [DEBUG] {message}")
+            logger = get_logger(f"segmentation.{self.name}")
+            logger.debug(message)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}')"
