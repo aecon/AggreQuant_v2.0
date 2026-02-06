@@ -1259,6 +1259,7 @@ dependencies = [
     # Image processing
     "numpy>=1.24",
     "scikit-image>=0.21",
+    "opencv-python-headless>=4.8",
     "tifffile>=2023.7",
 
     # Data handling
@@ -1328,6 +1329,7 @@ aggrequant-gui = "gui.app:main"
 | segmentation-models-pytorch | >=0.3 | Pre-built architectures |
 | StarDist | >=0.8 | Nuclei segmentation |
 | Cellpose | >=3.0,<4.0 | Cell segmentation (v3 API) |
+| OpenCV | >=4.8 | Focus metrics (Laplacian, Sobel) |
 | Albumentations | >=1.3 | Data augmentation |
 | customtkinter | >=5.2 | Modern GUI |
 | Pydantic | >=2.0 | Configuration validation |
@@ -1526,8 +1528,8 @@ All development should be done in this directory. The refactored code will repla
 conda activate AggreQuant
 
 # The environment uses Python 3.11 and has core dependencies installed:
-# numpy, scikit-image, tifffile, pandas, pyarrow, pyyaml, pydantic,
-# click, tqdm, matplotlib
+# numpy, scikit-image, opencv-python-headless, tifffile, pandas, pyarrow,
+# pyyaml, pydantic, click, tqdm, matplotlib
 
 # To install additional dependencies (e.g., for NN training):
 pip install torch torchvision albumentations segmentation-models-pytorch
@@ -1563,7 +1565,7 @@ pip install -e .
 
 **Environment Setup**:
 - [x] Conda environment `AggreQuant` created with Python 3.11
-- [x] Core dependencies installed (numpy, scikit-image, tifffile, pandas, pyarrow, pyyaml, pydantic, click, tqdm, matplotlib)
+- [x] Core dependencies installed (numpy, scikit-image, opencv-python-headless, tifffile, pandas, pyarrow, pyyaml, pydantic, click, tqdm, matplotlib)
 
 **Phase 1 - Core Package (mostly complete)**:
 - [x] `aggrequant/__init__.py` - Package init with version and author
@@ -1571,7 +1573,7 @@ pip install -e .
 - [x] `aggrequant/common/image_utils.py` - normalize_image, to_uint8, to_float32, pad_to_multiple, unpad
 - [x] `aggrequant/common/logging.py` - setup_logging, get_logger, SimpleLogger
 - [x] `aggrequant/quality/__init__.py` - Exports for quality module
-- [x] `aggrequant/quality/focus.py` - FocusMetrics, variance_of_laplacian, compute_focus_metrics, generate_blur_mask
+- [x] `aggrequant/quality/focus.py` - variance_of_laplacian, compute_patch_focus_maps, generate_blur_mask (uses OpenCV)
 - [x] `aggrequant/segmentation/base.py` - Segmenter Protocol, BaseSegmenter ABC
 - [x] `aggrequant/loaders/__init__.py` - Exports for loaders module
 - [x] `aggrequant/loaders/config.py` - PipelineConfig, ChannelConfig, SegmentationConfig, QualityConfig, OutputConfig

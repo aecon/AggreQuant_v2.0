@@ -2,8 +2,6 @@
 """
 Benchmark script comparing StarDist vs Cellpose for nuclei segmentation.
 
-Standalone script - no dependencies on aggrequant codebase.
-
 Author: Athena Economides, 2026, UZH
 """
 
@@ -19,11 +17,10 @@ import skimage.filters
 import skimage.morphology
 import skimage.segmentation
 import tifffile
-from csbdeep.utils import normalize  # percentlize normalization to range [0,1]
+from csbdeep.utils import normalize  # percentile normalization to range [0,1]
 
 
 # Directories
-# SCRIPT_DIR = Path(__file__).parent
 INPUT_DIR = Path("/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/benchmark_nuclei")
 OUTPUT_DIR = INPUT_DIR / "output"
 
@@ -47,18 +44,6 @@ def preprocess_background_normalization(image: np.ndarray) -> np.ndarray:
     background = skimage.filters.gaussian(denoised, sigma=SIGMA_BACKGROUND, mode='nearest', preserve_range=True)
     normalized = denoised / (background + 1e-8)
     return normalized
-
-
-# def postprocess_size_exclusion(labels: np.ndarray) -> np.ndarray:
-#     """Post-process nuclei labels (size exclusion)"""
-#     # Size exclusion
-#     unique_labels, counts = np.unique(labels, return_counts=True)
-#     for label_id, area in zip(unique_labels[1:], counts[1:]):
-#         if area < MIN_NUCLEUS_AREA or area > MAX_NUCLEUS_AREA:
-#             labels[labels == label_id] = 0
-#     # Relabel consecutively
-#     labels = skimage.morphology.label(labels > 0).astype(np.uint16)
-#     return labels
 
 
 def segment_stardist(image: np.ndarray, preprocess: bool = False) -> np.ndarray:
@@ -156,6 +141,7 @@ def main():
         print(f"  {img_path.name}")
 
         image = load_image(img_path)
+
         stardist_labels = segment_stardist(image, preprocess=False)
         cellpose_labels = segment_cellpose(image, gpu=True, preprocess=False)
 

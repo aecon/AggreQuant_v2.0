@@ -290,7 +290,7 @@ def compute_masked_measurements(
 
 def apply_focus_metrics_to_result(
     result: FieldResult,
-    focus_metrics: "FocusMetrics",
+    focus_maps: dict,
     blur_threshold: float = 15.0,
 ) -> FieldResult:
     """
@@ -298,17 +298,22 @@ def apply_focus_metrics_to_result(
 
     Arguments:
         result: FieldResult to update
-        focus_metrics: FocusMetrics from quality module
+        focus_maps: Dict from compute_patch_focus_maps containing "VarianceLaplacian" key
         blur_threshold: Threshold for variance of Laplacian
 
     Returns:
         Updated FieldResult
     """
-    result.focus_variance_laplacian_mean = focus_metrics.variance_of_laplacian_mean
-    result.focus_variance_laplacian_min = focus_metrics.variance_of_laplacian_min
-    result.focus_pct_patches_blurry = focus_metrics.pct_patches_below_threshold
-    result.focus_pct_area_blurry = focus_metrics.pct_patches_below_threshold  # Approximation
-    result.focus_is_likely_blurry = focus_metrics.is_likely_blurry
+    var_lap = focus_maps["VarianceLaplacian"]
+    n_patches = var_lap.size
+    n_blurry = int(np.sum(var_lap < blur_threshold))
+    pct_blurry = (n_blurry / n_patches * 100) if n_patches > 0 else 0.0
+
+    result.focus_variance_laplacian_mean = float(np.mean(var_lap))
+    result.focus_variance_laplacian_min = float(np.min(var_lap))
+    result.focus_pct_patches_blurry = pct_blurry
+    result.focus_pct_area_blurry = pct_blurry  # Same since non-overlapping patches
+    result.focus_is_likely_blurry = pct_blurry > 50
     result.blur_threshold_used = blur_threshold
 
     return result

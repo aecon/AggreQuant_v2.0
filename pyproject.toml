@@ -28,6 +28,7 @@ dependencies = [
     # Image processing
     "numpy>=1.24",
     "scikit-image>=0.21",
+    "opencv-python-headless>=4.8",
     "tifffile>=2023.7",
 
     # Data handling

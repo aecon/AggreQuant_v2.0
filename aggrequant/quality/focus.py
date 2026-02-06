@@ -1,75 +1,24 @@
 """
 Focus/blur quality assessment for microscopy images.
 
-This module provides tools to detect blurry regions in microscopy images
-using patch-based focus metrics. Blurry regions can be excluded from
-downstream analysis to improve data quality.
+This module provides patch-based focus metrics to detect blurry regions
+in microscopy images. Blurry regions can be excluded from downstream
+analysis to improve data quality.
 
 Author: Athena Economides, 2026, UZH
 """
 
+import cv2
 import numpy as np
-import skimage.filters
-from dataclasses import dataclass
 from typing import Tuple, Dict
 
 from aggrequant.common.logging import get_logger
-from aggrequant.common.image_utils import normalize_image
 
 logger = get_logger(__name__)
 
 # Default parameters
 DEFAULT_PATCH_SIZE = (40, 40)
-DEFAULT_BLUR_THRESHOLD = 15  # for Variance of Laplacian
-
-
-def _prepare_image(image: np.ndarray) -> np.ndarray:
-    """
-    Prepare image for focus metric computation.
-
-    Uses percentile normalization to handle outliers and ensure
-    consistent metric values across different image types.
-
-    Arguments:
-        image: 2D image array (any dtype)
-
-    Returns:
-        Normalized float32 image in [0, 1] range
-    """
-    return normalize_image(image, method="percentile", percentile_low=1.0, percentile_high=99.0)
-
-
-@dataclass
-class FocusMetrics:
-    """
-    Container for focus quality metrics of a single image.
-
-    Attributes:
-        variance_laplacian_mean: Mean variance of Laplacian across patches (higher = sharper)
-        variance_laplacian_std: Std of variance of Laplacian across patches
-        variance_laplacian_min: Minimum variance of Laplacian (worst patch)
-        laplace_energy_mean: Mean Laplacian energy across patches
-        sobel_mean: Mean Sobel gradient magnitude
-        brenner_mean: Mean Brenner focus measure
-        focus_score_mean: Mean focus score (variance/mean ratio)
-        n_patches_total: Total number of patches analyzed
-        n_patches_blurry: Number of patches below blur threshold
-        pct_patches_blurry: Percentage of patches that are blurry
-        pct_area_blurry: Percentage of image area that is blurry
-        is_likely_blurry: True if >50% of image is blurry
-    """
-    variance_laplacian_mean: float
-    variance_laplacian_std: float
-    variance_laplacian_min: float
-    laplace_energy_mean: float
-    sobel_mean: float
-    brenner_mean: float
-    focus_score_mean: float
-    n_patches_total: int
-    n_patches_blurry: int
-    pct_patches_blurry: float
-    pct_area_blurry: float
-    is_likely_blurry: bool
+DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian
 
 
 # =============================================================================
@@ -83,13 +32,18 @@ def variance_of_laplacian(patch: np.ndarray) -> float:
     Higher values indicate sharper images with more edges.
     This is the most reliable single metric for blur detection.
 
+    We use OpenCV's Laplacian instead of scikit-image because:
+    - cv2.Laplacian uses optimized separable filters
+    - Better numerical precision with CV_64F output
+    - Industry standard for blur detection (Pech-Pacheco et al., 2000)
+
     Arguments:
-        patch: 2D grayscale image patch (uint8 or float)
+        patch: 2D grayscale image patch
 
     Returns:
         Variance of the Laplacian response
     """
-    lap = skimage.filters.laplace(patch.astype(np.float64))
+    lap = cv2.Laplacian(patch.astype(np.float64), cv2.CV_64F)
     return float(lap.var())
 
 
@@ -103,7 +57,7 @@ def laplace_energy(patch: np.ndarray) -> float:
     Returns:
         Mean of squared Laplacian values
     """
-    lap = skimage.filters.laplace(patch.astype(np.float64))
+    lap = cv2.Laplacian(patch.astype(np.float64), cv2.CV_64F)
     return float(np.mean(lap * lap))
 
 
@@ -111,14 +65,21 @@ def sobel_metric(patch: np.ndarray) -> float:
     """
     Compute Sobel gradient magnitude metric.
 
+    We use OpenCV's Sobel instead of scikit-image because:
+    - cv2.Sobel provides separate x/y gradients for proper magnitude calculation
+    - Optimized SIMD implementation for better performance
+    - Consistent with cv2.Laplacian usage in this module
+
     Arguments:
         patch: 2D grayscale image patch
 
     Returns:
         Mean gradient magnitude
     """
-    # skimage.filters.sobel returns the magnitude directly
-    mag = skimage.filters.sobel(patch.astype(np.float64))
+    patch_f = patch.astype(np.float64)
+    sobelx = cv2.Sobel(patch_f, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(patch_f, cv2.CV_64F, 0, 1, ksize=3)
+    mag = np.sqrt(sobelx**2 + sobely**2)
     return float(np.mean(mag))
 
 
@@ -135,8 +96,8 @@ def brenner_metric(patch: np.ndarray) -> float:
     Returns:
         Brenner focus measure (sum of squared differences)
     """
-    patch_float = patch.astype(np.float64)
-    diff = patch_float[2:, :] - patch_float[:-2, :]
+    patch_f = patch.astype(np.float64)
+    diff = patch_f[2:, :] - patch_f[:-2, :]
     return float(np.sum(diff * diff))
 
 
@@ -152,197 +113,51 @@ def focus_score(patch: np.ndarray) -> float:
     Returns:
         Variance divided by mean (with epsilon for stability)
     """
-    V = np.nanvar(patch.astype(np.float64))
-    M = np.nanmean(patch.astype(np.float64))
+    patch_f = patch.astype(np.float64)
+    V = np.nanvar(patch_f)
+    M = np.nanmean(patch_f)
     eps = np.finfo(np.float32).eps
     return float(V / (M + eps))
 
 
 # =============================================================================
-# Main Functions
+# Patch-based Analysis
 # =============================================================================
-
-def compute_focus_metrics(
-    image: np.ndarray,
-    patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
-    blur_threshold: float = DEFAULT_BLUR_THRESHOLD,
-    verbose: bool = False,
-    debug: bool = False
-) -> FocusMetrics:
-    """
-    Compute focus quality metrics for an image using patch-based analysis.
-
-    Divides the image into non-overlapping patches and computes multiple
-    focus metrics for each patch. Returns aggregated statistics.
-
-    Arguments:
-        image: 2D grayscale image (uint8 or uint16)
-        patch_size: tuple (height, width) for non-overlapping patches
-        blur_threshold: threshold for Variance of Laplacian (patches below are blurry)
-        verbose: print progress messages
-        debug: print detailed debug information
-
-    Returns:
-        FocusMetrics dataclass with all computed metrics
-    """
-    # Ensure image is suitable for processing
-    if len(image.shape) != 2:
-        raise ValueError(f"Expected 2D image, got shape {image.shape}")
-
-    # Normalize image for consistent metric computation
-    img = _prepare_image(image)
-
-    h, w = img.shape
-    ph, pw = patch_size
-
-    # Compute grid positions (non-overlapping)
-    ys = list(range(0, h - ph + 1, ph))
-    xs = list(range(0, w - pw + 1, pw))
-
-    n_patches = len(ys) * len(xs)
-
-    if n_patches == 0:
-        raise ValueError(f"Image size {h}x{w} too small for patch size {patch_size}")
-
-    if verbose:
-        logger.info(f"Image size: {h}x{w}, patch grid: {len(ys)}x{len(xs)} = {n_patches} patches")
-
-    # Storage for per-patch metrics
-    var_lap_values = []
-    lap_energy_values = []
-    sobel_values = []
-    brenner_values = []
-    focus_values = []
-
-    # Compute metrics for each patch
-    for y in ys:
-        for x in xs:
-            patch = img[y:y+ph, x:x+pw]
-
-            var_lap_values.append(variance_of_laplacian(patch))
-            lap_energy_values.append(laplace_energy(patch))
-            sobel_values.append(sobel_metric(patch))
-            brenner_values.append(brenner_metric(patch))
-            focus_values.append(focus_score(patch))
-
-    # Convert to arrays
-    var_lap = np.array(var_lap_values)
-
-    # Count blurry patches (below threshold)
-    n_blurry = int(np.sum(var_lap < blur_threshold))
-    pct_blurry = n_blurry / n_patches * 100
-
-    # Compute area percentage (accounting for edge pixels not covered by patches)
-    total_patch_area = n_patches * ph * pw
-    blurry_patch_area = n_blurry * ph * pw
-    pct_area_blurry = blurry_patch_area / (h * w) * 100
-
-    if debug:
-        logger.debug(f"Variance Laplacian: mean={np.mean(var_lap):.2f}, min={np.min(var_lap):.2f}")
-        logger.debug(f"Blurry patches: {n_blurry}/{n_patches} ({pct_blurry:.1f}%)")
-
-    return FocusMetrics(
-        variance_laplacian_mean=float(np.mean(var_lap)),
-        variance_laplacian_std=float(np.std(var_lap)),
-        variance_laplacian_min=float(np.min(var_lap)),
-        laplace_energy_mean=float(np.mean(lap_energy_values)),
-        sobel_mean=float(np.mean(sobel_values)),
-        brenner_mean=float(np.mean(brenner_values)),
-        focus_score_mean=float(np.mean(focus_values)),
-        n_patches_total=n_patches,
-        n_patches_blurry=n_blurry,
-        pct_patches_blurry=float(pct_blurry),
-        pct_area_blurry=float(pct_area_blurry),
-        is_likely_blurry=(pct_blurry > 50),
-    )
-
-
-def generate_blur_mask(
-    image: np.ndarray,
-    patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
-    blur_threshold: float = DEFAULT_BLUR_THRESHOLD,
-    verbose: bool = False,
-    debug: bool = False
-) -> np.ndarray:
-    """
-    Generate a binary mask indicating blurry regions.
-
-    Arguments:
-        image: 2D grayscale image
-        patch_size: tuple (height, width)
-        blur_threshold: threshold for Variance of Laplacian
-
-    Returns:
-        blur_mask: boolean array, True where image is blurry
-    """
-    if len(image.shape) != 2:
-        raise ValueError(f"Expected 2D image, got shape {image.shape}")
-
-    # Normalize image for consistent metric computation
-    img = _prepare_image(image)
-
-    h, w = img.shape
-    ph, pw = patch_size
-
-    blur_mask = np.zeros((h, w), dtype=bool)
-
-    ys = list(range(0, h - ph + 1, ph))
-    xs = list(range(0, w - pw + 1, pw))
-
-    n_blurry = 0
-    for y in ys:
-        for x in xs:
-            patch = img[y:y+ph, x:x+pw]
-            var_lap = variance_of_laplacian(patch)
-
-            if var_lap < blur_threshold:
-                blur_mask[y:y+ph, x:x+pw] = True
-                n_blurry += 1
-
-    if verbose:
-        n_patches = len(ys) * len(xs)
-        logger.info(f"Masked {n_blurry}/{n_patches} patches as blurry")
-
-    return blur_mask
-
 
 def compute_patch_focus_maps(
     image: np.ndarray,
     patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
-    verbose: bool = False
 ) -> Tuple[Dict[str, np.ndarray], list, list]:
     """
-    Compute focus metric maps for visualization.
+    Compute focus metric maps using non-overlapping patches.
 
-    Returns 2D arrays where each element corresponds to a patch.
+    Divides the image into a grid of non-overlapping patches and computes
+    all focus metrics for each patch.
 
     Arguments:
         image: 2D grayscale image
         patch_size: tuple (height, width) for patches
-        verbose: print progress messages
 
     Returns:
         maps: dict mapping metric name to 2D score array
-        ys: list of patch y coordinates
-        xs: list of patch x coordinates
+        ys: list of patch y coordinates (top-left)
+        xs: list of patch x coordinates (top-left)
     """
-    if len(image.shape) != 2:
+    if image.ndim != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
 
-    # Normalize image for consistent metric computation
-    img = _prepare_image(image)
-
-    h, w = img.shape
+    h, w = image.shape
     ph, pw = patch_size
 
+    # Non-overlapping grid
     ys = list(range(0, h - ph + 1, ph))
     xs = list(range(0, w - pw + 1, pw))
 
     n_y = len(ys)
     n_x = len(xs)
 
-    if verbose:
-        logger.info(f"Computing focus maps: {n_y}x{n_x} patches")
+    if n_y == 0 or n_x == 0:
+        raise ValueError(f"Image size {h}x{w} too small for patch size {patch_size}")
 
     # Initialize maps
     maps = {
@@ -355,7 +170,7 @@ def compute_patch_focus_maps(
 
     for i, y in enumerate(ys):
         for j, x in enumerate(xs):
-            patch = img[y:y+ph, x:x+pw]
+            patch = image[y:y+ph, x:x+pw]
             maps["VarianceLaplacian"][i, j] = variance_of_laplacian(patch)
             maps["LaplaceEnergy"][i, j] = laplace_energy(patch)
             maps["Sobel"][i, j] = sobel_metric(patch)
@@ -363,3 +178,46 @@ def compute_patch_focus_maps(
             maps["FocusScore"][i, j] = focus_score(patch)
 
     return maps, ys, xs
+
+
+def generate_blur_mask(
+    image: np.ndarray,
+    patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
+    threshold: float = DEFAULT_BLUR_THRESHOLD,
+    metric: str = "VarianceLaplacian",
+) -> np.ndarray:
+    """
+    Generate a binary mask indicating blurry regions.
+
+    Arguments:
+        image: 2D grayscale image
+        patch_size: tuple (height, width) for patches
+        threshold: patches with metric value below this are marked as blurry
+        metric: which metric to use for thresholding
+                ("VarianceLaplacian", "LaplaceEnergy", "Sobel", "Brenner", "FocusScore")
+
+    Returns:
+        blur_mask: boolean array, True where image is blurry
+    """
+    maps, ys, xs = compute_patch_focus_maps(image, patch_size)
+
+    if metric not in maps:
+        raise ValueError(f"Unknown metric '{metric}'. Available: {list(maps.keys())}")
+
+    score_map = maps[metric]
+    blur_flags = score_map < threshold
+
+    h, w = image.shape
+    ph, pw = patch_size
+    mask = np.zeros((h, w), dtype=bool)
+
+    for i, y in enumerate(ys):
+        for j, x in enumerate(xs):
+            if blur_flags[i, j]:
+                mask[y:y+ph, x:x+pw] = True
+
+    n_blurry = int(blur_flags.sum())
+    n_total = blur_flags.size
+    logger.debug(f"Masked {n_blurry}/{n_total} patches as blurry ({100*n_blurry/n_total:.1f}%)")
+
+    return mask
