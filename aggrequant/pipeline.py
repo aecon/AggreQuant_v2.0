@@ -206,9 +206,9 @@ class SegmentationPipeline:
         aggregate_labels: np.ndarray,
     ):
         """Save segmentation masks to output directory."""
-        mask_dir = self.config.output.output_dir / well_id
-        mask_dir.mkdir(parents=True, exist_ok=True)
+        labels_dir = self.config.output.output_dir / "labels"
+        labels_dir.mkdir(parents=True, exist_ok=True)
 
-        tifffile.imwrite(mask_dir / f"f{field_id}_nuclei.tif", nuclei_labels.astype(np.uint16))
-        tifffile.imwrite(mask_dir / f"f{field_id}_cells.tif", cell_labels.astype(np.uint16))
-        tifffile.imwrite(mask_dir / f"f{field_id}_aggregates.tif", aggregate_labels.astype(np.uint32))
+        tifffile.imwrite(labels_dir / f"{well_id}_f{field_id}_nuclei.tif", nuclei_labels.astype(np.uint16))
+        tifffile.imwrite(labels_dir / f"{well_id}_f{field_id}_cells.tif", cell_labels.astype(np.uint16))
+        tifffile.imwrite(labels_dir / f"{well_id}_f{field_id}_aggregates.tif", aggregate_labels.astype(np.uint32))
