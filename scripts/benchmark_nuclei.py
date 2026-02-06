@@ -2,10 +2,7 @@
 """
 Benchmark script comparing StarDist vs Cellpose for nuclei segmentation.
 
-Generates side-by-side overlay figures for qualitative evaluation across
-different microscopy conditions (blur, contrast variations, etc.).
-
-For methods paper supplementary material.
+Standalone script - no dependencies on aggrequant codebase.
 
 Author: Athena Economides, 2026, UZH
 """
@@ -13,43 +10,90 @@ Author: Athena Economides, 2026, UZH
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
 
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import skimage.filters
+import skimage.morphology
 import skimage.segmentation
-
-from aggrequant.common.image_utils import load_image, normalize_image
-from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
+import tifffile
+from csbdeep.utils import normalize  # percentlize normalization to range [0,1]
 
 
 # Directories
-SCRIPT_DIR = Path(__file__).parent
-INPUT_DIR = SCRIPT_DIR / "benchmark_images"
-OUTPUT_DIR = SCRIPT_DIR / "benchmark_output"
+# SCRIPT_DIR = Path(__file__).parent
+INPUT_DIR = Path("/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/benchmark_nuclei")
+OUTPUT_DIR = INPUT_DIR / "output"
+
+# StarDist preprocessing parameters
+SIGMA_DENOISE = 2.0
+SIGMA_BACKGROUND = 50.0
+
+MIN_NUCLEUS_AREA = 300
+MAX_NUCLEUS_AREA = 15000
 
 
-def load_cellpose_nuclei_model(gpu: bool = True):
-    """Load Cellpose with nuclei model."""
+def load_image(path: Path) -> np.ndarray:
+    """Load a TIFF image."""
+    return tifffile.imread(str(path))
+
+
+def preprocess_background_normalization(image: np.ndarray) -> np.ndarray:
+    """Preprocess image for StarDist (denoise + background normalization)."""
+    img = image.astype(np.float32)
+    denoised = skimage.filters.gaussian(img, sigma=SIGMA_DENOISE)
+    background = skimage.filters.gaussian(denoised, sigma=SIGMA_BACKGROUND, mode='nearest', preserve_range=True)
+    normalized = denoised / (background + 1e-8)
+    return normalized
+
+
+# def postprocess_size_exclusion(labels: np.ndarray) -> np.ndarray:
+#     """Post-process nuclei labels (size exclusion)"""
+#     # Size exclusion
+#     unique_labels, counts = np.unique(labels, return_counts=True)
+#     for label_id, area in zip(unique_labels[1:], counts[1:]):
+#         if area < MIN_NUCLEUS_AREA or area > MAX_NUCLEUS_AREA:
+#             labels[labels == label_id] = 0
+#     # Relabel consecutively
+#     labels = skimage.morphology.label(labels > 0).astype(np.uint16)
+#     return labels
+
+
+def segment_stardist(image: np.ndarray, preprocess: bool = False) -> np.ndarray:
+    """Run StarDist nuclei segmentation."""
+    from stardist.models import StarDist2D
+    model = StarDist2D.from_pretrained("2D_versatile_fluo")
+    if preprocess:
+        input_image = preprocess_background_normalization(image)
+    else:
+        input_image = image
+    # Stardist expects normalized data in [0,1] range
+    labels, _ = model.predict_instances(normalize(input_image), predict_kwargs=dict(verbose=False))
+    return labels
+
+
+def segment_cellpose(image: np.ndarray, gpu: bool = True, preprocess: bool = False) -> np.ndarray:
+    """Run Cellpose nuclei segmentation.
+    models in v3: 'cyto3', 'cyto2', 'nuclei'"""
     from cellpose import models
-    return models.Cellpose(gpu=gpu, model_type="nuclei")
-
-
-def segment_cellpose(model, image: np.ndarray) -> np.ndarray:
-    """Run Cellpose nuclei segmentation."""
-    masks, _, _, _ = model.eval(image, channels=[0, 0])
+    model = models.Cellpose(gpu=gpu, model_type="nuclei")
+    if preprocess:
+        input_image = preprocess_background_normalization(image)
+    else:
+        input_image = image
+    # if NUCLEUS channel does not exist, set the second channel to 0
+    channels = [[0,0]]
+    masks, _, _, _ = model.eval(input_image, channels=channels)
     return masks
 
 
 def create_overlay(image: np.ndarray, labels: np.ndarray, color=(1, 0, 0)) -> np.ndarray:
     """Create RGB overlay with label contours."""
-    # Normalize image to [0, 1]
-    img_norm = normalize_image(image, method="percentile")
-
-    # Create RGB image
+    img_norm = normalize(image)
     rgb = np.stack([img_norm] * 3, axis=-1)
 
-    # Find boundaries
     if labels.max() > 0:
         boundaries = skimage.segmentation.find_boundaries(labels, mode="outer")
         for i, c in enumerate(color):
@@ -68,19 +112,19 @@ def create_comparison_figure(
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
     # Raw image
-    img_norm = normalize_image(image, method="percentile")
+    img_norm = normalize(image)
     axes[0].imshow(img_norm, cmap="gray")
     axes[0].set_title("Raw Image")
     axes[0].axis("off")
 
     # StarDist overlay
-    stardist_overlay = create_overlay(image, stardist_labels, color=(1, 0, 0))
+    stardist_overlay = create_overlay(image, stardist_labels, color=(1, 0, 1))
     axes[1].imshow(stardist_overlay)
     axes[1].set_title(f"StarDist (n={stardist_labels.max()})")
     axes[1].axis("off")
 
     # Cellpose overlay
-    cellpose_overlay = create_overlay(image, cellpose_labels, color=(0, 1, 0))
+    cellpose_overlay = create_overlay(image, cellpose_labels, color=(1, 0, 1))
     axes[2].imshow(cellpose_overlay)
     axes[2].set_title(f"Cellpose (n={cellpose_labels.max()})")
     axes[2].axis("off")
@@ -92,45 +136,29 @@ def create_comparison_figure(
 
 
 def main():
-    # Check input directory
     if not INPUT_DIR.exists():
         print(f"Error: Input directory not found: {INPUT_DIR}")
         print("Please create the directory and add benchmark images.")
         return
 
-    # Find images
     image_files = sorted(INPUT_DIR.glob("*.tif"))
     if not image_files:
         print(f"No .tif files found in {INPUT_DIR}")
         return
 
     print(f"Found {len(image_files)} images")
-
-    # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Initialize models
-    print("Loading StarDist model...")
-    stardist = StarDistSegmenter(verbose=False)
-
-    print("Loading Cellpose model...")
-    cellpose_model = load_cellpose_nuclei_model(gpu=True)
-
-    # Process each image
     print("\nProcessing images...")
     print("=" * 50)
 
     for img_path in image_files:
         print(f"  {img_path.name}")
 
-        # Load image
         image = load_image(img_path)
+        stardist_labels = segment_stardist(image, preprocess=False)
+        cellpose_labels = segment_cellpose(image, gpu=True, preprocess=False)
 
-        # Segment with both models
-        stardist_labels = stardist.segment(image)
-        cellpose_labels = segment_cellpose(cellpose_model, image)
-
-        # Create comparison figure
         fig = create_comparison_figure(
             image,
             stardist_labels,
@@ -138,7 +166,6 @@ def main():
             title=img_path.stem,
         )
 
-        # Save figure
         output_path = OUTPUT_DIR / f"{img_path.stem}_comparison.png"
         fig.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
