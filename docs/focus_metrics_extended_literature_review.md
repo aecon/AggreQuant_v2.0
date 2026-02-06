@@ -22,19 +22,14 @@
 ## Short summary
 
 Available Pretrained Models
-  ┌───────────────────────────────┬──────┬─────────────────────────────┬───────────────────┬───────────────┐
-  │             Model             │ Year │            Task             │ Weights Available │   Usability   │
-  ├───────────────────────────────┼──────┼─────────────────────────────┼───────────────────┼───────────────┤
-  │ Google MicroscopeImageQuality │ 2018 │ Focus classification        │ Yes               │ ⚠️ TF1.x only │
-  ├───────────────────────────────┼──────┼─────────────────────────────┼───────────────────┼───────────────┤
-  │ UniFMIR                       │ 2024 │ Image restoration           │ Yes               │ ✅ PyTorch    │
-  ├───────────────────────────────┼──────┼─────────────────────────────┼───────────────────┼───────────────┤
-  │ Microsnoop                    │ 2023 │ Image representation        │ Yes               │ ✅ PyTorch    │
-  ├───────────────────────────────┼──────┼─────────────────────────────┼───────────────────┼───────────────┤
-  │ MPT-CataBlur                  │ 2024 │ Deblurring                  │ Yes               │ ✅ PyTorch    │
-  ├───────────────────────────────┼──────┼─────────────────────────────┼───────────────────┼───────────────┤
-  │ NASA Microscopy Models        │ 2022 │ Segmentation/classification │ Yes               │ ✅ PyTorch    │
-  └───────────────────────────────┴──────┴─────────────────────────────┴───────────────────┴───────────────┘
+| Model                         | Year | Task                        | Weights Available | Usability     |
+| ----------------------------- | ---- | --------------------------- | ----------------- | ------------- |
+| Google MicroscopeImageQuality | 2018 | Focus classification        | Yes               | ⚠️ TF1.x only |
+| UniFMIR                       | 2024 | Image restoration           | Yes               | ✅ PyTorch     |
+| Microsnoop                    | 2023 | Image representation        | Yes               | ✅ PyTorch     |
+| MPT-CataBlur                  | 2024 | Deblurring                  | Yes               | ✅ PyTorch     |
+| NASA Microscopy Models        | 2022 | Segmentation/classification | Yes               | ✅ PyTorch     |
+
   Critical finding: The Google 2018 model remains the only dedicated focus quality classifier for fluorescence microscopy. No
   newer alternatives exist with available pretrained weights.
 
@@ -47,20 +42,17 @@ Available Pretrained Models
 
   My Recommendation
 
-  ┌─────────────────────────────────────────────────────────┐
-  │  Phase 1: Add PLLS metric (1-2 days)                    │
-  │  ├── Catches globally defocused images (your A-24)     │
-  │  └── Often sufficient for 85-90% of cases              │
-  │                                                         │
-  │  Phase 2: If needed, fine-tune in PyTorch (2-3 weeks)  │
-  │  ├── Reimplement Google's small CNN architecture       │
-  │  ├── Train on synthetically defocused versions of      │
-  │  │   your own in-focus images                          │
-  │  └── Achieves ~89% F-score                             │
-  │                                                         │
-  │  Phase 3: Train from scratch (NOT recommended)          │
-  │  └── Only if unique microscope/modality requirements   │
-  └─────────────────────────────────────────────────────────┘
+### Phase 1: Add PLLS metric (1–2 days)
+- Catches globally defocused images (your A-24)
+- Often sufficient for 85–90% of cases
+
+### Phase 2: If needed, fine-tune in PyTorch (2–3 weeks)
+- Reimplement Google's small CNN architecture
+- Train on synthetically defocused versions of your own in-focus images
+- Achieves ~89% F-score
+
+### Phase 3: Train from scratch (NOT recommended)
+- Only if unique microscope/modality requirements
 
   Why NOT Train From Scratch?
 
