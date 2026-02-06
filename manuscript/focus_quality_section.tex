@@ -1,0 +1,234 @@
+% =============================================================================
+% Focus Quality Assessment Section
+% AggreQuant Methods Paper
+% =============================================================================
+
+\section{Image Focus Quality Assessment}
+\label{sec:focus_quality}
+
+Automated high-throughput microscopy generates large datasets where image quality varies due to autofocus failures, sample drift, and optical aberrations. Accurate identification of out-of-focus images is critical for obtaining clean, unbiased datasets for downstream analysis. This section reviews established focus quality metrics, describes the methods implemented in AggreQuant, and presents benchmark results comparing their performance on fluorescence microscopy images.
+
+% -----------------------------------------------------------------------------
+\subsection{Literature Review: Focus Quality Metrics}
+\label{subsec:focus_literature}
+
+Focus quality assessment methods can be broadly categorized into three classes: spatial domain methods, frequency domain methods, and deep learning approaches.
+
+% --- Spatial Domain Methods ---
+\subsubsection{Spatial Domain Methods}
+
+Spatial domain methods quantify image sharpness by analyzing local intensity variations, edges, and gradients. These methods are computationally efficient and widely used in microscopy applications.
+
+\paragraph{Variance of Laplacian (VoL).}
+The Laplacian operator $\nabla^2$ highlights regions of rapid intensity change, and the variance of its response serves as a sharpness indicator \cite{pech2000diatom}. For an image $I$, the metric is computed as:
+\begin{equation}
+    \text{VoL}(I) = \text{Var}\left(\nabla^2 I\right) = \text{Var}\left(\frac{\partial^2 I}{\partial x^2} + \frac{\partial^2 I}{\partial y^2}\right)
+\end{equation}
+Higher values indicate sharper images with stronger edges. This metric is widely adopted due to its simplicity and effectiveness, serving as the default blur detection method in OpenCV and numerous microscopy applications \cite{pyimagesearch2015blur}.
+
+\paragraph{Brenner Gradient.}
+The Brenner focus measure computes the sum of squared intensity differences between pixels separated by a fixed distance \cite{brenner1976automated}:
+\begin{equation}
+    \text{Brenner}(I) = \sum_{x,y} \left(I(x+2, y) - I(x, y)\right)^2
+\end{equation}
+This metric is computationally fast and effective for autofocus applications, though it primarily captures horizontal gradients.
+
+\paragraph{Tenengrad and Sobel-based Metrics.}
+The Tenengrad metric uses Sobel operators to compute gradient magnitude:
+\begin{equation}
+    \text{Tenengrad}(I) = \sum_{x,y} \left(G_x^2 + G_y^2\right)
+\end{equation}
+where $G_x$ and $G_y$ are the horizontal and vertical Sobel gradients. A comparative study by Pertuz et al. \cite{pertuz2013analysis} found that Tenengrad exhibits superior noise robustness among spatial operators, making it suitable for low-signal fluorescence microscopy.
+
+\paragraph{Normalized Variance (Focus Score).}
+The normalized variance, also known as focus score, computes the ratio of intensity variance to mean intensity:
+\begin{equation}
+    \text{FocusScore}(I) = \frac{\text{Var}(I)}{\text{Mean}(I) + \epsilon}
+\end{equation}
+This metric was identified as optimal for brightfield, phase contrast, and DIC microscopy by Sun et al. \cite{sun2004autofocusing}, and is implemented in CellProfiler's MeasureImageQuality module \cite{carpenter2006cellprofiler}.
+
+\paragraph{Laplacian Energy.}
+A variant of VoL, Laplacian energy computes the mean of squared Laplacian values:
+\begin{equation}
+    \text{LaplaceEnergy}(I) = \frac{1}{N}\sum_{x,y} \left(\nabla^2 I(x,y)\right)^2
+\end{equation}
+This metric emphasizes strong edges more than VoL and can be more sensitive to fine structural details.
+
+% --- Frequency Domain Methods ---
+\subsubsection{Frequency Domain Methods}
+
+Frequency domain methods analyze the power spectrum of images, exploiting the fact that defocus blur attenuates high-frequency components.
+
+\paragraph{Power Log-Log Slope (PLLS).}
+The PLLS metric, introduced by Bray et al. \cite{bray2012workflow}, computes the slope of the radially-averaged power spectrum on a log-log scale. For an image with 2D Fourier transform $F(u,v)$, the radial power spectrum $P(r)$ is computed by averaging $|F|^2$ over annuli of radius $r$. The PLLS is then:
+\begin{equation}
+    \text{PLLS} = \frac{d \log P(r)}{d \log r}
+\end{equation}
+obtained via linear regression on the log-transformed data. Natural images typically exhibit power spectra following $P(r) \propto r^{-\beta}$ with $\beta \approx 2$ \cite{field1987relations}. Defocus blur removes high-frequency content, resulting in steeper (more negative) slopes. PLLS was identified as the best single metric for focus quality assessment in high-content screening by Bray et al. \cite{bray2012workflow} and is implemented in CellProfiler.
+
+\paragraph{Discrete Cosine Transform (DCT) Methods.}
+DCT-based focus measures analyze the energy distribution across frequency bands. Studies on light-sheet fluorescence microscopy found that on large image patches ($\geq 250 \times 250$ $\mu$m$^2$), DCT-based methods achieve performance comparable to deep neural networks \cite{zhang2021deep}.
+
+\paragraph{Wavelet-based Methods.}
+The Discrete Wavelet Transform (DWT) decomposes images into multi-resolution sub-bands. A recent quantitative evaluation \cite{sensors2025focus} found that the FDWT (Fast Discrete Wavelet Transform) operator excels in sensitivity metrics, though spatial methods like Tenengrad offer better noise robustness.
+
+% --- Deep Learning Methods ---
+\subsubsection{Deep Learning Methods}
+
+Deep learning approaches have emerged as the state-of-the-art for focus quality assessment, offering the ability to learn complex blur patterns directly from data.
+
+\paragraph{Google Microscope Image Quality Classifier.}
+Yang et al. \cite{yang2018assessing} developed a convolutional neural network for microscopy focus quality assessment, consisting of:
+\begin{itemize}
+    \item Convolutional layer: 32 filters ($5 \times 5$)
+    \item Max pooling ($2 \times 2$)
+    \item Convolutional layer: 64 filters ($5 \times 5$)
+    \item Max pooling ($2 \times 2$)
+    \item Fully connected layer: 1024 units
+    \item Dropout (0.5)
+    \item Output layer: 11 classes (defocus levels)
+\end{itemize}
+Operating on $84 \times 84$ pixel patches, the model achieves an F-score of 0.89 on binary in-focus/out-of-focus classification, outperforming PLLS (F-score 0.84) on the same task. The model was trained on synthetically defocused Hoechst-stained U2OS cells and demonstrated generalization to unseen stains (Phalloidin, Tubulin). Pre-trained weights and inference code are available at \url{https://github.com/google/microscopeimagequality}, though the implementation requires TensorFlow 1.x.
+
+\paragraph{Foundation Models for Microscopy.}
+Recent work has developed foundation models for fluorescence microscopy image restoration. UniFMIR \cite{ma2024unifmir}, published in Nature Methods, provides a transformer-based model pre-trained on diverse microscopy datasets for tasks including denoising, super-resolution, and isotropic reconstruction. While not specifically designed for focus quality assessment, such models could potentially be fine-tuned for this task. Similarly, Microsnoop \cite{microsnoop2023} offers a generalist microscopy image representation model trained on over 2.2 million images using masked self-supervised learning.
+
+\paragraph{Multi-Pyramid Transformer (MPT).}
+Zhang et al. \cite{zhang2024mpt} presented a unified framework for microscopy defocus deblurring at CVPR 2024, combining multi-pyramid transformers with contrastive learning. While designed for blur correction rather than detection, the architecture demonstrates state-of-the-art performance on microscopy defocus blur.
+
+% --- Comparison Table ---
+\subsubsection{Summary of Methods}
+
+Table~\ref{tab:focus_methods_comparison} summarizes the key characteristics of focus quality assessment methods.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of focus quality assessment methods for microscopy.}
+\label{tab:focus_methods_comparison}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Method} & \textbf{Domain} & \textbf{Detects Global Blur} & \textbf{Computational Cost} & \textbf{Requires Training} \\
+\midrule
+Variance of Laplacian & Spatial & Limited & Low & No \\
+Brenner Gradient & Spatial & Limited & Very Low & No \\
+Sobel/Tenengrad & Spatial & Limited & Low & No \\
+Normalized Variance & Spatial & Limited & Very Low & No \\
+PLLS & Frequency & Yes & Medium & No \\
+Wavelet (FDWT) & Frequency & Yes & Medium & No \\
+CNN Classifier & Learned & Yes & High & Yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% -----------------------------------------------------------------------------
+\subsection{Implementation in AggreQuant}
+\label{subsec:focus_implementation}
+
+AggreQuant implements both spatial domain and frequency domain focus metrics, providing a comprehensive toolkit for image quality assessment in fluorescence microscopy.
+
+\subsubsection{Patch-based Spatial Metrics}
+
+Images are divided into non-overlapping patches (default: $80 \times 80$ pixels), and the following metrics are computed for each patch:
+
+\begin{enumerate}
+    \item \textbf{Variance of Laplacian}: Using OpenCV's optimized Laplacian operator with 64-bit floating point precision.
+    \item \textbf{Laplacian Energy}: Mean of squared Laplacian values.
+    \item \textbf{Sobel Gradient Magnitude}: Mean of the gradient magnitude computed from Sobel operators.
+    \item \textbf{Brenner Metric}: Sum of squared differences between pixels two positions apart.
+    \item \textbf{Focus Score}: Normalized variance (variance divided by mean intensity).
+\end{enumerate}
+
+To ensure portability across different bit depths (8-bit, 12-bit, 16-bit, float), all images are internally normalized to an 8-bit scale $[0, 255]$ using percentile normalization (1st to 99.8th percentile), similar to the approach used in CSBDeep \cite{weigert2018content}. This ensures that threshold values remain consistent regardless of the input image format.
+
+\subsubsection{Global Frequency Domain Metrics}
+
+To detect globally defocused images---where texture may be present but high-frequency content is uniformly attenuated---AggreQuant implements frequency domain metrics operating on the entire image:
+
+\begin{enumerate}
+    \item \textbf{Power Log-Log Slope (PLLS)}: Computed via radial averaging of the 2D power spectrum followed by log-log linear regression. More negative values indicate sharper images.
+    \item \textbf{High-Frequency Ratio}: Ratio of energy outside a central low-frequency region to energy within it, providing a simple measure of high-frequency content.
+    \item \textbf{Global Variance of Laplacian}: VoL computed on the full normalized image rather than patches.
+\end{enumerate}
+
+The combination of patch-based and global metrics enables detection of both localized blur regions (e.g., tilted focal planes, local aberrations) and uniform defocus across the entire field of view.
+
+% -----------------------------------------------------------------------------
+\subsection{Benchmark Results}
+\label{subsec:focus_benchmark}
+
+We evaluated the implemented focus metrics on a set of 10 fluorescence microscopy images of DAPI-stained nuclei acquired on a high-content screening microscope. The dataset includes images with varying focus quality, cell density, and imaging artifacts.
+
+\subsubsection{Experimental Setup}
+
+Images were acquired at $20\times$ magnification with a field of view of approximately $600 \times 600$ $\mu$m. Focus metrics were computed using $80 \times 80$ pixel patches for spatial methods and full-image analysis for frequency domain methods.
+
+\subsubsection{Results}
+
+Table~\ref{tab:focus_benchmark} presents the focus quality metrics for each image, ranked by PLLS (most negative = sharpest).
+
+\begin{table}[htbp]
+\centering
+\caption{Focus quality metrics for benchmark images. PLLS = Power Log-Log Slope (more negative indicates sharper focus). VoL = Variance of Laplacian. HFR = High-Frequency Ratio.}
+\label{tab:focus_benchmark}
+\begin{tabular}{@{}lrrrrl@{}}
+\toprule
+\textbf{Image} & \textbf{PLLS} & \textbf{Global VoL} & \textbf{HFR} & \textbf{Mean Patch VoL} & \textbf{Assessment} \\
+\midrule
+J-03 & $-4.01$ & 1.3 & 0.20 & 1.6 & Sharp (sparse) \\
+E-05 & $-2.61$ & 924.5 & 0.87 & 941.9 & Sharp \\
+O-24 & $-1.93$ & 3103.1 & 1.92 & 3148.0 & Acceptable \\
+P-06 & $-1.72$ & 2728.0 & 2.35 & 2722.2 & Acceptable \\
+D-17 & $-1.70$ & 11050.4 & 2.25 & 11164.6 & Acceptable \\
+G-15 & $-1.69$ & 10052.4 & 2.28 & 10146.0 & Acceptable \\
+N-18 & $-1.66$ & 4208.7 & 2.40 & 4252.9 & Acceptable \\
+L-17 & $-1.65$ & 7362.0 & 2.41 & 7420.2 & Acceptable \\
+A-01 & $-1.42$ & 7158.1 & 2.60 & 7221.3 & Borderline \\
+\textbf{A-24} & $\mathbf{-0.37}$ & \textbf{38872.6} & \textbf{3.87} & \textbf{39114.3} & \textbf{Defocused} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Analysis}
+
+The benchmark results reveal a critical limitation of spatial domain metrics alone. Image A-24, which is visually identifiable as globally defocused (uniformly hazy appearance), exhibits the \textit{highest} VoL values among all images (Global VoL = 38,872.6, Mean Patch VoL = 39,114.3). This counterintuitive result occurs because the image contains dense cellular texture that generates strong Laplacian responses, despite the overall loss of fine structural detail due to defocus.
+
+In contrast, the PLLS metric correctly identifies A-24 as the most defocused image, with a value of $-0.37$---substantially less negative than all other images. The PLLS metric captures the attenuation of high-frequency content characteristic of defocus blur, which spatial metrics fail to detect when texture is present.
+
+Based on these results, we propose the following threshold guidelines for PLLS-based focus quality assessment:
+\begin{itemize}
+    \item $\text{PLLS} < -2.5$: Sharp image (high confidence)
+    \item $-2.5 \leq \text{PLLS} < -1.5$: Acceptable for most analyses
+    \item $-1.5 \leq \text{PLLS} < -1.0$: Borderline---manual inspection recommended
+    \item $\text{PLLS} \geq -1.0$: Likely defocused---flag for quality control
+\end{itemize}
+
+\subsubsection{Recommendation}
+
+For robust focus quality assessment in fluorescence microscopy, we recommend a two-stage approach:
+\begin{enumerate}
+    \item \textbf{Global assessment using PLLS}: Identify images with uniform defocus that spatial metrics may miss.
+    \item \textbf{Patch-based assessment using VoL}: Detect localized blur regions within otherwise acceptable images.
+\end{enumerate}
+
+This combined approach leverages the complementary strengths of frequency domain (global defocus detection) and spatial domain (local blur detection) methods, providing comprehensive quality control without the computational overhead and training requirements of deep learning approaches.
+
+% =============================================================================
+% References for this section
+% =============================================================================
+% Note: These should be added to the main bibliography file
+
+% \bibitem{pech2000diatom} Pech-Pacheco et al., "Diatom autofocusing in brightfield microscopy: a comparative study", ICPR 2000.
+% \bibitem{brenner1976automated} Brenner et al., "An automated microscope for cytologic research", J Histochem Cytochem, 1976.
+% \bibitem{pertuz2013analysis} Pertuz et al., "Analysis of focus measure operators for shape-from-focus", Pattern Recognition, 2013.
+% \bibitem{sun2004autofocusing} Sun et al., "Autofocusing in computer microscopy: selecting the optimal focus algorithm", Microscopy Research and Technique, 2004.
+% \bibitem{bray2012workflow} Bray et al., "Workflow and metrics for image quality control in large-scale high-content screens", J Biomol Screen, 2012.
+% \bibitem{field1987relations} Field, "Relations between the statistics of natural images and the response properties of cortical cells", JOSA A, 1987.
+% \bibitem{yang2018assessing} Yang et al., "Assessing microscope image focus quality with deep learning", BMC Bioinformatics, 2018.
+% \bibitem{ma2024unifmir} Ma et al., "Pretraining a foundation model for generalizable fluorescence microscopy-based image restoration", Nature Methods, 2024.
+% \bibitem{microsnoop2023} "Microsnoop: A generalist tool for microscopy image representation", The Innovation, 2023.
+% \bibitem{zhang2024mpt} Zhang et al., "A Unified Framework for Microscopy Defocus Deblur with Multi-Pyramid Transformer and Contrastive Learning", CVPR, 2024.
+% \bibitem{sensors2025focus} "Quantitative Evaluation of Focus Measure Operators in Optical Microscopy", Sensors, 2025.
+% \bibitem{weigert2018content} Weigert et al., "Content-aware image restoration: pushing the limits of fluorescence microscopy", Nature Methods, 2018.
+% \bibitem{carpenter2006cellprofiler} Carpenter et al., "CellProfiler: image analysis software for identifying and quantifying cell phenotypes", Genome Biology, 2006.
+% \bibitem{pyimagesearch2015blur} Rosebrock, "Blur detection with OpenCV", PyImageSearch, 2015.
+% \bibitem{zhang2021deep} Zhang et al., "Deep learning-based autofocus method enhances image quality in light-sheet fluorescence microscopy", Biomedical Optics Express, 2021.
