@@ -5,6 +5,11 @@ This module provides patch-based focus metrics to detect blurry regions
 in microscopy images. Blurry regions can be excluded from downstream
 analysis to improve data quality.
 
+All images are internally normalized to 8-bit scale [0, 255] using percentile
+normalization (similar to csbdeep.utils.normalize) before computing focus metrics.
+This ensures that thresholds (like DEFAULT_BLUR_THRESHOLD) are portable across
+different bit depths (8-bit, 12-bit, 16-bit, float, etc.).
+
 Author: Athena Economides, 2026, UZH
 """
 
@@ -18,7 +23,48 @@ logger = get_logger(__name__)
 
 # Default parameters
 DEFAULT_PATCH_SIZE = (40, 40)
-DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian
+DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian (calibrated for 8-bit scale)
+
+# Percentile normalization parameters (similar to csbdeep defaults)
+DEFAULT_PMIN = 1.0
+DEFAULT_PMAX = 99.8
+
+
+# =============================================================================
+# Internal Utilities
+# =============================================================================
+
+def _normalize_to_8bit(
+    image: np.ndarray,
+    pmin: float = DEFAULT_PMIN,
+    pmax: float = DEFAULT_PMAX,
+) -> np.ndarray:
+    """
+    Normalize image to 8-bit scale [0, 255] using percentile normalization.
+
+    Similar to csbdeep.utils.normalize but scales to [0, 255] instead of [0, 1].
+    This ensures focus metric thresholds are portable across different bit depths.
+
+    Arguments:
+        image: Input image of any dtype
+        pmin: Lower percentile for clipping (default: 1.0)
+        pmax: Upper percentile for clipping (default: 99.8)
+
+    Returns:
+        Image as float64 in range [0, 255]
+    """
+    img = image.astype(np.float64)
+
+    p_low = np.percentile(img, pmin)
+    p_high = np.percentile(img, pmax)
+
+    if p_high - p_low < 1e-10:
+        # Constant or near-constant image - return zeros (no edges/features)
+        return np.zeros_like(img, dtype=np.float64)
+
+    # Clip and scale to [0, 255]
+    img_clipped = np.clip(img, p_low, p_high)
+    return (img_clipped - p_low) / (p_high - p_low) * 255.0
 
 
 # =============================================================================
@@ -134,8 +180,12 @@ def compute_patch_focus_maps(
     Divides the image into a grid of non-overlapping patches and computes
     all focus metrics for each patch.
 
+    The image is internally normalized to 8-bit scale [0, 255] using percentile
+    normalization before computing metrics. This ensures thresholds are portable
+    across different bit depths.
+
     Arguments:
-        image: 2D grayscale image
+        image: 2D grayscale image (any dtype/bit-depth)
         patch_size: tuple (height, width) for patches
 
     Returns:
@@ -159,6 +209,9 @@ def compute_patch_focus_maps(
     if n_y == 0 or n_x == 0:
         raise ValueError(f"Image size {h}x{w} too small for patch size {patch_size}")
 
+    # Normalize entire image to 8-bit scale for consistent metrics
+    image_norm = _normalize_to_8bit(image)
+
     # Initialize maps
     maps = {
         "VarianceLaplacian": np.zeros((n_y, n_x)),
@@ -170,7 +223,7 @@ def compute_patch_focus_maps(
 
     for i, y in enumerate(ys):
         for j, x in enumerate(xs):
-            patch = image[y:y+ph, x:x+pw]
+            patch = image_norm[y:y+ph, x:x+pw]
             maps["VarianceLaplacian"][i, j] = variance_of_laplacian(patch)
             maps["LaplaceEnergy"][i, j] = laplace_energy(patch)
             maps["Sobel"][i, j] = sobel_metric(patch)

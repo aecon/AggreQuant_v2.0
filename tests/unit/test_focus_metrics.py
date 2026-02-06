@@ -180,3 +180,70 @@ class TestGenerateBlurMask:
         mask_high = generate_blur_mask(img, threshold=1000)
         # High threshold means more patches are below it (more blurry)
         assert np.sum(mask_high) >= np.sum(mask_low)
+
+
+class TestBitDepthNormalization:
+    """Tests for consistent behavior across different bit depths."""
+
+    def test_8bit_vs_16bit_similar_results(self):
+        """Same image at 8-bit and 16-bit should produce similar focus metrics."""
+        # Create 8-bit image with edges
+        img_8bit = np.zeros((200, 200), dtype=np.uint8)
+        img_8bit[50:150, 50:150] = 255
+
+        # Scale to 16-bit (same relative intensities)
+        img_16bit = (img_8bit.astype(np.uint16) * 257)  # 255 -> 65535
+
+        maps_8bit, _, _ = compute_patch_focus_maps(img_8bit, patch_size=(40, 40))
+        maps_16bit, _, _ = compute_patch_focus_maps(img_16bit, patch_size=(40, 40))
+
+        # Results should be very close (within 1% relative tolerance)
+        for metric in maps_8bit.keys():
+            np.testing.assert_allclose(
+                maps_8bit[metric],
+                maps_16bit[metric],
+                rtol=0.01,
+                err_msg=f"Metric '{metric}' differs between 8-bit and 16-bit",
+            )
+
+    def test_float_0_1_similar_results(self):
+        """Float [0,1] image should produce similar focus metrics as uint8."""
+        # Create 8-bit image with edges
+        img_8bit = np.zeros((200, 200), dtype=np.uint8)
+        img_8bit[50:150, 50:150] = 255
+
+        # Convert to float [0, 1]
+        img_float = img_8bit.astype(np.float32) / 255.0
+
+        maps_8bit, _, _ = compute_patch_focus_maps(img_8bit, patch_size=(40, 40))
+        maps_float, _, _ = compute_patch_focus_maps(img_float, patch_size=(40, 40))
+
+        # Results should be very close
+        for metric in maps_8bit.keys():
+            np.testing.assert_allclose(
+                maps_8bit[metric],
+                maps_float[metric],
+                rtol=0.01,
+                err_msg=f"Metric '{metric}' differs between uint8 and float",
+            )
+
+    def test_blur_mask_consistent_across_bit_depths(self):
+        """Blur mask should be identical regardless of input bit depth."""
+        # Create image with mixed sharp/blurry regions
+        img_8bit = np.zeros((200, 200), dtype=np.uint8)
+        img_8bit[0:100, 0:100] = 128  # Constant region (blurry)
+        img_8bit[100:200, 100:200] = np.tile(
+            np.array([[0, 255], [255, 0]], dtype=np.uint8), (50, 50)
+        )  # Checkerboard (sharp)
+
+        # Scale to 16-bit
+        img_16bit = img_8bit.astype(np.uint16) * 257
+
+        mask_8bit = generate_blur_mask(img_8bit, threshold=15)
+        mask_16bit = generate_blur_mask(img_16bit, threshold=15)
+
+        # Masks should be identical
+        np.testing.assert_array_equal(
+            mask_8bit, mask_16bit,
+            err_msg="Blur masks differ between 8-bit and 16-bit input",
+        )
