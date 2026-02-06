@@ -15,6 +15,7 @@ Author: Athena Economides, 2026, UZH
 
 import cv2
 import numpy as np
+from scipy import ndimage
 from typing import Tuple, Dict
 
 from aggrequant.common.logging import get_logger
@@ -22,7 +23,7 @@ from aggrequant.common.logging import get_logger
 logger = get_logger(__name__)
 
 # Default parameters
-DEFAULT_PATCH_SIZE = (40, 40)
+DEFAULT_PATCH_SIZE = (80, 80)
 DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian (calibrated for 8-bit scale)
 
 # Percentile normalization parameters (similar to csbdeep defaults)
@@ -164,6 +165,118 @@ def focus_score(patch: np.ndarray) -> float:
     M = np.nanmean(patch_f)
     eps = np.finfo(np.float32).eps
     return float(V / (M + eps))
+
+
+# =============================================================================
+# Global Image Quality Metrics (Frequency Domain)
+# =============================================================================
+
+def power_log_log_slope(image: np.ndarray) -> float:
+    """
+    Compute Power Log-Log Slope (PLLS) - frequency domain metric for global defocus.
+
+    This metric computes the slope of the power spectrum on a log-log scale.
+    More negative values indicate more blur (high frequencies are lost in blurry images).
+
+    This was identified as the best single metric for focus quality by Bray et al. (2012)
+    and is used in CellProfiler's MeasureImageQuality module.
+
+    Reference:
+        Bray et al., "Workflow and metrics for image quality control in
+        large-scale high-content screens", J Biomol Screen, 2012
+
+    Arguments:
+        image: 2D grayscale image (any dtype)
+
+    Returns:
+        Slope of log-log power spectrum (typically -1 to -4, more negative = blurrier)
+    """
+    img = image.astype(np.float64)
+
+    # Compute 2D FFT
+    f = np.fft.fft2(img)
+    f_shift = np.fft.fftshift(f)
+    magnitude = np.abs(f_shift) ** 2
+
+    # Compute radial average (azimuthal integration)
+    h, w = magnitude.shape
+    cy, cx = h // 2, w // 2
+
+    # Create radius map
+    y, x = np.ogrid[:h, :w]
+    r = np.sqrt((x - cx) ** 2 + (y - cy) ** 2).astype(int)
+
+    # Maximum radius to consider (avoid corners)
+    max_r = min(cx, cy)
+
+    # Compute radial mean of power spectrum
+    radial_sum = ndimage.sum(magnitude, r, index=np.arange(1, max_r))
+    radial_count = ndimage.sum(np.ones_like(magnitude), r, index=np.arange(1, max_r))
+    radial_mean = radial_sum / (radial_count + 1e-10)
+
+    # Log-log linear fit (skip DC component at index 0)
+    freqs = np.arange(1, len(radial_mean) + 1)
+    valid = radial_mean > 0
+
+    if valid.sum() < 10:
+        logger.warning("Insufficient valid frequency bins for PLLS computation")
+        return 0.0
+
+    log_f = np.log(freqs[valid])
+    log_p = np.log(radial_mean[valid])
+
+    # Linear regression: slope of log(power) vs log(frequency)
+    slope, _ = np.polyfit(log_f, log_p, 1)
+
+    return float(slope)
+
+
+def compute_global_focus_metrics(image: np.ndarray) -> Dict[str, float]:
+    """
+    Compute global (whole-image) focus quality metrics.
+
+    These metrics assess the overall focus quality of the entire image,
+    complementing patch-based metrics which detect local blur regions.
+
+    Arguments:
+        image: 2D grayscale image (any dtype)
+
+    Returns:
+        Dictionary with global focus metrics:
+            - power_log_log_slope: PLLS value (more negative = blurrier)
+            - global_variance_laplacian: VoL computed on full image
+            - high_freq_ratio: Ratio of high to low frequency energy
+    """
+    # Normalize for consistent VoL
+    img_norm = _normalize_to_8bit(image)
+
+    # PLLS (on original image, not normalized)
+    plls = power_log_log_slope(image)
+
+    # Global Variance of Laplacian
+    global_vol = variance_of_laplacian(img_norm)
+
+    # High frequency ratio (simple FFT-based measure)
+    f = np.fft.fft2(image.astype(np.float64))
+    f_shift = np.fft.fftshift(f)
+    magnitude = np.abs(f_shift)
+
+    h, w = magnitude.shape
+    cy, cx = h // 2, w // 2
+    radius = min(h, w) // 4
+
+    y, x = np.ogrid[:h, :w]
+    low_mask = ((y - cy) ** 2 + (x - cx) ** 2) < radius ** 2
+
+    low_energy = magnitude[low_mask].sum()
+    high_energy = magnitude[~low_mask].sum()
+    high_freq_ratio = high_energy / (low_energy + 1e-10)
+
+    return {
+        "power_log_log_slope": plls,
+        "global_variance_laplacian": global_vol,
+        "high_freq_ratio": high_freq_ratio,
+    }
 
 
 # =============================================================================
