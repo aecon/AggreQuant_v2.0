@@ -55,6 +55,7 @@ def compute_field_measurements(
     cell_labels: np.ndarray,
     aggregate_labels: np.ndarray,
     nuclei_labels: Optional[np.ndarray] = None,
+    blur_mask: Optional[np.ndarray] = None,
     min_aggregate_area: int = MIN_AGGREGATE_AREA_PIXELS,
     verbose: bool = False,
     debug: bool = False,
@@ -70,6 +71,9 @@ def compute_field_measurements(
     5. Number of aggregates per image
     6. Average number of aggregates per aggregate-positive cell
 
+    When blur_mask is provided, additionally computes masked metrics
+    (cell counts, aggregate-positive counts, areas) excluding blurry regions.
+
     Uses a single-pass sparse cross-tabulation instead of per-aggregate
     loops, giving O(pixels) complexity instead of O(n_aggregates * pixels).
 
@@ -77,6 +81,7 @@ def compute_field_measurements(
         cell_labels: Instance segmentation of cells (uint16)
         aggregate_labels: Instance segmentation of aggregates (uint32)
         nuclei_labels: Optional instance segmentation of nuclei
+        blur_mask: Optional binary mask where 1 = blurry (to be excluded)
         min_aggregate_area: Minimum aggregate area in pixels
         verbose: Print progress messages
         debug: Print detailed debug information
@@ -195,6 +200,41 @@ def compute_field_measurements(
         n_nuclei = int(np.sum(nuc_counts[1:] > 0)) if len(nuc_counts) > 1 else 0
         total_nuclei_area = int(nuc_counts[1:].sum()) if len(nuc_counts) > 1 else 0
 
+    # Blur-masked metrics (when blur_mask is provided)
+    n_cells_masked = None
+    n_agg_positive_masked = None
+    pct_agg_positive_masked = None
+    total_cell_area_masked = None
+    total_agg_area_masked = None
+
+    if blur_mask is not None:
+        cell_labels_masked = cell_labels.copy()
+        cell_labels_masked[blur_mask != 0] = 0
+
+        masked_counts = np.bincount(cell_labels_masked.ravel(), minlength=len(cell_counts))
+
+        # Valid cells: at least 50% of area in non-blurry region
+        ratios = np.zeros(len(cell_counts), dtype=np.float64)
+        nonzero = cell_counts > 0
+        ratios[nonzero] = masked_counts[nonzero] / cell_counts[nonzero]
+        valid_cell_ids = np.where((ratios >= 0.5) & (np.arange(len(ratios)) > 0))[0]
+        n_cells_masked = len(valid_cell_ids)
+
+        # Aggregate mask inside non-blurry cell regions
+        mask_agg_masked = compute_aggregate_mask_inside_cells(aggregate_labels, cell_labels_masked)
+
+        # Aggregate area per cell via weighted bincount
+        agg_area_per_cell = np.bincount(
+            cell_labels_masked.ravel(),
+            weights=mask_agg_masked.ravel().astype(np.float64),
+            minlength=len(cell_counts),
+        )
+        n_agg_positive_masked = int(np.sum(agg_area_per_cell[valid_cell_ids] >= min_aggregate_area))
+        pct_agg_positive_masked = (n_agg_positive_masked / n_cells_masked * 100) if n_cells_masked > 0 else 0.0
+
+        total_cell_area_masked = float(int(masked_counts[1:].sum()) if len(masked_counts) > 1 else 0)
+        total_agg_area_masked = float(int(np.sum(mask_agg_masked)))
+
     # Create result
     result = FieldResult(
         plate_name="",  # To be filled by caller
@@ -213,6 +253,11 @@ def compute_field_measurements(
         pct_aggregate_area_over_cell=pct_area_agg,
         avg_aggregates_per_positive_cell=avg_agg_per_positive,
         pct_ambiguous_aggregates=pct_ambiguous,
+        n_cells_masked=n_cells_masked,
+        n_aggregate_positive_cells_masked=n_agg_positive_masked,
+        pct_aggregate_positive_cells_masked=pct_agg_positive_masked,
+        total_cell_area_masked_px=total_cell_area_masked,
+        total_aggregate_area_masked_px=total_agg_area_masked,
     )
 
     # Diagnostic data
@@ -226,65 +271,6 @@ def compute_field_measurements(
         diagnostics["overlay_nagg_per_cell"] = overlay_nagg_per_cell
 
     return result, diagnostics
-
-
-def compute_masked_measurements(
-    cell_labels: np.ndarray,
-    aggregate_labels: np.ndarray,
-    blur_mask: np.ndarray,
-    min_aggregate_area: int = MIN_AGGREGATE_AREA_PIXELS,
-) -> Dict[str, float]:
-    """
-    Compute measurements excluding blurry regions.
-
-    Arguments:
-        cell_labels: Instance segmentation of cells
-        aggregate_labels: Instance segmentation of aggregates
-        blur_mask: Binary mask where 1 = blurry (to be excluded)
-        min_aggregate_area: Minimum aggregate area in pixels
-
-    Returns:
-        Dictionary with masked measurements
-    """
-    # Apply valid (non-blurry) mask to cell labels
-    cell_labels_masked = cell_labels.copy()
-    cell_labels_masked[blur_mask != 0] = 0
-
-    # Use bincount to get per-cell areas in one pass each
-    original_counts = np.bincount(cell_labels.ravel())
-    masked_counts = np.bincount(cell_labels_masked.ravel(), minlength=len(original_counts))
-
-    # Valid cells: at least 50% of area in non-blurry region
-    ratios = np.zeros(len(original_counts), dtype=np.float64)
-    nonzero = original_counts > 0
-    ratios[nonzero] = masked_counts[nonzero] / original_counts[nonzero]
-    valid_cell_ids = np.where((ratios >= 0.5) & (np.arange(len(ratios)) > 0))[0]
-    n_cells_masked = len(valid_cell_ids)
-
-    # Create aggregate mask inside valid cells
-    mask_agg = compute_aggregate_mask_inside_cells(aggregate_labels, cell_labels_masked)
-    labels_agg_inside = skimage.morphology.label(mask_agg, connectivity=2)
-
-    # Aggregate area per cell via weighted bincount — single pass
-    agg_area_per_cell = np.bincount(
-        cell_labels_masked.ravel(),
-        weights=mask_agg.ravel().astype(np.float64),
-        minlength=len(original_counts),
-    )
-    n_agg_positive_masked = int(np.sum(agg_area_per_cell[valid_cell_ids] >= min_aggregate_area))
-
-    pct_agg_positive_masked = (n_agg_positive_masked / n_cells_masked * 100) if n_cells_masked > 0 else 0.0
-
-    total_cell_area_masked = int(masked_counts[1:].sum()) if len(masked_counts) > 1 else 0
-    total_agg_area_masked = int(np.sum(mask_agg))
-
-    return {
-        "n_cells_masked": n_cells_masked,
-        "n_aggregate_positive_cells_masked": n_agg_positive_masked,
-        "pct_aggregate_positive_cells_masked": pct_agg_positive_masked,
-        "total_cell_area_masked_px": float(total_cell_area_masked),
-        "total_aggregate_area_masked_px": float(total_agg_area_masked),
-    }
 
 
 def apply_focus_metrics_to_result(

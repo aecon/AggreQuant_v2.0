@@ -235,3 +235,61 @@ class TestComputeFieldMeasurementsRegression:
         _assert_results_match(ref, result)
         assert result.pct_ambiguous_aggregates == 100.0
         assert result.n_aggregate_positive_cells == 2
+
+    def test_no_blur_mask_leaves_masked_fields_none(self):
+        """Without blur_mask, masked fields should remain None."""
+        cell_labels = np.zeros((50, 50), dtype=np.uint16)
+        cell_labels[10:40, 10:40] = 1
+        agg_labels = np.zeros((50, 50), dtype=np.uint32)
+        agg_labels[15:25, 15:25] = 1
+
+        result, _ = compute_field_measurements(
+            cell_labels, agg_labels, min_aggregate_area=9,
+        )
+        assert result.n_cells_masked is None
+        assert result.pct_aggregate_positive_cells_masked is None
+
+    def test_blur_mask_excludes_blurry_region(self):
+        """blur_mask should exclude blurry cells and recompute metrics."""
+        cell_labels = np.zeros((50, 100), dtype=np.uint16)
+        cell_labels[10:40, 10:45] = 1   # cell 1: left side (clear)
+        cell_labels[10:40, 55:90] = 2   # cell 2: right side (blurry)
+
+        agg_labels = np.zeros((50, 100), dtype=np.uint32)
+        agg_labels[15:25, 15:25] = 1    # aggregate in cell 1 only
+
+        # Blur covers the right half — cell 2 loses all its area
+        blur_mask = np.zeros((50, 100), dtype=np.uint8)
+        blur_mask[:, 50:] = 1
+
+        result, _ = compute_field_measurements(
+            cell_labels, agg_labels, blur_mask=blur_mask, min_aggregate_area=9,
+        )
+        # Unmasked: 2 cells, 1 aggregate-positive
+        assert result.n_cells == 2
+        assert result.n_aggregate_positive_cells == 1
+
+        # Masked: cell 2 lost 100% area → discarded, only cell 1 survives
+        assert result.n_cells_masked == 1
+        assert result.n_aggregate_positive_cells_masked == 1
+        assert result.pct_aggregate_positive_cells_masked == 100.0
+        assert result.total_cell_area_masked_px > 0
+        assert result.total_aggregate_area_masked_px > 0
+
+    def test_blur_mask_partial_cell_retention(self):
+        """Cell retaining >=50% area after masking should survive."""
+        cell_labels = np.zeros((100, 100), dtype=np.uint16)
+        cell_labels[10:90, 10:90] = 1  # 80×80 = 6400 px
+
+        agg_labels = np.zeros((100, 100), dtype=np.uint32)
+        agg_labels[20:30, 20:30] = 1   # 100 px aggregate
+
+        # Blur covers 30% of the cell (top 24 rows of the 80-row cell)
+        blur_mask = np.zeros((100, 100), dtype=np.uint8)
+        blur_mask[:34, :] = 1  # rows 10-33 of cell are blurred = 24*80 = 1920 px (~30%)
+
+        result, _ = compute_field_measurements(
+            cell_labels, agg_labels, blur_mask=blur_mask, min_aggregate_area=9,
+        )
+        # Cell retains ~70% → should survive
+        assert result.n_cells_masked == 1
