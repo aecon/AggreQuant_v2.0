@@ -23,34 +23,6 @@ MIN_AGGREGATE_AREA_PIXELS = 9
 SMALL_HOLE_AREA_THRESHOLD = 25
 
 
-def compute_aggregate_mask_inside_cells(
-    aggregate_labels: np.ndarray,
-    cell_labels: np.ndarray,
-) -> np.ndarray:
-    """
-    Create aggregate mask excluding regions outside cells.
-
-    Arguments:
-        aggregate_labels: Instance labels for aggregates
-        cell_labels: Instance labels for cells
-
-    Returns:
-        mask: Binary mask of aggregates inside cells
-    """
-    # Create binary mask from aggregate labels
-    mask = (aggregate_labels > 0).astype(np.uint8)
-
-    # Fill small holes in aggregate mask
-    mask = remove_small_holes_compat(
-        mask, area_threshold=SMALL_HOLE_AREA_THRESHOLD, connectivity=2
-    ).astype(np.uint8)
-
-    # Exclude regions outside cells
-    mask[cell_labels == 0] = 0
-
-    return mask
-
-
 def compute_field_measurements(
     cell_labels: np.ndarray,
     aggregate_labels: np.ndarray,
@@ -221,7 +193,11 @@ def compute_field_measurements(
         n_cells_masked = len(valid_cell_ids)
 
         # Aggregate mask inside non-blurry cell regions
-        mask_agg_masked = compute_aggregate_mask_inside_cells(aggregate_labels, cell_labels_masked)
+        mask_agg_masked = (aggregate_labels > 0).astype(np.uint8)
+        mask_agg_masked = remove_small_holes_compat(
+            mask_agg_masked, area_threshold=SMALL_HOLE_AREA_THRESHOLD, connectivity=2,
+        ).astype(np.uint8)
+        mask_agg_masked[cell_labels_masked == 0] = 0
 
         # Aggregate area per cell via weighted bincount
         agg_area_per_cell = np.bincount(

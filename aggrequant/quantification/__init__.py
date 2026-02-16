@@ -10,7 +10,6 @@ from .results import FieldResult, WellResult, PlateResult
 from .measurements import (
     compute_field_measurements,
     apply_focus_metrics_to_result,
-    compute_aggregate_mask_inside_cells,
 )
 
 __all__ = [
@@ -21,5 +20,4 @@ __all__ = [
     # Measurement functions
     "compute_field_measurements",
     "apply_focus_metrics_to_result",
-    "compute_aggregate_mask_inside_cells",
 ]
