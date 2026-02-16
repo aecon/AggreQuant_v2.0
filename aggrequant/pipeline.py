@@ -253,6 +253,9 @@ class SegmentationPipeline:
         self, cell_labels: np.ndarray, nuclei_labels: np.ndarray
     ) -> tuple:
         """Remove cells touching image border and their corresponding nuclei."""
+        cell_labels = cell_labels.copy()
+        nuclei_labels = nuclei_labels.copy()
+
         # Find labels touching any border
         border_ids = set()
         border_ids.update(np.unique(cell_labels[0, :]))       # top

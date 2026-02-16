@@ -92,11 +92,9 @@ def compute_field_measurements(
         result: FieldResult with all measurements
         diagnostics: Dictionary with diagnostic images/data
     """
-    # Create aggregate mask inside cells
-    mask_agg = compute_aggregate_mask_inside_cells(aggregate_labels, cell_labels)
-
-    # Re-label aggregates inside cells (connected components)
-    labels_agg_inside = skimage.morphology.label(mask_agg, connectivity=2)
+    # Aggregate mask and labels (assumes aggregates already filtered to be inside cells)
+    mask_agg = (aggregate_labels > 0).astype(np.uint8)
+    labels_agg_inside = aggregate_labels
 
     if debug:
         logger.debug(f"Aggregates inside cells: {labels_agg_inside.max()}")
