@@ -9,7 +9,6 @@ Author: Athena Economides, 2026, UZH
 import numpy as np
 import skimage.morphology
 from typing import Optional, Tuple, Dict
-from dataclasses import dataclass
 
 from .results import FieldResult
 from aggrequant.common.logging import get_logger
@@ -21,16 +20,6 @@ logger = get_logger(__name__)
 # Default parameters
 MIN_AGGREGATE_AREA_PIXELS = 9
 SMALL_HOLE_AREA_THRESHOLD = 25
-
-
-@dataclass
-class AggregateStats:
-    """Statistics for a single aggregate."""
-    aggregate_id: int
-    total_area: int
-    n_cells_overlapping: int
-    is_ambiguous: bool  # overlaps multiple cells
-    cell_areas: Dict[int, int]  # cell_id -> overlap area
 
 
 def compute_aggregate_mask_inside_cells(
@@ -116,18 +105,17 @@ def compute_field_measurements(
     aggregates_per_cell = np.zeros(n_cells)  # Number of aggregates per cell
     cells_per_aggregate = np.zeros(n_aggregates)  # Number of cells per aggregate
 
-    # Diagnostic overlay images
-    overlay_cells_agg = np.zeros(cell_labels.shape, dtype=np.float32)
-    overlay_cells_agg[mask_cell > 0] = -1
-
-    overlay_nagg_per_cell = np.ones(cell_labels.shape, dtype=np.float32) * -1
-    overlay_nagg_per_cell[mask_cell > 0] = 0
+    # Diagnostic overlay images (only allocated in debug mode)
+    if debug:
+        overlay_cells_agg = np.zeros(cell_labels.shape, dtype=np.float32)
+        overlay_cells_agg[mask_cell > 0] = -1
+        overlay_nagg_per_cell = np.ones(cell_labels.shape, dtype=np.float32) * -1
+        overlay_nagg_per_cell[mask_cell > 0] = 0
 
     # Process each aggregate
     for ia, agg_id in enumerate(unique_aggregates):
         # Get aggregate region
         idx_agg = labels_agg_inside == agg_id
-        total_agg_area = np.sum(idx_agg)
 
         # Find cells under this aggregate
         cell_ids_under_agg = cell_labels[idx_agg]
@@ -149,17 +137,17 @@ def compute_field_measurements(
                     aggregates_per_cell[cell_idx[0]] += 1
                     cells_per_aggregate[ia] += 1
 
-                    # Update diagnostic overlays
-                    cell_mask = cell_labels == cell_id
-                    overlay_cells_agg[cell_mask & ~idx_agg] = -2
-                    overlay_nagg_per_cell[cell_mask] = aggregates_per_cell[cell_idx[0]]
+                    if debug:
+                        cell_mask = cell_labels == cell_id
+                        overlay_cells_agg[cell_mask & ~idx_agg] = -2
+                        overlay_nagg_per_cell[cell_mask] = aggregates_per_cell[cell_idx[0]]
 
-        # Color aggregate by number of cells it overlaps
-        overlay_cells_agg[idx_agg] = cells_per_aggregate[ia]
+        if debug:
+            overlay_cells_agg[idx_agg] = cells_per_aggregate[ia]
 
-    # Clean up diagnostic images
-    overlay_cells_agg[mask_cell == 0] = 0
-    overlay_nagg_per_cell[mask_agg > 0] = -2
+    if debug:
+        overlay_cells_agg[mask_cell == 0] = 0
+        overlay_nagg_per_cell[mask_agg > 0] = -2
 
     # Compute final statistics
     total_cell_area = np.sum(mask_cell)
@@ -211,12 +199,13 @@ def compute_field_measurements(
 
     # Diagnostic data
     diagnostics = {
-        "overlay_cells_agg": overlay_cells_agg,
-        "overlay_nagg_per_cell": overlay_nagg_per_cell,
         "labels_agg_inside_cells": labels_agg_inside,
         "aggregates_per_cell": aggregates_per_cell,
         "cells_per_aggregate": cells_per_aggregate,
     }
+    if debug:
+        diagnostics["overlay_cells_agg"] = overlay_cells_agg
+        diagnostics["overlay_nagg_per_cell"] = overlay_nagg_per_cell
 
     return result, diagnostics
 

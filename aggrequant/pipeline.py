@@ -54,6 +54,13 @@ class SegmentationPipeline:
             max_area=seg.nuclei_max_area,
             verbose=verbose,
         )
+        # Relabeling assumes cells use nuclei as seeds (cell IDs match nucleus IDs).
+        # Currently only CellposeSegmenter guarantees this.
+        if seg.cell_model not in ("cyto3",):
+            raise ValueError(
+                f"Unsupported cell model '{seg.cell_model}'. "
+                "Only Cellpose models (cyto3) are currently supported."
+            )
         self._cell_segmenter = CellposeSegmenter(
             gpu=self.config.use_gpu,
             verbose=verbose,
