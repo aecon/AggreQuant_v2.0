@@ -7,7 +7,7 @@
 # Author: Athena Economides, 2026, UZH
 
 # Input data location
-input_dir: "/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/20230509_Dalila_Elena_GE_InCell_Plate_1_2001261754_1"
+input_dir: "/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/data_384wells"
 plate_format: "384"
 
 # Channel configuration
