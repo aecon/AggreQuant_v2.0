@@ -7,6 +7,7 @@ Author: Athena Economides, 2026, UZH
 """
 
 import numpy as np
+import skimage.morphology
 from typing import Optional, Tuple, Dict
 from dataclasses import dataclass
 
@@ -183,10 +184,12 @@ def compute_field_measurements(
     positive_cells_agg_counts = aggregates_per_cell[aggregates_per_cell > 0]
     avg_agg_per_positive = float(np.mean(positive_cells_agg_counts)) if len(positive_cells_agg_counts) > 0 else 0.0
 
-    # Count nuclei if provided
+    # Count nuclei and compute nuclei area if provided
     n_nuclei = 0
+    total_nuclei_area = 0
     if nuclei_labels is not None:
         n_nuclei = len(np.unique(nuclei_labels[nuclei_labels > 0]))
+        total_nuclei_area = int(np.sum(nuclei_labels > 0))
 
     # Create result
     result = FieldResult(
@@ -197,6 +200,7 @@ def compute_field_measurements(
         field=0,  # To be filled by caller
         n_cells=n_cells,
         n_nuclei=n_nuclei,
+        total_nuclei_area_px=float(total_nuclei_area),
         total_cell_area_px=float(total_cell_area),
         n_aggregates=n_aggregates,
         n_aggregate_positive_cells=n_agg_positive_cells,

@@ -18,6 +18,7 @@ from .loaders.config import PipelineConfig
 from .loaders.images import ImageLoader, group_files_by_field
 from .common.image_utils import load_image
 from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
+from .quantification.measurements import compute_field_measurements
 from .segmentation.nuclei.stardist import StarDistSegmenter
 from .segmentation.cells.cellpose import CellposeSegmenter
 from .segmentation.aggregates.filter_based import FilterBasedSegmenter
@@ -63,8 +64,9 @@ class SegmentationPipeline:
             verbose=verbose,
         )
 
-        # Accumulated focus metrics (saved to CSV at end of run)
+        # Accumulated results (saved to CSV at end of run)
         self._focus_results: List[Dict] = []
+        self._field_results: List[Dict] = []
 
     def _log(self, message: str):
         if self.verbose:
@@ -114,9 +116,11 @@ class SegmentationPipeline:
                 if max_fields is not None and fields_processed >= max_fields:
                     self._log(f"Reached max_fields={max_fields}, stopping")
                     self._save_focus_metrics()
+                    self._save_field_measurements()
                     return
 
         self._save_focus_metrics()
+        self._save_field_measurements()
         self._log("Pipeline complete")
 
     def _process_field(self, well_id: str, field_id: str, field_files: list):
@@ -150,6 +154,26 @@ class SegmentationPipeline:
         cell_labels, nuclei_labels = self._remove_border_objects(cell_labels, nuclei_labels)
         aggregate_labels = self._filter_aggregates_by_cells(aggregate_labels, cell_labels)
         nuclei_labels, cell_labels = self._relabel_consecutive(nuclei_labels, cell_labels)
+
+        # Quantification
+        result, _ = compute_field_measurements(
+            cell_labels, aggregate_labels, nuclei_labels,
+            min_aggregate_area=self.config.segmentation.aggregate_min_size,
+            verbose=self.verbose,
+        )
+        self._field_results.append({
+            "well_id": well_id,
+            "field_id": field_id,
+            "n_cells": result.n_cells,
+            "total_nuclei_area_px": result.total_nuclei_area_px,
+            "total_cell_area_px": result.total_cell_area_px,
+            "total_aggregate_area_px": result.total_aggregate_area_px,
+            "n_aggregates": result.n_aggregates,
+            "n_aggregate_positive_cells": result.n_aggregate_positive_cells,
+            "pct_aggregate_positive_cells": result.pct_aggregate_positive_cells,
+        })
+        self._log(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
+                  f"{result.pct_aggregate_positive_cells:.1f}% agg-positive")
 
         # Save masks
         if self.config.output.save_masks:
@@ -200,6 +224,19 @@ class SegmentationPipeline:
         df = pd.DataFrame(self._focus_results)
         df.to_csv(path, index=False)
         self._log(f"Focus metrics saved to {path} ({len(df)} rows)")
+
+    def _save_field_measurements(self):
+        """Save accumulated field measurements to CSV."""
+        if not self._field_results:
+            return
+
+        output_dir = self.config.output.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / "field_measurements.csv"
+
+        df = pd.DataFrame(self._field_results)
+        df.to_csv(path, index=False)
+        self._log(f"Field measurements saved to {path} ({len(df)} rows)")
 
     def _load_channel(self, field_files: list, purpose: str) -> Optional[np.ndarray]:
         """Load image for a specific channel purpose."""

@@ -33,6 +33,7 @@ class FieldResult:
     # Cell metrics
     n_cells: int = 0
     n_nuclei: int = 0
+    total_nuclei_area_px: float = 0.0
     total_cell_area_px: float = 0.0
 
     # Aggregate metrics (total)
