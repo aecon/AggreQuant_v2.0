@@ -7,10 +7,7 @@ Author: Athena Economides, 2026, UZH
 """
 
 from .results import FieldResult, WellResult, PlateResult
-from .measurements import (
-    compute_field_measurements,
-    apply_focus_metrics_to_result,
-)
+from .measurements import compute_field_measurements
 
 __all__ = [
     # Results containers
@@ -19,5 +16,4 @@ __all__ = [
     "PlateResult",
     # Measurement functions
     "compute_field_measurements",
-    "apply_focus_metrics_to_result",
 ]

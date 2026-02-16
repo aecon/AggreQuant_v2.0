@@ -247,34 +247,3 @@ def compute_field_measurements(
         diagnostics["overlay_nagg_per_cell"] = overlay_nagg_per_cell
 
     return result, diagnostics
-
-
-def apply_focus_metrics_to_result(
-    result: FieldResult,
-    focus_maps: dict,
-    blur_threshold: float = 15.0,
-) -> FieldResult:
-    """
-    Add focus quality metrics to a field result.
-
-    Arguments:
-        result: FieldResult to update
-        focus_maps: Dict from compute_patch_focus_maps containing "VarianceLaplacian" key
-        blur_threshold: Threshold for variance of Laplacian
-
-    Returns:
-        Updated FieldResult
-    """
-    var_lap = focus_maps["VarianceLaplacian"]
-    n_patches = var_lap.size
-    n_blurry = int(np.sum(var_lap < blur_threshold))
-    pct_blurry = (n_blurry / n_patches * 100) if n_patches > 0 else 0.0
-
-    result.focus_variance_laplacian_mean = float(np.mean(var_lap))
-    result.focus_variance_laplacian_min = float(np.min(var_lap))
-    result.focus_pct_patches_blurry = pct_blurry
-    result.focus_pct_area_blurry = pct_blurry  # Same since non-overlapping patches
-    result.focus_is_likely_blurry = pct_blurry > 50
-    result.blur_threshold_used = blur_threshold
-
-    return result
