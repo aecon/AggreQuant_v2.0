@@ -7,15 +7,17 @@ Author: Athena Economides, 2026, UZH
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List
 
 import numpy as np
+import pandas as pd
 import skimage.morphology
 import tifffile
 
 from .loaders.config import PipelineConfig
 from .loaders.images import ImageLoader, group_files_by_field
 from .common.image_utils import load_image
+from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
 from .segmentation.nuclei.stardist import StarDistSegmenter
 from .segmentation.cells.cellpose import CellposeSegmenter
 from .segmentation.aggregates.filter_based import FilterBasedSegmenter
@@ -61,6 +63,9 @@ class SegmentationPipeline:
             verbose=verbose,
         )
 
+        # Accumulated focus metrics (saved to CSV at end of run)
+        self._focus_results: List[Dict] = []
+
     def _log(self, message: str):
         if self.verbose:
             print(message)
@@ -88,6 +93,7 @@ class SegmentationPipeline:
 
         self._log(f"Found {loader.n_wells} wells")
 
+        self._focus_results = []
         fields_processed = 0
         for well_id in loader.wells:
             well_files = loader.get_well_files(well_id)
@@ -107,8 +113,10 @@ class SegmentationPipeline:
                 fields_processed += 1
                 if max_fields is not None and fields_processed >= max_fields:
                     self._log(f"Reached max_fields={max_fields}, stopping")
+                    self._save_focus_metrics()
                     return
 
+        self._save_focus_metrics()
         self._log("Pipeline complete")
 
     def _process_field(self, well_id: str, field_id: str, field_files: list):
@@ -124,6 +132,15 @@ class SegmentationPipeline:
 
         self._log(f"  Processing {well_id}/f{field_id}")
 
+        # Focus quality metrics
+        quality = self.config.quality
+        if "nuclei" in quality.compute_on:
+            metrics = self._compute_focus_metrics(nuclei_img, "nuclei")
+            self._focus_results.append({"well_id": well_id, "field_id": field_id, "channel": "nuclei", **metrics})
+        if "cells" in quality.compute_on:
+            metrics = self._compute_focus_metrics(cell_img, "cells")
+            self._focus_results.append({"well_id": well_id, "field_id": field_id, "channel": "cells", **metrics})
+
         # Segment
         nuclei_labels = self._nuclei_segmenter.segment(nuclei_img)
         cell_labels = self._cell_segmenter.segment(cell_img, nuclei_labels)
@@ -137,6 +154,52 @@ class SegmentationPipeline:
         # Save masks
         if self.config.output.save_masks:
             self._save_masks(well_id, field_id, nuclei_labels, cell_labels, aggregate_labels)
+
+    def _compute_focus_metrics(self, image: np.ndarray, channel: str) -> Dict:
+        """
+        Compute focus quality metrics for a single image.
+
+        Arguments:
+            image: 2D grayscale image
+            channel: Channel label (for logging)
+
+        Returns:
+            Flat dict of metric results with prefixed keys.
+        """
+        quality = self.config.quality
+        results = {}
+
+        # Patch-based metrics
+        if quality.compute_patch_metrics and quality.patch_metrics:
+            maps, _, _ = compute_patch_focus_maps(image, patch_size=quality.patch_size)
+            for metric_name in quality.patch_metrics:
+                score_map = maps[metric_name]
+                results[f"patch_{metric_name}_mean"] = float(score_map.mean())
+                results[f"patch_{metric_name}_min"] = float(score_map.min())
+                results[f"patch_{metric_name}_max"] = float(score_map.max())
+
+        # Global metrics
+        if quality.compute_global_metrics and quality.global_metrics:
+            global_results = compute_global_focus_metrics(image)
+            for metric_name in quality.global_metrics:
+                results[f"global_{metric_name}"] = global_results[metric_name]
+
+        n_metrics = len(results)
+        self._log(f"    Focus ({channel}): {n_metrics} metrics computed")
+        return results
+
+    def _save_focus_metrics(self):
+        """Save accumulated focus metrics to CSV."""
+        if not self._focus_results:
+            return
+
+        output_dir = self.config.output.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / "focus_metrics.csv"
+
+        df = pd.DataFrame(self._focus_results)
+        df.to_csv(path, index=False)
+        self._log(f"Focus metrics saved to {path} ({len(df)} rows)")
 
     def _load_channel(self, field_files: list, purpose: str) -> Optional[np.ndarray]:
         """Load image for a specific channel purpose."""

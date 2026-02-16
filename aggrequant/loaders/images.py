@@ -22,23 +22,6 @@ logger = get_logger(__name__)
 UNKNOWN_WELL_ID = "unknown"
 
 
-# Backward compatibility alias
-def load_tiff(path: Path) -> np.ndarray:
-    """
-    Load a TIFF image file.
-
-    This is a backward-compatibility alias for load_image().
-    New code should use load_image() from aggrequant.common.image_utils.
-
-    Arguments:
-        path: Path to TIFF file
-
-    Returns:
-        Image as numpy array
-    """
-    return load_image(path)
-
-
 def parse_operetta_filename(filename: str) -> Dict[str, str]:
     """
     Parse Operetta/Harmony microscope filename format.
@@ -355,7 +338,7 @@ class ImageLoader:
         if self.verbose:
             logger.info(f"Loading {len(channel_files)} images for {well}/{channel}")
 
-        images = [load_tiff(f) for f in channel_files]
+        images = [load_image(f) for f in channel_files]
         return images, channel_files
 
     def load_field(

@@ -45,13 +45,18 @@ segmentation:
   aggregate_min_size: 9       # Minimum aggregate size in pixels
   aggregate_intensity_threshold: 1.6  # Normalized intensity threshold
 
-# Quality control settings
+# Focus quality metrics
+# Set compute_on to ["nuclei"] or ["nuclei", "cells"] to enable.
+# Leave empty [] to skip focus computation (saves time).
 quality:
-  focus_patch_size: [40, 40]
-  focus_blur_threshold: 15.0
-  focus_reject_threshold: 50.0  # Reject field if >50% patches are blurry
-  min_intensity: 0.0
-  max_saturation_pct: 5.0
+  compute_on: ["nuclei"]
+  compute_patch_metrics: true
+  compute_global_metrics: true
+  patch_metrics: ["VarianceLaplacian"]
+  # Available: VarianceLaplacian, LaplaceEnergy, Sobel, Brenner, FocusScore
+  global_metrics: ["power_log_log_slope"]
+  # Available: power_log_log_slope, global_variance_laplacian, high_freq_ratio
+  patch_size: [40, 40]
 
 # Output settings
 output:

@@ -13,7 +13,6 @@ from .config import (
     create_default_config,
 )
 from .images import (
-    load_tiff,
     load_image,
     load_image_stack,
     parse_operetta_filename,
@@ -43,7 +42,6 @@ __all__ = [
     "PipelineConfig",
     "create_default_config",
     # Images
-    "load_tiff",
     "load_image",
     "load_image_stack",
     "parse_operetta_filename",

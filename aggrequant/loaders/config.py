@@ -43,22 +43,47 @@ class SegmentationConfig:
     aggregate_intensity_threshold: float = 0.5
 
 
+VALID_PATCH_METRICS = {"VarianceLaplacian", "LaplaceEnergy", "Sobel", "Brenner", "FocusScore"}
+VALID_GLOBAL_METRICS = {"power_log_log_slope", "global_variance_laplacian", "high_freq_ratio"}
+VALID_FOCUS_CHANNELS = {"nuclei", "cells"}
+
+
 @dataclass
 class QualityConfig:
-    """Configuration for quality control."""
-    # Focus/blur detection
-    focus_patch_size: Tuple[int, int] = (40, 40)
-    focus_blur_threshold: float = 15.0
-    focus_reject_threshold: float = 50.0  # Reject if >50% blurry
+    """Configuration for focus quality metrics."""
+    # Which channels to compute focus metrics on (empty = skip focus entirely)
+    compute_on: List[str] = field(default_factory=list)
 
-    # Intensity thresholds
-    min_intensity: float = 0.0
-    max_saturation_pct: float = 5.0
+    # Which categories to compute
+    compute_patch_metrics: bool = True
+    compute_global_metrics: bool = True
+
+    # Which specific metrics to compute
+    patch_metrics: List[str] = field(default_factory=lambda: ["VarianceLaplacian"])
+    global_metrics: List[str] = field(default_factory=lambda: ["power_log_log_slope"])
+
+    # Patch settings
+    patch_size: Tuple[int, int] = (40, 40)
 
     def __post_init__(self):
-        # Ensure focus_patch_size is a tuple (YAML loads as list)
-        if isinstance(self.focus_patch_size, list):
-            self.focus_patch_size = tuple(self.focus_patch_size)
+        if isinstance(self.patch_size, list):
+            self.patch_size = tuple(self.patch_size)
+
+        for ch in self.compute_on:
+            if ch not in VALID_FOCUS_CHANNELS:
+                raise ValueError(
+                    f"Invalid focus channel '{ch}'. Must be one of {VALID_FOCUS_CHANNELS}"
+                )
+        for m in self.patch_metrics:
+            if m not in VALID_PATCH_METRICS:
+                raise ValueError(
+                    f"Invalid patch metric '{m}'. Must be one of {VALID_PATCH_METRICS}"
+                )
+        for m in self.global_metrics:
+            if m not in VALID_GLOBAL_METRICS:
+                raise ValueError(
+                    f"Invalid global metric '{m}'. Must be one of {VALID_GLOBAL_METRICS}"
+                )
 
 
 @dataclass
@@ -181,11 +206,12 @@ class PipelineConfig:
                 "aggregate_intensity_threshold": self.segmentation.aggregate_intensity_threshold,
             },
             "quality": {
-                "focus_patch_size": list(self.quality.focus_patch_size),
-                "focus_blur_threshold": self.quality.focus_blur_threshold,
-                "focus_reject_threshold": self.quality.focus_reject_threshold,
-                "min_intensity": self.quality.min_intensity,
-                "max_saturation_pct": self.quality.max_saturation_pct,
+                "compute_on": self.quality.compute_on,
+                "compute_patch_metrics": self.quality.compute_patch_metrics,
+                "compute_global_metrics": self.quality.compute_global_metrics,
+                "patch_metrics": self.quality.patch_metrics,
+                "global_metrics": self.quality.global_metrics,
+                "patch_size": list(self.quality.patch_size),
             },
             "output": {
                 "output_dir": str(self.output.output_dir),
