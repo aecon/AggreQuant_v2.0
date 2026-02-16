@@ -89,8 +89,8 @@ class CellposeSegmenter(BaseSegmenter):
         nuclei_mask = (nuclei_labels > 0).astype(np.float32)
 
         # Create 2-channel input: [cells, nuclei_mask]
-        n = image.shape[0]
-        input_image = np.zeros((2, n, n))
+        h, w = image.shape[:2]
+        input_image = np.zeros((2, h, w))
         input_image[0, :, :] = image
         input_image[1, :, :] = nuclei_mask
 

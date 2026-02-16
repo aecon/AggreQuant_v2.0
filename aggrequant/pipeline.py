@@ -14,7 +14,8 @@ import skimage.morphology
 import tifffile
 
 from .loaders.config import PipelineConfig
-from .loaders.images import ImageLoader, group_files_by_field, load_tiff
+from .loaders.images import ImageLoader, group_files_by_field
+from .common.image_utils import load_image
 from .segmentation.nuclei.stardist import StarDistSegmenter
 from .segmentation.cells.cellpose import CellposeSegmenter
 from .segmentation.aggregates.filter_based import FilterBasedSegmenter
@@ -34,7 +35,7 @@ class SegmentationPipeline:
         self.config = PipelineConfig.from_yaml(config_path)
         self.verbose = verbose
 
-        # Build channel pattern mapping
+        # Build channel pattern mappings
         self._channel_patterns = {}
         self._channel_by_purpose = {}
         for ch in self.config.channels:
@@ -64,8 +65,13 @@ class SegmentationPipeline:
         if self.verbose:
             print(message)
 
-    def run(self):
-        """Run the segmentation pipeline on all images."""
+    def run(self, max_fields: Optional[int] = None):
+        """
+        Run the segmentation pipeline on all images.
+
+        Arguments:
+            max_fields: If set, stop after processing this many fields.
+        """
         # Configure TensorFlow memory growth before any model loading
         import tensorflow as tf
         gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -82,6 +88,7 @@ class SegmentationPipeline:
 
         self._log(f"Found {loader.n_wells} wells")
 
+        fields_processed = 0
         for well_id in loader.wells:
             well_files = loader.get_well_files(well_id)
             if not well_files:
@@ -97,6 +104,10 @@ class SegmentationPipeline:
 
             for field_id, field_files in sorted(fields.items()):
                 self._process_field(well_id, field_id, field_files)
+                fields_processed += 1
+                if max_fields is not None and fields_processed >= max_fields:
+                    self._log(f"Reached max_fields={max_fields}, stopping")
+                    return
 
         self._log("Pipeline complete")
 
@@ -135,7 +146,7 @@ class SegmentationPipeline:
 
         for f in field_files:
             if pattern.lower() in f.name.lower():
-                return load_tiff(f)
+                return load_image(f)
         return None
 
     def _remove_border_objects(
@@ -177,25 +188,15 @@ class SegmentationPipeline:
         self, nuclei_labels: np.ndarray, cell_labels: np.ndarray
     ) -> tuple:
         """Relabel nuclei and cells to consecutive IDs, maintaining correspondence."""
-        # Get unique non-zero labels (shared between nuclei and cells)
         unique_ids = np.unique(nuclei_labels[nuclei_labels > 0])
 
-        # Create mapping: old_id -> new_id
-        id_map = {0: 0}
+        # Build lookup table: old_id -> new_id
+        max_id = max(nuclei_labels.max(), cell_labels.max())
+        lookup = np.zeros(max_id + 1, dtype=nuclei_labels.dtype)
         for new_id, old_id in enumerate(sorted(unique_ids), start=1):
-            id_map[old_id] = new_id
+            lookup[old_id] = new_id
 
-        # Apply mapping
-        new_nuclei = np.zeros_like(nuclei_labels)
-        new_cells = np.zeros_like(cell_labels)
-
-        for old_id, new_id in id_map.items():
-            if old_id == 0:
-                continue
-            new_nuclei[nuclei_labels == old_id] = new_id
-            new_cells[cell_labels == old_id] = new_id
-
-        return new_nuclei, new_cells
+        return lookup[nuclei_labels], lookup[cell_labels]
 
     def _save_masks(
         self,
