@@ -4,14 +4,15 @@ Tracking progress toward a working pipeline and its companion manuscript.
 
 ## Phase 1: Get the segmentation pipeline running
 
-- [ ] Fix `run_pipeline.py` to use `SegmentationPipeline` correctly
-- [ ] Run pipeline on plate data (nuclei + cells + aggregates via filter method)
-- [ ] Verify output masks are correct (visual inspection)
-- [ ] Ensure focus quality check is integrated
+- [x] Fix `run_pipeline.py` to use `SegmentationPipeline` correctly
+- [x] Run pipeline on plate data (nuclei + cells + aggregates via filter method)
+- [x] Clean up pipeline internals (vectorize relabeling, fix square-image bug, remove `load_tiff`)
+- [x] Add configurable per-image focus quality metrics (patch-based + global, saved to CSV)
+- [x] Verify output masks are correct (visual inspection)
 
 ## Phase 2: Quantification and statistics
 
-- [ ] Per-cell measurements (aggregate count, area, intensity)
+- [x] Per-field measurements (n_cells, nuclei/cell/aggregate areas, % agg-positive cells → CSV)
 - [ ] Well-level statistics (% aggregate-positive cells)
 - [ ] Control well analysis (SSMD, Z-factor)
 - [ ] Export results (CSV / Parquet)
