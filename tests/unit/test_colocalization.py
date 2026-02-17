@@ -7,7 +7,7 @@ import pytest
 import tifffile
 
 from aggrequant.segmentation.postprocessing import count_labels
-from aggrequant.quantification.colocalization import (
+from aggrequant.colocalization import (
     build_overlap_table,
     count_positive_cells,
     quantify_field,

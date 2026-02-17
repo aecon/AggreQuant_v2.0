@@ -12,8 +12,8 @@ from aggrequant.loaders.images import ImageLoader, group_files_by_field
 from aggrequant.common.image_utils import load_image
 from aggrequant.common.logging import get_logger
 from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
-from aggrequant.quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
-from aggrequant.quantification.colocalization import quantify_field
+from aggrequant.focus import compute_patch_focus_maps, compute_global_focus_metrics
+from aggrequant.colocalization import quantify_field
 from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
 from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
 from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter

@@ -6,7 +6,7 @@ Author: Athena Economides, 2026, UZH
 
 import numpy as np
 import pytest
-from aggrequant.quality.focus import (
+from aggrequant.focus import (
     variance_of_laplacian,
     laplace_energy,
     sobel_metric,

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tifffile
 
-from aggrequant.quality.focus import (
+from aggrequant.focus import (
     compute_patch_focus_maps,
     compute_global_focus_metrics,
     power_log_log_slope,
