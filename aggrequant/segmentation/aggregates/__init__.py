@@ -4,7 +4,7 @@ Aggregate segmentation backends.
 Author: Athena Economides, 2026, UZH
 """
 
-from .filter_based import FilterBasedSegmenter
-from .neural_network import NeuralNetworkSegmenter
+from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
+from aggrequant.segmentation.aggregates.neural_network import NeuralNetworkSegmenter
 
 __all__ = ["FilterBasedSegmenter", "NeuralNetworkSegmenter"]

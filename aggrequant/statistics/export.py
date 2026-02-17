@@ -13,8 +13,8 @@ from datetime import datetime
 
 import pandas as pd
 
-from ..quantification.results import PlateResult, WellResult, FieldResult
-from .controls import ControlComparison, get_control_statistics
+from aggrequant.quantification.results import PlateResult, WellResult, FieldResult
+from aggrequant.statistics.controls import ControlComparison, get_control_statistics
 
 
 def export_to_csv(

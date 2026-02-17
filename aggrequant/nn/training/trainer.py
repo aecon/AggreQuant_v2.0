@@ -436,7 +436,7 @@ def train_model(
         >>> model = ModularUNet()
         >>> model, history = train_model(model, train_loader, val_loader)
     """
-    from .losses import DiceBCELoss
+    from aggrequant.nn.training.losses import DiceBCELoss
 
     # Default criterion
     if criterion is None:

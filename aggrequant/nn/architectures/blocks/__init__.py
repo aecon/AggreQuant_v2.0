@@ -43,19 +43,19 @@ Example:
 """
 
 # Basic convolution blocks
-from .conv import SingleConv, DoubleConv
+from aggrequant.nn.architectures.blocks.conv import SingleConv, DoubleConv
 
 # Residual blocks
-from .residual import ResidualBlock, BottleneckResidualBlock
+from aggrequant.nn.architectures.blocks.residual import ResidualBlock, BottleneckResidualBlock
 
 # Attention gates
-from .attention import AttentionGate, MultiHeadAttentionGate
+from aggrequant.nn.architectures.blocks.attention import AttentionGate, MultiHeadAttentionGate
 
 # Squeeze-and-Excitation blocks
-from .se import SEBlock, SEConvBlock, SEResidualBlock
+from aggrequant.nn.architectures.blocks.se import SEBlock, SEConvBlock, SEResidualBlock
 
 # CBAM blocks
-from .cbam import (
+from aggrequant.nn.architectures.blocks.cbam import (
     ChannelAttention,
     SpatialAttention,
     CBAM,
@@ -64,7 +64,7 @@ from .cbam import (
 )
 
 # ASPP blocks
-from .aspp import ASPP, ASPPBridge, ASPPConv, ASPPPooling, LightASPP
+from aggrequant.nn.architectures.blocks.aspp import ASPP, ASPPBridge, ASPPConv, ASPPPooling, LightASPP
 
 __all__ = [
     # Basic convolution

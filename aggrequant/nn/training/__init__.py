@@ -12,7 +12,7 @@ Example:
     >>> history = trainer.fit(epochs=100)
 """
 
-from .losses import (
+from aggrequant.nn.training.losses import (
     DiceLoss,
     DiceBCELoss,
     FocalLoss,
@@ -22,7 +22,7 @@ from .losses import (
     BoundaryLoss,
     get_loss_function,
 )
-from .trainer import (
+from aggrequant.nn.training.trainer import (
     Trainer,
     TrainingHistory,
     train_model,

@@ -368,6 +368,6 @@ class ImageLoader:
         for channel_name, pattern in self.channel_patterns.items():
             matching = [f for f in field_files if pattern.lower() in f.name.lower()]
             if matching:
-                result[channel_name] = load_tiff(matching[0])
+                result[channel_name] = load_image(matching[0])
 
         return result

@@ -26,10 +26,10 @@ Submodules:
 __version__ = "2.0.0"
 
 # Core architecture
-from .architectures import ModularUNet, UNet
+from aggrequant.nn.architectures import ModularUNet, UNet
 
 # Training (optional - for model development)
-from .training import (
+from aggrequant.nn.training import (
     DiceLoss,
     DiceBCELoss,
     FocalLoss,
@@ -39,14 +39,14 @@ from .training import (
 )
 
 # Evaluation
-from .evaluation import (
+from aggrequant.nn.evaluation import (
     dice_score,
     iou_score,
     evaluate_model,
 )
 
 # Utilities
-from .utils import get_device
+from aggrequant.nn.utils import get_device
 
 __all__ = [
     # Version

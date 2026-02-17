@@ -15,7 +15,7 @@ from typing import Optional, Union, Dict, Any
 import torch
 import torch.nn as nn
 
-from ..base import BaseSegmenter
+from aggrequant.segmentation.base import BaseSegmenter
 from aggrequant.common.image_utils import (
     remove_small_holes_compat,
     remove_small_objects_compat,

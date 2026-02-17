@@ -15,7 +15,7 @@ Example:
     ... )
 """
 
-from .dataset import (
+from aggrequant.nn.data.dataset import (
     AggregateDataset,
     PatchDataset,
     InferenceDataset,
@@ -23,7 +23,7 @@ from .dataset import (
     load_image,
     normalize_image,
 )
-from .augmentation import (
+from aggrequant.nn.data.augmentation import (
     get_training_augmentation,
     get_validation_augmentation,
     get_test_time_augmentation,

@@ -4,7 +4,7 @@ GPU configuration utilities.
 Author: Athena Economides, 2026, UZH
 """
 
-from .logging import get_logger
+from aggrequant.common.logging import get_logger
 
 logger = get_logger(__name__)
 

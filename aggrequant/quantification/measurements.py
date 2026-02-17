@@ -11,7 +11,7 @@ import skimage.morphology
 from scipy import sparse
 from typing import Optional, Tuple, Dict
 
-from .results import FieldResult
+from aggrequant.quantification.results import FieldResult
 from aggrequant.common.logging import get_logger
 from aggrequant.common.image_utils import remove_small_holes_compat
 

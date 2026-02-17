@@ -10,8 +10,8 @@ Author: Athena Economides, 2026, UZH
 from typing import Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..loaders.config import PipelineConfig
-    from ..quantification.results import PlateResult
+    from aggrequant.loaders.config import PipelineConfig
+    from aggrequant.quantification.results import PlateResult
 
 
 # Type alias for progress callback

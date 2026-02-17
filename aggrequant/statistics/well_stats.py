@@ -9,7 +9,7 @@ Author: Athena Economides, 2026, UZH
 import numpy as np
 from typing import List, Optional
 
-from ..quantification.results import FieldResult, WellResult
+from aggrequant.quantification.results import FieldResult, WellResult
 
 
 def aggregate_field_to_well(

@@ -37,7 +37,7 @@ Available modules to test:
     - use_deep_supervision: Multi-scale auxiliary outputs
 """
 
-from .unet import ModularUNet, UNet
+from aggrequant.nn.architectures.unet import ModularUNet, UNet
 
 __all__ = [
     "ModularUNet",

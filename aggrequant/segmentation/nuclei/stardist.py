@@ -10,7 +10,7 @@ Author: Athena Economides, 2026, UZH
 import numpy as np
 import skimage.filters
 import skimage.morphology
-from ..base import BaseSegmenter
+from aggrequant.segmentation.base import BaseSegmenter
 
 
 # Default parameters

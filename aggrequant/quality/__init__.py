@@ -1,6 +1,6 @@
 """Image quality assessment module."""
 
-from .focus import (
+from aggrequant.quality.focus import (
     ALL_PATCH_METRICS,
     variance_of_laplacian,
     laplace_energy,

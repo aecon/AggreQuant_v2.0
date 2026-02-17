@@ -12,7 +12,7 @@ import scipy.ndimage
 import skimage.morphology
 from typing import Optional
 
-from ..base import BaseSegmenter
+from aggrequant.segmentation.base import BaseSegmenter
 from aggrequant.common.image_utils import (
     remove_small_holes_compat,
     remove_small_objects_compat,

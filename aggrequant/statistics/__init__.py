@@ -7,12 +7,12 @@ computes quality control metrics (SSMD), and exports results.
 Author: Athena Economides, 2026, UZH
 """
 
-from .well_stats import (
+from aggrequant.statistics.well_stats import (
     aggregate_field_to_well,
     compute_well_statistics_from_qoi_arrays,
     compute_area_percentage_from_arrays,
 )
-from .controls import (
+from aggrequant.statistics.controls import (
     compute_ssmd,
     compute_z_factor,
     compare_controls,
@@ -22,7 +22,7 @@ from .controls import (
     format_ssmd_interpretation,
     format_z_factor_interpretation,
 )
-from .export import (
+from aggrequant.statistics.export import (
     export_to_csv,
     export_to_parquet,
     export_to_excel,

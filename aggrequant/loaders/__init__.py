@@ -4,7 +4,7 @@ Data loading and configuration for HCS image analysis.
 Author: Athena Economides, 2026, UZH
 """
 
-from .config import (
+from aggrequant.loaders.config import (
     ChannelConfig,
     SegmentationConfig,
     QualityConfig,
@@ -12,7 +12,7 @@ from .config import (
     PipelineConfig,
     create_default_config,
 )
-from .images import (
+from aggrequant.loaders.images import (
     load_image,
     load_image_stack,
     parse_operetta_filename,
@@ -22,7 +22,7 @@ from .images import (
     group_files_by_field,
     ImageLoader,
 )
-from .plate import (
+from aggrequant.loaders.plate import (
     PLATE_LAYOUTS,
     well_id_to_indices,
     indices_to_well_id,

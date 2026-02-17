@@ -9,7 +9,7 @@ Author: Athena Economides, 2026, UZH
 
 import numpy as np
 
-from ..base import BaseSegmenter
+from aggrequant.segmentation.base import BaseSegmenter
 
 
 class CellposeSegmenter(BaseSegmenter):

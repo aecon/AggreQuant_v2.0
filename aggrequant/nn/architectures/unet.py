@@ -25,7 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Optional, Union
 
-from .blocks import (
+from aggrequant.nn.architectures.blocks import (
     DoubleConv,
     ResidualBlock,
     AttentionGate,

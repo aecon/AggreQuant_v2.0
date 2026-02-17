@@ -9,7 +9,7 @@ This package provides tools for:
 __version__ = "2.0.0"
 __author__ = "Athena Economides"
 
-from .pipeline import SegmentationPipeline
+from aggrequant.pipeline import SegmentationPipeline
 
 __all__ = [
     "__version__",

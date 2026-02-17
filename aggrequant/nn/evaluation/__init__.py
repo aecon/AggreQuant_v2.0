@@ -11,7 +11,7 @@ Example:
     >>> metrics = evaluate_model(model, test_loader)
 """
 
-from .metrics import (
+from aggrequant.nn.evaluation.metrics import (
     dice_score,
     iou_score,
     precision,

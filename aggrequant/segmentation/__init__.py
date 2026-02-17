@@ -9,11 +9,11 @@ Provides segmenters for:
 Author: Athena Economides, 2026, UZH
 """
 
-from .base import BaseSegmenter
-from .nuclei import StarDistSegmenter
-from .cells import CellposeSegmenter
-from .aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
-from .postprocessing import (
+from aggrequant.segmentation.base import BaseSegmenter
+from aggrequant.segmentation.nuclei import StarDistSegmenter
+from aggrequant.segmentation.cells import CellposeSegmenter
+from aggrequant.segmentation.aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
+from aggrequant.segmentation.postprocessing import (
     remove_border_objects,
     filter_aggregates_by_cells,
     relabel_consecutive,

@@ -13,18 +13,18 @@ import numpy as np
 import pandas as pd
 import tifffile
 
-from .loaders.config import PipelineConfig
-from .loaders.images import ImageLoader, group_files_by_field
-from .common.image_utils import load_image
-from .common.logging import get_logger
-from .common.gpu_utils import configure_tensorflow_memory_growth
-from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
-from .quantification.measurements import compute_field_measurements
-from .quantification.results import FieldResult
-from .segmentation.nuclei.stardist import StarDistSegmenter
-from .segmentation.cells.cellpose import CellposeSegmenter
-from .segmentation.aggregates.filter_based import FilterBasedSegmenter
-from .segmentation.postprocessing import (
+from aggrequant.loaders.config import PipelineConfig
+from aggrequant.loaders.images import ImageLoader, group_files_by_field
+from aggrequant.common.image_utils import load_image
+from aggrequant.common.logging import get_logger
+from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
+from aggrequant.quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
+from aggrequant.quantification.measurements import compute_field_measurements
+from aggrequant.quantification.results import FieldResult
+from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
+from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
+from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
+from aggrequant.segmentation.postprocessing import (
     remove_border_objects,
     filter_aggregates_by_cells,
     relabel_consecutive,
