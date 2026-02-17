@@ -1,10 +1,4 @@
-"""
-Quantification measurements for aggregate analysis.
-
-Computes quantities of interest (QoI) from segmentation masks.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Quantification measurements from segmentation masks."""
 
 import numpy as np
 import skimage.morphology

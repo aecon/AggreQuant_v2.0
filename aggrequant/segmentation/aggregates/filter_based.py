@@ -1,11 +1,4 @@
-"""
-Filter-based aggregate segmentation.
-
-Classical segmentation using normalized intensity thresholding
-and morphological operations.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Filter-based aggregate segmentation."""
 
 import numpy as np
 import scipy.ndimage

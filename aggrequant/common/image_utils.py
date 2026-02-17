@@ -1,8 +1,4 @@
-"""
-Image utility functions for loading, normalization and type conversion.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Image loading, normalization, and type conversion utilities."""
 
 from pathlib import Path
 from typing import Union, List

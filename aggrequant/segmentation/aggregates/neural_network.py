@@ -1,11 +1,4 @@
-"""
-Neural network-based aggregate segmentation.
-
-Uses PyTorch UNet models for semantic segmentation with
-sliding window inference and patch stitching.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Neural network-based aggregate segmentation."""
 
 import numpy as np
 import skimage.morphology

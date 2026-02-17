@@ -1,8 +1,4 @@
-"""
-Cell segmentation backends.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Cell segmentation backends."""
 
 from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
 

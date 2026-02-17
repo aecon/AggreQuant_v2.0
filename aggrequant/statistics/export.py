@@ -1,10 +1,4 @@
-"""
-Data export utilities for statistics.
-
-Exports results to CSV, Parquet, Excel, and text formats.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Data export to CSV, Parquet, Excel, and text formats."""
 
 import numpy as np
 from pathlib import Path

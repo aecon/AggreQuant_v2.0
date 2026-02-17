@@ -1,10 +1,4 @@
-"""
-Quantification module for AggreQuant.
-
-Computes quantities of interest (QoI) from segmentation results.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Quantification of aggregate measurements from segmentation results."""
 
 from aggrequant.quantification.results import FieldResult, WellResult, PlateResult
 from aggrequant.quantification.measurements import compute_field_measurements

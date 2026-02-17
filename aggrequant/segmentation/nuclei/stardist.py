@@ -1,11 +1,4 @@
-"""
-StarDist-based nuclei segmentation.
-
-Wraps the pre-trained StarDist 2D model for nuclei detection
-in fluorescence microscopy images.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""StarDist-based nuclei segmentation."""
 
 import numpy as np
 import skimage.filters

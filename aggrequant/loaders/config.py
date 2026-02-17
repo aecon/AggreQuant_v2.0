@@ -1,8 +1,4 @@
-"""
-Configuration schema and validation for the analysis pipeline.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Configuration schema and validation for the analysis pipeline."""
 
 from dataclasses import dataclass, field
 from pathlib import Path

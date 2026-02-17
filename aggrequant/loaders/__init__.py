@@ -1,8 +1,4 @@
-"""
-Data loading and configuration for HCS image analysis.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Data loading and configuration for HCS image analysis."""
 
 from aggrequant.loaders.config import (
     ChannelConfig,

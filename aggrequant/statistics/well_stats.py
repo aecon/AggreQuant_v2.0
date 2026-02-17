@@ -1,10 +1,4 @@
-"""
-Well-level statistics aggregation.
-
-Aggregates field-level measurements to well-level statistics.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Well-level statistics aggregation from field-level measurements."""
 
 import numpy as np
 from typing import List, Optional

@@ -1,8 +1,4 @@
-"""
-Base classes and protocols for segmentation backends.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Base classes and protocols for segmentation backends."""
 
 from abc import ABC, abstractmethod
 import numpy as np

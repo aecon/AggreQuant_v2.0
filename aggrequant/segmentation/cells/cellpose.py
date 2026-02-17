@@ -1,11 +1,4 @@
-"""
-Cellpose-based cell segmentation.
-
-Wraps the pre-trained Cellpose model for cell segmentation
-using both cell and nuclei channels.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Cellpose-based cell segmentation."""
 
 import numpy as np
 

@@ -1,8 +1,4 @@
-"""
-GPU configuration utilities.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""GPU configuration utilities."""
 
 from aggrequant.common.logging import get_logger
 

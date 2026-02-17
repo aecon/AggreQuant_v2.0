@@ -1,13 +1,4 @@
-"""
-Segmentation backends for AggreQuant.
-
-Provides segmenters for:
-- Nuclei (StarDist)
-- Cells (Cellpose)
-- Aggregates (Filter-based, Neural Network)
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Segmentation backends for nuclei, cells, and aggregates."""
 
 from aggrequant.segmentation.base import BaseSegmenter
 from aggrequant.segmentation.nuclei import StarDistSegmenter

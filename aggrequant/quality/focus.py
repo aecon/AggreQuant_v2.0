@@ -1,17 +1,4 @@
-"""
-Focus/blur quality assessment for microscopy images.
-
-This module provides patch-based focus metrics to detect blurry regions
-in microscopy images. Blurry regions can be excluded from downstream
-analysis to improve data quality.
-
-All images are internally normalized to 8-bit scale [0, 255] using percentile
-normalization (similar to csbdeep.utils.normalize) before computing focus metrics.
-This ensures that thresholds (like DEFAULT_BLUR_THRESHOLD) are portable across
-different bit depths (8-bit, 12-bit, 16-bit, float, etc.).
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Patch-based focus quality assessment for microscopy images."""
 
 import cv2
 import numpy as np

@@ -1,8 +1,4 @@
-"""
-Plate and well data structures for HCS analysis.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Plate and well data structures for HCS analysis."""
 
 from dataclasses import dataclass, field
 from pathlib import Path

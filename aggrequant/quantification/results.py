@@ -1,10 +1,4 @@
-"""
-Results container dataclasses for quantification outputs.
-
-Provides structured containers for field-level and well-level results.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Result container dataclasses for field-level and well-level outputs."""
 
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List, Dict, Any

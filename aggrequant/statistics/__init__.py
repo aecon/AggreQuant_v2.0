@@ -1,11 +1,4 @@
-"""
-Statistics module for AggreQuant.
-
-Aggregates field-level results to well-level statistics,
-computes quality control metrics (SSMD), and exports results.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Well-level statistics, quality control metrics, and data export."""
 
 from aggrequant.statistics.well_stats import (
     aggregate_field_to_well,

@@ -1,8 +1,4 @@
-"""
-Logging utilities for consistent output across the package.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Logging utilities for consistent output across the package."""
 
 import logging
 import sys

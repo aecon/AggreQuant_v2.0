@@ -1,8 +1,4 @@
-"""
-Common utilities shared across the aggrequant package.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Common utilities shared across the aggrequant package."""
 
 from aggrequant.common.image_utils import (
     SUPPORTED_IMAGE_EXTENSIONS,

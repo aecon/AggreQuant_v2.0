@@ -1,11 +1,4 @@
-"""
-Post-processing utilities for segmentation label maps.
-
-Pure functions for cleaning up and harmonizing label arrays
-after segmentation (border removal, filtering, relabeling).
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Post-processing utilities for segmentation label maps."""
 
 import numpy as np
 import skimage.morphology

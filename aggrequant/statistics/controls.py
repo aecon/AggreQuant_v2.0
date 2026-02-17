@@ -1,11 +1,4 @@
-"""
-Control well analysis and SSMD calculation.
-
-Computes Strictly Standardized Mean Difference (SSMD) and other
-quality metrics comparing control wells.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Control well analysis and SSMD calculation."""
 
 import math
 import numpy as np

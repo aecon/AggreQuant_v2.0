@@ -1,8 +1,4 @@
-"""
-Nuclei segmentation backends.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Nuclei segmentation backends."""
 
 from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
 
