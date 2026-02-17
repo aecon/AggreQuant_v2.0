@@ -164,6 +164,9 @@ ALL_PATCH_METRICS: Dict[str, callable] = {
     "FocusScore": focus_score,
 }
 
+# All available global focus metrics
+ALL_GLOBAL_METRICS = {"power_log_log_slope", "global_variance_laplacian", "high_freq_ratio"}
+
 
 # =============================================================================
 # Global Image Quality Metrics (Frequency Domain)

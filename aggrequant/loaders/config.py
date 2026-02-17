@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
 import yaml
 
+from aggrequant.focus import ALL_PATCH_METRICS, ALL_GLOBAL_METRICS
+
 
 @dataclass
 class ChannelConfig:
@@ -39,8 +41,6 @@ class SegmentationConfig:
     aggregate_intensity_threshold: float = 0.5
 
 
-VALID_PATCH_METRICS = {"VarianceLaplacian", "LaplaceEnergy", "Sobel", "Brenner", "FocusScore"}
-VALID_GLOBAL_METRICS = {"power_log_log_slope", "global_variance_laplacian", "high_freq_ratio"}
 VALID_FOCUS_CHANNELS = {"nuclei", "cells"}
 
 
@@ -71,14 +71,14 @@ class QualityConfig:
                     f"Invalid focus channel '{ch}'. Must be one of {VALID_FOCUS_CHANNELS}"
                 )
         for m in self.patch_metrics:
-            if m not in VALID_PATCH_METRICS:
+            if m not in ALL_PATCH_METRICS:
                 raise ValueError(
-                    f"Invalid patch metric '{m}'. Must be one of {VALID_PATCH_METRICS}"
+                    f"Invalid patch metric '{m}'. Must be one of {list(ALL_PATCH_METRICS)}"
                 )
         for m in self.global_metrics:
-            if m not in VALID_GLOBAL_METRICS:
+            if m not in ALL_GLOBAL_METRICS:
                 raise ValueError(
-                    f"Invalid global metric '{m}'. Must be one of {VALID_GLOBAL_METRICS}"
+                    f"Invalid global metric '{m}'. Must be one of {ALL_GLOBAL_METRICS}"
                 )
 
 
