@@ -19,6 +19,7 @@ from .common.image_utils import load_image
 from .common.logging import get_logger
 from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
 from .quantification.measurements import compute_field_measurements
+from .quantification.results import FieldResult
 from .segmentation.nuclei.stardist import StarDistSegmenter
 from .segmentation.cells.cellpose import CellposeSegmenter
 from .segmentation.aggregates.filter_based import FilterBasedSegmenter
@@ -85,7 +86,7 @@ class SegmentationPipeline:
 
         # Accumulated results (saved to CSV at end of run)
         self._focus_results: List[Dict] = []
-        self._field_results: List[Dict] = []
+        self._field_results: List[FieldResult] = []
 
     def run(self, max_fields: Optional[int] = None):
         """
@@ -176,17 +177,9 @@ class SegmentationPipeline:
             min_aggregate_area=self.config.segmentation.aggregate_min_size,
             verbose=self.verbose,
         )
-        self._field_results.append({
-            "well_id": well_id,
-            "field_id": field_id,
-            "n_cells": result.n_cells,
-            "total_nuclei_area_px": result.total_nuclei_area_px,
-            "total_cell_area_px": result.total_cell_area_px,
-            "total_aggregate_area_px": result.total_aggregate_area_px,
-            "n_aggregates": result.n_aggregates,
-            "n_aggregate_positive_cells": result.n_aggregate_positive_cells,
-            "pct_aggregate_positive_cells": result.pct_aggregate_positive_cells,
-        })
+        result.well_id = well_id
+        result.field = int(field_id)
+        self._field_results.append(result)
         logger.info(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
                   f"{result.pct_aggregate_positive_cells:.1f}% agg-positive")
 
@@ -249,7 +242,7 @@ class SegmentationPipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
         path = output_dir / "field_measurements.csv"
 
-        df = pd.DataFrame(self._field_results)
+        df = pd.DataFrame([r.to_dict() for r in self._field_results])
         df.to_csv(path, index=False)
         logger.info(f"Field measurements saved to {path} ({len(df)} rows)")
 
