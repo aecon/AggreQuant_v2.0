@@ -16,6 +16,7 @@ import tifffile
 from .loaders.config import PipelineConfig
 from .loaders.images import ImageLoader, group_files_by_field
 from .common.image_utils import load_image
+from .common.logging import get_logger
 from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
 from .quantification.measurements import compute_field_measurements
 from .segmentation.nuclei.stardist import StarDistSegmenter
@@ -28,6 +29,9 @@ from .segmentation.postprocessing import (
 )
 
 
+logger = get_logger(__name__)
+
+
 class SegmentationPipeline:
     """Pipeline for nuclei, cell, and aggregate segmentation."""
 
@@ -37,10 +41,14 @@ class SegmentationPipeline:
 
         Arguments:
             config_path: Path to YAML configuration file
-            verbose: Print progress messages
+            verbose: Enable info-level logging
         """
         self.config = PipelineConfig.from_yaml(config_path)
         self.verbose = verbose
+
+        if verbose:
+            import logging
+            logging.getLogger("aggrequant").setLevel(logging.INFO)
 
         # Build channel pattern mappings
         self._channel_patterns = {}
@@ -79,10 +87,6 @@ class SegmentationPipeline:
         self._focus_results: List[Dict] = []
         self._field_results: List[Dict] = []
 
-    def _log(self, message: str):
-        if self.verbose:
-            print(message)
-
     def run(self, max_fields: Optional[int] = None):
         """
         Run the segmentation pipeline on all images.
@@ -96,7 +100,7 @@ class SegmentationPipeline:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-        self._log(f"Loading images from {self.config.input_dir}")
+        logger.info(f"Loading images from {self.config.input_dir}")
 
         loader = ImageLoader(
             directory=self.config.input_dir,
@@ -104,35 +108,35 @@ class SegmentationPipeline:
             verbose=self.verbose,
         )
 
-        self._log(f"Found {loader.n_wells} wells")
+        logger.info(f"Found {loader.n_wells} wells")
 
         self._focus_results = []
         fields_processed = 0
         for well_id in loader.wells:
             well_files = loader.get_well_files(well_id)
             if not well_files:
-                self._log(f"Skipping {well_id}: no files")
+                logger.info(f"Skipping {well_id}: no files")
                 continue
 
             fields = group_files_by_field(well_files)
             if not fields:
-                self._log(f"Skipping {well_id}: no valid fields")
+                logger.info(f"Skipping {well_id}: no valid fields")
                 continue
 
-            self._log(f"Processing well {well_id} ({len(fields)} fields)")
+            logger.info(f"Processing well {well_id} ({len(fields)} fields)")
 
             for field_id, field_files in sorted(fields.items()):
                 self._process_field(well_id, field_id, field_files)
                 fields_processed += 1
                 if max_fields is not None and fields_processed >= max_fields:
-                    self._log(f"Reached max_fields={max_fields}, stopping")
+                    logger.info(f"Reached max_fields={max_fields}, stopping")
                     self._save_focus_metrics()
                     self._save_field_measurements()
                     return
 
         self._save_focus_metrics()
         self._save_field_measurements()
-        self._log("Pipeline complete")
+        logger.info("Pipeline complete")
 
     def _process_field(self, well_id: str, field_id: str, field_files: list):
         """Process a single field of view."""
@@ -142,10 +146,10 @@ class SegmentationPipeline:
         aggregate_img = self._load_channel(field_files, "aggregates")
 
         if nuclei_img is None or cell_img is None or aggregate_img is None:
-            self._log(f"  Skipping {well_id}/f{field_id}: missing channel(s)")
+            logger.info(f"  Skipping {well_id}/f{field_id}: missing channel(s)")
             return
 
-        self._log(f"  Processing {well_id}/f{field_id}")
+        logger.info(f"  Processing {well_id}/f{field_id}")
 
         # Focus quality metrics
         quality = self.config.quality
@@ -183,7 +187,7 @@ class SegmentationPipeline:
             "n_aggregate_positive_cells": result.n_aggregate_positive_cells,
             "pct_aggregate_positive_cells": result.pct_aggregate_positive_cells,
         })
-        self._log(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
+        logger.info(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
                   f"{result.pct_aggregate_positive_cells:.1f}% agg-positive")
 
         # Save masks
@@ -220,7 +224,7 @@ class SegmentationPipeline:
                 results[f"global_{metric_name}"] = global_results[metric_name]
 
         n_metrics = len(results)
-        self._log(f"    Focus ({channel}): {n_metrics} metrics computed")
+        logger.info(f"    Focus ({channel}): {n_metrics} metrics computed")
         return results
 
     def _save_focus_metrics(self):
@@ -234,7 +238,7 @@ class SegmentationPipeline:
 
         df = pd.DataFrame(self._focus_results)
         df.to_csv(path, index=False)
-        self._log(f"Focus metrics saved to {path} ({len(df)} rows)")
+        logger.info(f"Focus metrics saved to {path} ({len(df)} rows)")
 
     def _save_field_measurements(self):
         """Save accumulated field measurements to CSV."""
@@ -247,7 +251,7 @@ class SegmentationPipeline:
 
         df = pd.DataFrame(self._field_results)
         df.to_csv(path, index=False)
-        self._log(f"Field measurements saved to {path} ({len(df)} rows)")
+        logger.info(f"Field measurements saved to {path} ({len(df)} rows)")
 
     def _load_channel(self, field_files: list, purpose: str) -> Optional[np.ndarray]:
         """Load image for a specific channel purpose."""
