@@ -39,29 +39,21 @@ class FieldResult:
     avg_aggregates_per_positive_cell: float = 0.0
     pct_ambiguous_aggregates: float = 0.0
 
-    # Focus quality metrics
-    focus_variance_laplacian_mean: Optional[float] = None
-    focus_variance_laplacian_min: Optional[float] = None
-    focus_pct_patches_blurry: Optional[float] = None
-    focus_pct_area_blurry: Optional[float] = None
-    focus_is_likely_blurry: Optional[bool] = None
-
-    # Blur-masked metrics (excluding blurry regions)
-    n_cells_masked: Optional[int] = None
-    n_aggregate_positive_cells_masked: Optional[int] = None
-    pct_aggregate_positive_cells_masked: Optional[float] = None
-    total_cell_area_masked_px: Optional[float] = None
-    total_aggregate_area_masked_px: Optional[float] = None
+    # Focus quality metrics (flexible dict, flattened in to_dict)
+    focus_metrics: Dict[str, float] = field(default_factory=dict)
 
     # Metadata
-    segmentation_method: str = "unknown"
-    model_weights: Optional[str] = None
-    blur_threshold_used: Optional[float] = None
     timestamp: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for DataFrame creation."""
-        return asdict(self)
+        """Convert to dictionary for DataFrame creation (focus_metrics flattened)."""
+        d = {}
+        for f in self.__dataclass_fields__:
+            if f == "focus_metrics":
+                continue
+            d[f] = getattr(self, f)
+        d.update(self.focus_metrics)
+        return d
 
     def __post_init__(self):
         """Set timestamp if not provided."""
@@ -100,15 +92,6 @@ class WellResult:
     pct_aggregate_area_over_cell: float = 0.0
     avg_aggregates_per_positive_cell: float = 0.0
 
-    # Focus quality (average across fields)
-    avg_focus_variance_laplacian: Optional[float] = None
-    n_blurry_fields: int = 0
-    pct_blurry_fields: float = 0.0
-
-    # Blur-masked metrics (aggregated)
-    total_n_cells_masked: Optional[int] = None
-    pct_aggregate_positive_cells_masked: Optional[float] = None
-
     # Per-field data (for detailed analysis)
     field_results: List[FieldResult] = field(default_factory=list)
 
@@ -130,11 +113,6 @@ class WellResult:
             "total_aggregate_area_px": self.total_aggregate_area_px,
             "pct_aggregate_area_over_cell": self.pct_aggregate_area_over_cell,
             "avg_aggregates_per_positive_cell": self.avg_aggregates_per_positive_cell,
-            "avg_focus_variance_laplacian": self.avg_focus_variance_laplacian,
-            "n_blurry_fields": self.n_blurry_fields,
-            "pct_blurry_fields": self.pct_blurry_fields,
-            "total_n_cells_masked": self.total_n_cells_masked,
-            "pct_aggregate_positive_cells_masked": self.pct_aggregate_positive_cells_masked,
         }
         if include_fields:
             result["field_results"] = [f.to_dict() for f in self.field_results]

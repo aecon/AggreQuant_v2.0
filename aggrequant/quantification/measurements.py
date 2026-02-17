@@ -223,11 +223,6 @@ def compute_field_measurements(
         pct_aggregate_area_over_cell=pct_area_agg,
         avg_aggregates_per_positive_cell=avg_agg_per_positive,
         pct_ambiguous_aggregates=pct_ambiguous,
-        n_cells_masked=n_cells_masked,
-        n_aggregate_positive_cells_masked=n_agg_positive_masked,
-        pct_aggregate_positive_cells_masked=pct_agg_positive_masked,
-        total_cell_area_masked_px=total_cell_area_masked,
-        total_aggregate_area_masked_px=total_agg_area_masked,
     )
 
     # Diagnostic data

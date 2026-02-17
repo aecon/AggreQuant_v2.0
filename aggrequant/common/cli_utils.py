@@ -44,7 +44,7 @@ def print_config_summary(config: "PipelineConfig") -> None:
     print("  CONFIGURATION SUMMARY")
     print("=" * 70)
     print(f"  Input directory:    {config.input_dir}")
-    print(f"  Output directory:   {config.output.output_dir}")
+    print(f"  Output directory:   {config.output_dir}")
     print(f"  Plate format:       {config.plate_format}-well")
     print(f"  GPU enabled:        {config.use_gpu}")
     print()

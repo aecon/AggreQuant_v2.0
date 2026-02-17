@@ -63,7 +63,7 @@ def run_pipeline_from_dict(
     )
 
     output_config = OutputConfig(
-        output_dir=Path(config_dict.get("output_dir", "output")),
+        output_subdir=config_dict.get("output_subdir", "aggrequant_output"),
         save_masks=config_dict.get("save_masks", True),
         save_overlays=config_dict.get("save_overlays", True),
         save_statistics=True,

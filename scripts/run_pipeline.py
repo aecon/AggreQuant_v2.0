@@ -3,8 +3,8 @@
 Run the AggreQuant segmentation pipeline from a YAML configuration file.
 
 Usage:
-    python scripts/run_pipeline.py configs/plate1_384well.yaml
-    python scripts/run_pipeline.py configs/plate1_384well.yaml --verbose
+    python scripts/run_pipeline.py configs/test_384well.yaml
+    python scripts/run_pipeline.py configs/test_384well.yaml --verbose
 
 Author: Athena Economides, 2026, UZH
 """

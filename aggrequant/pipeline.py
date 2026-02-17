@@ -84,7 +84,6 @@ class SegmentationPipeline:
             configure_tensorflow_memory_growth()
 
         # Accumulated results (saved to CSV at end of run)
-        self._focus_results: List[Dict] = []
         self._field_results: List[FieldResult] = []
 
     def run(self, max_fields: Optional[int] = None):
@@ -104,7 +103,7 @@ class SegmentationPipeline:
 
         logger.info(f"Found {loader.n_wells} wells")
 
-        self._focus_results = []
+        self._field_results = []
         fields_processed = 0
         for well_id in loader.wells:
             well_files = loader.get_well_files(well_id)
@@ -124,12 +123,10 @@ class SegmentationPipeline:
                 fields_processed += 1
                 if max_fields is not None and fields_processed >= max_fields:
                     logger.info(f"Reached max_fields={max_fields}, stopping")
-                    self._save_focus_metrics()
-                    self._save_field_measurements()
+                    self._save_results()
                     return
 
-        self._save_focus_metrics()
-        self._save_field_measurements()
+        self._save_results()
         logger.info("Pipeline complete")
 
     def _process_field(self, well_id: str, field_id: str, field_files: list):
@@ -145,14 +142,15 @@ class SegmentationPipeline:
 
         logger.info(f"  Processing {well_id}/f{field_id}")
 
-        # Focus quality metrics
+        # Focus quality metrics (stored in FieldResult.focus_metrics)
+        focus_metrics = {}
         quality = self.config.quality
         if "nuclei" in quality.compute_on:
             metrics = self._compute_focus_metrics(nuclei_img, "nuclei")
-            self._focus_results.append({"well_id": well_id, "field_id": field_id, "channel": "nuclei", **metrics})
+            focus_metrics.update({f"nuclei_{k}": v for k, v in metrics.items()})
         if "cells" in quality.compute_on:
             metrics = self._compute_focus_metrics(cell_img, "cells")
-            self._focus_results.append({"well_id": well_id, "field_id": field_id, "channel": "cells", **metrics})
+            focus_metrics.update({f"cells_{k}": v for k, v in metrics.items()})
 
         # Segment
         nuclei_labels = self._nuclei_segmenter.segment(nuclei_img)
@@ -172,6 +170,7 @@ class SegmentationPipeline:
         )
         result.well_id = well_id
         result.field = int(field_id)
+        result.focus_metrics = focus_metrics
         self._field_results.append(result)
         logger.info(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
                   f"{result.pct_aggregate_positive_cells:.1f}% agg-positive")
@@ -209,31 +208,18 @@ class SegmentationPipeline:
         if quality.compute_global_metrics and quality.global_metrics:
             global_results = compute_global_focus_metrics(image)
             for metric_name in quality.global_metrics:
-                results[f"global_{metric_name}"] = global_results[metric_name]
+                results[metric_name] = global_results[metric_name]
 
         n_metrics = len(results)
         logger.info(f"    Focus ({channel}): {n_metrics} metrics computed")
         return results
 
-    def _save_focus_metrics(self):
-        """Save accumulated focus metrics to CSV."""
-        if not self._focus_results:
-            return
-
-        output_dir = self.config.output.output_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
-        path = output_dir / "focus_metrics.csv"
-
-        df = pd.DataFrame(self._focus_results)
-        df.to_csv(path, index=False)
-        logger.info(f"Focus metrics saved to {path} ({len(df)} rows)")
-
-    def _save_field_measurements(self):
-        """Save accumulated field measurements to CSV."""
+    def _save_results(self):
+        """Save accumulated field measurements (incl. focus metrics) to CSV."""
         if not self._field_results:
             return
 
-        output_dir = self.config.output.output_dir
+        output_dir = self.config.output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
         path = output_dir / "field_measurements.csv"
 
@@ -261,7 +247,7 @@ class SegmentationPipeline:
         aggregate_labels: np.ndarray,
     ):
         """Save segmentation masks to output directory."""
-        labels_dir = self.config.output.output_dir / "labels"
+        labels_dir = self.config.output_dir / "labels"
         labels_dir.mkdir(parents=True, exist_ok=True)
 
         tifffile.imwrite(labels_dir / f"{well_id}_f{field_id}_nuclei.tif", nuclei_labels.astype(np.uint16))

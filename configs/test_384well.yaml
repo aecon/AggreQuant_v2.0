@@ -2,12 +2,12 @@
 # 384-well plate analysis with StarDist, Cellpose, and filter-based segmentation
 #
 # Usage:
-#   python scripts/run_plate_analysis.py configs/plate1_384well.yaml
+#   python scripts/run_pipeline.py configs/test_384well.yaml
 #
 # Author: Athena Economides, 2026, UZH
 
 # Input data location
-input_dir: "/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/data_384wells"
+input_dir: "../AggreQuant_testdata/data_384wells"
 plate_format: "384"
 
 # Channel configuration
@@ -54,13 +54,13 @@ quality:
   compute_global_metrics: true
   patch_metrics: ["VarianceLaplacian"]
   # Available: VarianceLaplacian, LaplaceEnergy, Sobel, Brenner, FocusScore
-  global_metrics: ["power_log_log_slope"]
+  global_metrics: ["power_log_log_slope", "global_variance_laplacian"]
   # Available: power_log_log_slope, global_variance_laplacian, high_freq_ratio
   patch_size: [40, 40]
 
 # Output settings
 output:
-  output_dir: "output/plate1"
+  output_subdir: "aggrequant_output"
   save_masks: true
   save_overlays: true
   save_statistics: true

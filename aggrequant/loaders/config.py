@@ -85,15 +85,11 @@ class QualityConfig:
 @dataclass
 class OutputConfig:
     """Configuration for output files."""
-    output_dir: Path = field(default_factory=lambda: Path("output"))
+    output_subdir: str = "aggrequant_output"
     save_masks: bool = True
     save_overlays: bool = True
     save_statistics: bool = True
     statistics_format: str = "parquet"  # "parquet", "csv", "both"
-
-    def __post_init__(self):
-        if isinstance(self.output_dir, str):
-            self.output_dir = Path(self.output_dir)
 
 
 @dataclass
@@ -137,6 +133,11 @@ class PipelineConfig:
         valid_formats = {"96", "384"}
         if self.plate_format not in valid_formats:
             raise ValueError(f"plate_format must be one of {valid_formats}")
+
+    @property
+    def output_dir(self) -> Path:
+        """Resolve output directory as input_dir / output.output_subdir."""
+        return self.input_dir / self.output.output_subdir
 
     @classmethod
     def from_yaml(cls, path: Path) -> "PipelineConfig":
@@ -210,7 +211,7 @@ class PipelineConfig:
                 "patch_size": list(self.quality.patch_size),
             },
             "output": {
-                "output_dir": str(self.output.output_dir),
+                "output_subdir": self.output.output_subdir,
                 "save_masks": self.output.save_masks,
                 "save_overlays": self.output.save_overlays,
                 "save_statistics": self.output.save_statistics,

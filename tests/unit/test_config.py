@@ -46,15 +46,15 @@ class TestQualityConfig:
     def test_default_values(self):
         """Should have correct default values."""
         qc = QualityConfig()
-        assert qc.focus_patch_size == (40, 40)
-        assert qc.focus_blur_threshold == 15.0
-        assert qc.focus_reject_threshold == 50.0
+        assert qc.patch_size == (40, 40)
+        assert qc.compute_on == []
+        assert qc.patch_metrics == ["VarianceLaplacian"]
 
     def test_tuple_from_list(self):
-        """List should be converted to tuple for focus_patch_size."""
-        qc = QualityConfig(focus_patch_size=[50, 50])
-        assert qc.focus_patch_size == (50, 50)
-        assert isinstance(qc.focus_patch_size, tuple)
+        """List should be converted to tuple for patch_size."""
+        qc = QualityConfig(patch_size=[50, 50])
+        assert qc.patch_size == (50, 50)
+        assert isinstance(qc.patch_size, tuple)
 
 
 class TestOutputConfig:
@@ -63,15 +63,18 @@ class TestOutputConfig:
     def test_default_values(self):
         """Should have correct default values."""
         oc = OutputConfig()
-        assert oc.output_dir == Path("output")
+        assert oc.output_subdir == "aggrequant_output"
         assert oc.save_masks == True
         assert oc.statistics_format == "parquet"
 
-    def test_string_to_path_conversion(self):
-        """String output_dir should be converted to Path."""
-        oc = OutputConfig(output_dir="/tmp/test")
-        assert isinstance(oc.output_dir, Path)
-        assert oc.output_dir == Path("/tmp/test")
+    def test_output_dir_resolved_via_pipeline_config(self):
+        """output_dir should be resolved relative to input_dir."""
+        config = PipelineConfig(
+            input_dir=Path("/data/plate1"),
+            plate_format="96",
+            output=OutputConfig(output_subdir="results"),
+        )
+        assert config.output_dir == Path("/data/plate1/results")
 
 
 class TestPipelineConfig:
@@ -155,7 +158,7 @@ class TestPipelineConfigYamlRoundTrip:
             assert loaded.verbose == True
 
     def test_quality_config_tuple_preserved(self):
-        """focus_patch_size should be tuple after YAML round-trip."""
+        """patch_size should be tuple after YAML round-trip."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             input_dir = tmpdir / "data"
@@ -165,15 +168,15 @@ class TestPipelineConfigYamlRoundTrip:
                 input_dir=input_dir,
                 plate_format="96",
             )
-            original.quality.focus_patch_size = (50, 50)
+            original.quality.patch_size = (50, 50)
 
             config_path = tmpdir / "config.yaml"
             original.to_yaml(config_path)
             loaded = PipelineConfig.from_yaml(config_path)
 
             # Should be tuple, not list
-            assert loaded.quality.focus_patch_size == (50, 50)
-            assert isinstance(loaded.quality.focus_patch_size, tuple)
+            assert loaded.quality.patch_size == (50, 50)
+            assert isinstance(loaded.quality.patch_size, tuple)
 
     def test_none_values_preserved(self):
         """None values should be preserved in YAML round-trip."""
