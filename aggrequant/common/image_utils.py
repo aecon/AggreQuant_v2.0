@@ -13,7 +13,6 @@ except ImportError:
 
 try:
     import skimage.io
-    import skimage.morphology
     HAS_SKIMAGE = True
 except ImportError:
     HAS_SKIMAGE = False
@@ -273,70 +272,3 @@ def unpad(image: np.ndarray, original_shape: tuple) -> np.ndarray:
         raise ValueError(f"Expected 2D or 3D shape, got {original_shape}")
 
 
-def remove_small_holes_compat(
-    mask: np.ndarray,
-    area_threshold: int,
-    connectivity: int = 2,
-) -> np.ndarray:
-    """
-    Remove small holes from a binary mask with scikit-image version compatibility.
-
-    Handles the API change in scikit-image where the parameter name changed
-    from `area_threshold` to `max_size` in version 0.26.
-
-    Arguments:
-        mask: Binary mask (will be converted to bool)
-        area_threshold: Maximum area of holes to remove
-        connectivity: Connectivity for hole detection (1 or 2)
-
-    Returns:
-        Binary mask with small holes filled
-    """
-    if not HAS_SKIMAGE:
-        raise ImportError("scikit-image is required for morphology operations")
-
-    bool_mask = mask.astype(bool)
-    try:
-        # New API (skimage >= 0.26)
-        return skimage.morphology.remove_small_holes(
-            bool_mask, max_size=area_threshold, connectivity=connectivity
-        )
-    except TypeError:
-        # Old API (skimage < 0.26)
-        return skimage.morphology.remove_small_holes(
-            bool_mask, area_threshold=area_threshold, connectivity=connectivity
-        )
-
-
-def remove_small_objects_compat(
-    labels: np.ndarray,
-    min_size: int,
-    connectivity: int = 2,
-) -> np.ndarray:
-    """
-    Remove small objects from a label image with scikit-image version compatibility.
-
-    Handles the API change in scikit-image where the parameter name changed
-    from `min_size` to `max_size` in version 0.26.
-
-    Arguments:
-        labels: Label image (integer array)
-        min_size: Minimum size of objects to keep
-        connectivity: Connectivity for object detection (1 or 2)
-
-    Returns:
-        Label image with small objects removed
-    """
-    if not HAS_SKIMAGE:
-        raise ImportError("scikit-image is required for morphology operations")
-
-    try:
-        # New API (skimage >= 0.26)
-        return skimage.morphology.remove_small_objects(
-            labels, max_size=min_size, connectivity=connectivity
-        )
-    except TypeError:
-        # Old API (skimage < 0.26)
-        return skimage.morphology.remove_small_objects(
-            labels, min_size=min_size, connectivity=connectivity
-        )

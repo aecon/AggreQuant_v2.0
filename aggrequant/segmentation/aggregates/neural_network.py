@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 from aggrequant.segmentation.base import BaseSegmenter
-from aggrequant.common.image_utils import (
+from aggrequant.segmentation.postprocessing import (
     remove_small_holes_compat,
     remove_small_objects_compat,
 )

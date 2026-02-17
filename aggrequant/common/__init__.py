@@ -10,8 +10,6 @@ from aggrequant.common.image_utils import (
     to_float32,
     pad_to_multiple,
     unpad,
-    remove_small_holes_compat,
-    remove_small_objects_compat,
 )
 from aggrequant.common.logging import (
     setup_logging,
@@ -38,8 +36,6 @@ __all__ = [
     "to_float32",
     "pad_to_multiple",
     "unpad",
-    "remove_small_holes_compat",
-    "remove_small_objects_compat",
     # Logging
     "setup_logging",
     "get_logger",
