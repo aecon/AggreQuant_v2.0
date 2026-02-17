@@ -29,6 +29,7 @@ from .cli_utils import (
     print_key_value,
     ProgressCallback,
 )
+from .gpu_utils import configure_tensorflow_memory_growth
 
 __all__ = [
     # Image utilities
@@ -53,4 +54,6 @@ __all__ = [
     "print_section_header",
     "print_key_value",
     "ProgressCallback",
+    # GPU
+    "configure_tensorflow_memory_growth",
 ]

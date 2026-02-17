@@ -17,6 +17,7 @@ from .loaders.config import PipelineConfig
 from .loaders.images import ImageLoader, group_files_by_field
 from .common.image_utils import load_image
 from .common.logging import get_logger
+from .common.gpu_utils import configure_tensorflow_memory_growth
 from .quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
 from .quantification.measurements import compute_field_measurements
 from .quantification.results import FieldResult
@@ -84,6 +85,10 @@ class SegmentationPipeline:
             verbose=verbose,
         )
 
+        # Configure GPU before any model loading
+        if self.config.use_gpu:
+            configure_tensorflow_memory_growth()
+
         # Accumulated results (saved to CSV at end of run)
         self._focus_results: List[Dict] = []
         self._field_results: List[FieldResult] = []
@@ -95,12 +100,6 @@ class SegmentationPipeline:
         Arguments:
             max_fields: If set, stop after processing this many fields.
         """
-        # Configure TensorFlow memory growth before any model loading
-        import tensorflow as tf
-        gpus = tf.config.experimental.list_physical_devices('GPU')
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-
         logger.info(f"Loading images from {self.config.input_dir}")
 
         loader = ImageLoader(
