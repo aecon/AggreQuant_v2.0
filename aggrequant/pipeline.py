@@ -12,7 +12,7 @@ from aggrequant.loaders.images import ImageLoader, group_files_by_field
 from aggrequant.common.image_utils import load_image
 from aggrequant.common.logging import get_logger
 from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
-from aggrequant.focus import compute_patch_focus_maps, compute_global_focus_metrics
+from aggrequant.focus import compute_focus_metrics
 from aggrequant.colocalization import quantify_field
 from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
 from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
@@ -141,14 +141,22 @@ class SegmentationPipeline:
 
         logger.info(f"  Processing {well_id}/f{field_id}")
 
-        # Focus quality metrics (stored in FieldResult.focus_metrics)
+        # Focus quality metrics
         focus_metrics = {}
         quality = self.config.quality
+        patch = quality.patch_metrics if quality.compute_patch_metrics else None
+        glbl = quality.global_metrics if quality.compute_global_metrics else None
         if "nuclei" in quality.compute_on:
-            metrics = self._compute_focus_metrics(nuclei_img, "nuclei")
+            metrics = compute_focus_metrics(
+                nuclei_img, patch_metrics=patch,
+                global_metrics=glbl, patch_size=quality.patch_size,
+            )
             focus_metrics.update({f"nuclei_{k}": v for k, v in metrics.items()})
         if "cells" in quality.compute_on:
-            metrics = self._compute_focus_metrics(cell_img, "cells")
+            metrics = compute_focus_metrics(
+                cell_img, patch_metrics=patch,
+                global_metrics=glbl, patch_size=quality.patch_size,
+            )
             focus_metrics.update({f"cells_{k}": v for k, v in metrics.items()})
 
         # Segment
@@ -181,41 +189,6 @@ class SegmentationPipeline:
         # Save masks
         if self.config.output.save_masks:
             self._save_masks(well_id, field_id, nuclei_labels, cell_labels, aggregate_labels)
-
-    def _compute_focus_metrics(self, image: np.ndarray, channel: str) -> Dict:
-        """
-        Compute focus quality metrics for a single image.
-
-        Arguments:
-            image: 2D grayscale image
-            channel: Channel label (for logging)
-
-        Returns:
-            Flat dict of metric results with prefixed keys.
-        """
-        quality = self.config.quality
-        results = {}
-
-        # Patch-based metrics
-        if quality.compute_patch_metrics and quality.patch_metrics:
-            maps, _, _ = compute_patch_focus_maps(
-                image, patch_size=quality.patch_size, metrics=quality.patch_metrics,
-            )
-            for metric_name in quality.patch_metrics:
-                score_map = maps[metric_name]
-                results[f"patch_{metric_name}_mean"] = float(score_map.mean())
-                results[f"patch_{metric_name}_min"] = float(score_map.min())
-                results[f"patch_{metric_name}_max"] = float(score_map.max())
-
-        # Global metrics
-        if quality.compute_global_metrics and quality.global_metrics:
-            global_results = compute_global_focus_metrics(image)
-            for metric_name in quality.global_metrics:
-                results[metric_name] = global_results[metric_name]
-
-        n_metrics = len(results)
-        logger.info(f"    Focus ({channel}): {n_metrics} metrics computed")
-        return results
 
     def _save_results(self):
         """Save accumulated field measurements (incl. focus metrics) to CSV."""

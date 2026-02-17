@@ -389,3 +389,49 @@ def generate_blur_mask(
     logger.debug(f"Masked {n_blurry}/{n_total} patches as blurry ({100*n_blurry/n_total:.1f}%)")
 
     return mask
+
+
+def compute_focus_metrics(
+    image: np.ndarray,
+    patch_metrics: list = None,
+    global_metrics: list = None,
+    patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
+) -> Dict[str, float]:
+    """
+    Compute focus quality metrics for a single image.
+
+    Summarises patch-based metrics (mean/min/max per metric) and global
+    frequency-domain metrics into a flat dictionary.
+
+    Arguments:
+        image: 2D grayscale image
+        patch_metrics: list of patch metric names to compute (default: None = skip).
+                       Valid names: "VarianceLaplacian", "LaplaceEnergy",
+                       "Sobel", "Brenner", "FocusScore".
+        global_metrics: list of global metric names to include (default: None = skip).
+                        Valid names: "power_log_log_slope",
+                        "global_variance_laplacian", "high_freq_ratio".
+        patch_size: tuple (height, width) for patch grid
+
+    Returns:
+        Flat dict of metric results, e.g.
+        {"patch_VarianceLaplacian_mean": 42.1, "power_log_log_slope": -2.3, ...}
+    """
+    results = {}
+
+    if patch_metrics:
+        maps, _, _ = compute_patch_focus_maps(
+            image, patch_size=patch_size, metrics=patch_metrics,
+        )
+        for name in patch_metrics:
+            score_map = maps[name]
+            results[f"patch_{name}_mean"] = float(score_map.mean())
+            results[f"patch_{name}_min"] = float(score_map.min())
+            results[f"patch_{name}_max"] = float(score_map.max())
+
+    if global_metrics:
+        all_global = compute_global_focus_metrics(image)
+        for name in global_metrics:
+            results[name] = all_global[name]
+
+    return results
