@@ -1,0 +1,253 @@
+# AggreQuant Pipeline Improvements
+
+## Dependency Diagram
+
+```
+pipeline.py (SegmentationPipeline)
+│
+├── DIRECT IMPORTS ──────────────────────────────────────────────────
+│
+├─► loaders/config.py .............. PipelineConfig
+│   ├── ChannelConfig
+│   ├── SegmentationConfig
+│   ├── QualityConfig
+│   └── OutputConfig
+│
+├─► loaders/images.py .............. ImageLoader, group_files_by_field
+│   ├─► common/image_utils.py ..... load_image, find_image_files, load_image_stack
+│   └─► common/logging.py ......... get_logger
+│
+├─► common/image_utils.py ......... load_image
+│   ├── (opt) tifffile
+│   └── (opt) skimage.io, skimage.morphology
+│
+├─► quality/focus.py .............. compute_patch_focus_maps, compute_global_focus_metrics
+│   ├── cv2 (OpenCV)
+│   ├── scipy.ndimage
+│   └─► common/logging.py
+│
+├─► quantification/measurements.py  compute_field_measurements
+│   ├── scipy.sparse
+│   ├── skimage.morphology
+│   ├─► quantification/results.py . FieldResult
+│   ├─► common/image_utils.py .... remove_small_holes_compat
+│   └─► common/logging.py
+│
+├─► segmentation/nuclei/stardist.py  StarDistSegmenter
+│   ├── skimage.filters, skimage.morphology
+│   ├── (lazy) stardist, csbdeep
+│   └─► segmentation/base.py ..... BaseSegmenter
+│       └─► common/logging.py
+│
+├─► segmentation/cells/cellpose.py . CellposeSegmenter
+│   ├── (lazy) cellpose.models
+│   └─► segmentation/base.py
+│
+├─► segmentation/aggregates/filter_based.py  FilterBasedSegmenter
+│   ├── scipy.ndimage, skimage.morphology
+│   ├─► common/image_utils.py .... remove_small_holes/objects_compat
+│   └─► segmentation/base.py
+│
+├── STDLIB / 3RD-PARTY (top-level) ─────────────────────────────────
+│   ├── numpy, pandas
+│   ├── skimage.morphology (used directly in pipeline)
+│   ├── tifffile (mask saving)
+│   └── tensorflow (lazy, GPU memory config only)
+│
+└── NOT USED BY PIPELINE ───────────────────────────────────────────
+    ├── loaders/plate.py ........... Plate, Well, FieldOfView (unused)
+    ├── quantification/results.py .. WellResult, PlateResult (unused)
+    ├── segmentation/aggregates/neural_network.py (unused)
+    ├── statistics/ ................ controls, well_stats, export (unused)
+    ├── common/cli_utils.py ........ (unused by pipeline)
+    ├── nn/ ........................ training/architectures (independent)
+    ├── gui/ ....................... (independent)
+    └── pipeline.bak.py ........... old backup (dead code)
+```
+
+---
+
+## Commentary on Each Module
+
+### Modules directly used — all necessary
+
+| Module | Verdict | Notes |
+|---|---|---|
+| `loaders/config.py` | **Essential** | Clean dataclass hierarchy. Good validation in `__post_init__`. |
+| `loaders/images.py` | **Essential** | File discovery and well/field grouping. Supports Operetta, InCell, ImageXpress parsers. |
+| `common/image_utils.py` | **Essential** | `load_image` + skimage compat wrappers. Good multi-backend fallback. |
+| `quality/focus.py` | **Essential** | Well-implemented patch/global focus metrics. Properly normalizes to 8-bit for portable thresholds. |
+| `quantification/measurements.py` | **Essential** | Core quantification. Sparse cross-tabulation is well-optimized. |
+| `quantification/results.py` | **Essential** | `FieldResult` is used. `WellResult`/`PlateResult` are defined but unused by pipeline. |
+| `segmentation/base.py` | **Essential** | Clean ABC. Consistent interface for all segmenters. |
+| `segmentation/nuclei/stardist.py` | **Essential** | Lazy model loading, good pre/post-processing pipeline. |
+| `segmentation/cells/cellpose.py` | **Essential** | Key nucleus-cell ID matching logic. |
+| `segmentation/aggregates/filter_based.py` | **Essential** | Classical pipeline that works well for high-contrast aggregates. |
+| `common/logging.py` | **Essential** | Standard `logging` wrapper with auto-config on first use. |
+
+### Modules NOT used by pipeline
+
+| Module | Verdict | Notes |
+|---|---|---|
+| `loaders/plate.py` | **Unused** | Rich Plate/Well/FieldOfView dataclasses. Pipeline uses plain dicts instead. |
+| `segmentation/aggregates/neural_network.py` | **Future** | Alternative UNet-based segmenter. Not wired into pipeline despite `aggregate_method` config field. |
+| `statistics/` | **Future** | SSMD, Z-factor, well aggregation, export. Pipeline stops at field-level CSV. |
+| `common/cli_utils.py` | **Peripheral** | Progress bar and summary printers. Used by scripts, not the pipeline core. |
+| `nn/` | **Independent** | Full training framework (UNet, losses, trainer, augmentation). Only connected via `NeuralNetworkSegmenter`. |
+| `gui/` | **Independent** | CustomTkinter GUI. Wraps pipeline. |
+| `pipeline.bak.py` | **Dead code** | Old pipeline referencing deleted functions. Should be removed. |
+
+---
+
+## Proposed Improvements
+
+### 1. Extract post-processing into its own module (P1)
+
+`_remove_border_objects`, `_filter_aggregates_by_cells`, and `_relabel_consecutive` are pure functions on numpy arrays. They have no dependency on `SegmentationPipeline` state and should live in a reusable module.
+
+```
+segmentation/
+    postprocessing.py   <- NEW: remove_border_objects, filter_aggregates_by_cells, relabel_consecutive
+```
+
+**Why:** These are general-purpose label-map operations. Extracting them makes them independently testable and reusable (e.g., by the GUI, scripts, or notebooks). It also shortens `pipeline.py` and makes `_process_field` easier to read.
+
+- [x] Done (937932b)
+
+### 2. Unify logging — replace `_log`/`print` with `get_logger` (P1)
+
+Pipeline uses `self._log()` which delegates to `print()`, while every other module uses `get_logger()`. This is inconsistent and means pipeline output can't be captured by the logging framework (no file logging, no level filtering).
+
+```python
+# Before (pipeline.py):
+def _log(self, message):
+    if self.verbose: print(message)
+
+# After:
+logger = get_logger(__name__)
+# Then use logger.info(), logger.debug() everywhere
+```
+
+**Why:** Consistent logging across the package. Users can redirect pipeline output to files, filter by level, etc.
+
+- [x] Done (8a9d89e)
+
+### 3. Use `FieldResult` end-to-end instead of manual dict flattening (P1)
+
+Currently, `compute_field_measurements` returns a `FieldResult`, but the pipeline immediately unpacks 7 specific fields into a hand-built dict (lines 171-181), ignoring the rest. This is fragile — if `FieldResult` gains/renames fields, the pipeline dict falls out of sync.
+
+```python
+# Before:
+self._field_results.append({
+    "well_id": well_id,
+    "field_id": field_id,
+    "n_cells": result.n_cells,
+    ...  # 7 hand-picked fields
+})
+
+# After: populate identifiers on the FieldResult, accumulate FieldResults directly
+result.well_id = well_id
+result.field = int(field_id)
+self._field_results.append(result)
+
+# At save time:
+df = pd.DataFrame([r.to_dict() for r in self._field_results])
+```
+
+**Why:** Single source of truth for field-level data. `FieldResult.to_dict()` already exists. Also unblocks the statistics module which expects `FieldResult` objects.
+
+- [x] Done (0d86cba)
+
+### 4. Wire `aggregate_method` config to actual segmenter selection (P2)
+
+`SegmentationConfig.aggregate_method` accepts `"unet"`, `"filter"`, `"hybrid"` but the pipeline always constructs `FilterBasedSegmenter`. Either:
+- (a) Wire up a factory: choose segmenter based on config value, or
+- (b) Remove the dead config options and simplify to just `"filter"` for now.
+
+Option (b) is simpler and honest about current capability. You can add the factory when `NeuralNetworkSegmenter` is ready.
+
+- [ ] Done
+
+### 5. Move TensorFlow GPU config out of `run()` (P2)
+
+The TF memory growth configuration (lines 90-93) is a global side effect. It should happen at application startup (CLI entry point or `__init__`), not inside `run()`.
+
+```python
+# In scripts/run_pipeline.py or common/gpu_utils.py:
+def configure_gpu():
+    import tensorflow as tf
+    for gpu in tf.config.experimental.list_physical_devices('GPU'):
+        tf.config.experimental.set_memory_growth(gpu, True)
+```
+
+**Why:** Calling `run()` multiple times would re-execute this. Also, separating concerns: the pipeline shouldn't manage TF global state.
+
+- [x] Done (fcd837e)
+
+### 6. Fix bug in `images.py:load_field` — calls undefined `load_tiff` (P0)
+
+`ImageLoader.load_field()` at line 371 calls `load_tiff(matching[0])`, which doesn't exist. Should be `load_image(matching[0])`.
+
+- [x] Done
+
+### 7. Fix dead code path in `image_utils.py` (P2)
+
+Lines 90-91 (`if is_tiff and HAS_TIFFFILE`) can never be reached because lines 82-83 already handle that exact condition. The fallback logic should be:
+
+```python
+if is_tiff and HAS_TIFFFILE:
+    return tifffile.imread(path_str)
+if HAS_SKIMAGE:
+    return skimage.io.imread(path_str)
+raise ImportError(...)
+```
+
+- [ ] Done
+
+### 8. Selectively compute patch focus metrics (P3)
+
+`compute_patch_focus_maps` always computes all 5 metrics even though the user configures specific ones via `quality.patch_metrics`. Add a `metrics` parameter:
+
+```python
+def compute_patch_focus_maps(image, patch_size, metrics=None):
+    # Only compute requested metrics (default: all)
+```
+
+**Why:** Performance. Computing all 5 for every patch when you only need 1 is wasteful, especially at scale (thousands of fields).
+
+- [x] Done (47e3457)
+
+### 9. Delete `pipeline.bak.py` (P0)
+
+It references deleted functions (`compute_masked_measurements`, `apply_focus_metrics_to_result`) and is completely unreachable. It should have been removed with the commits that deleted those functions.
+
+- [x] Done (2167c36)
+
+### 10. Bridge `Plate`/`Well` structures into the pipeline (P3)
+
+`loaders/plate.py` defines rich data structures that could replace the ad-hoc dict accumulation in the pipeline. This would naturally connect the pipeline output to the statistics module:
+
+```
+Pipeline -> FieldResult -> WellResult -> PlateResult -> statistics module -> export
+```
+
+This is more of an architectural evolution than a quick fix, and aligns with the deferred item about `FieldResult` flowing through the pipeline.
+
+- [ ] Done
+
+---
+
+## Summary of priorities
+
+| Priority | Improvement | Effort | Impact | Status |
+|---|---|---|---|---|
+| **P0** | Fix `load_tiff` bug (#6) | Trivial | Correctness | Done |
+| **P0** | Delete `pipeline.bak.py` (#9) | Trivial | Hygiene | Done |
+| **P1** | Extract postprocessing module (#1) | Small | Readability + testability | Done |
+| **P1** | Use `FieldResult` end-to-end (#3) | Small | Maintainability | Done |
+| **P1** | Unify logging (#2) | Small | Consistency | Done |
+| **P2** | Move TF config out of `run()` (#5) | Trivial | Correctness | Done |
+| **P2** | Clean dead config options (#4) | Trivial | Clarity | |
+| **P2** | Fix dead code path (#7) | Trivial | Hygiene | |
+| **P3** | Selective patch metrics (#8) | Medium | Performance | Done |
+| **P3** | Bridge Plate/Well structures (#10) | Large | Architecture | |
