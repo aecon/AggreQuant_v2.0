@@ -1,6 +1,7 @@
 """Image quality assessment module."""
 
 from .focus import (
+    ALL_PATCH_METRICS,
     variance_of_laplacian,
     laplace_energy,
     sobel_metric,
@@ -13,6 +14,7 @@ from .focus import (
 )
 
 __all__ = [
+    "ALL_PATCH_METRICS",
     "variance_of_laplacian",
     "laplace_energy",
     "sobel_metric",

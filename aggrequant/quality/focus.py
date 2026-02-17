@@ -24,6 +24,10 @@ logger = get_logger(__name__)
 
 # Default parameters
 DEFAULT_PATCH_SIZE = (80, 80)
+
+# All available patch-level focus metrics (name -> function)
+# Populated after function definitions below.
+ALL_PATCH_METRICS: Dict[str, callable] = {}
 DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian (calibrated for 8-bit scale)
 
 # Percentile normalization parameters (similar to csbdeep defaults)
@@ -167,6 +171,16 @@ def focus_score(patch: np.ndarray) -> float:
     return float(V / (M + eps))
 
 
+# Dispatch table: metric name -> function
+ALL_PATCH_METRICS.update({
+    "VarianceLaplacian": variance_of_laplacian,
+    "LaplaceEnergy": laplace_energy,
+    "Sobel": sobel_metric,
+    "Brenner": brenner_metric,
+    "FocusScore": focus_score,
+})
+
+
 # =============================================================================
 # Global Image Quality Metrics (Frequency Domain)
 # =============================================================================
@@ -286,12 +300,13 @@ def compute_global_focus_metrics(image: np.ndarray) -> Dict[str, float]:
 def compute_patch_focus_maps(
     image: np.ndarray,
     patch_size: Tuple[int, int] = DEFAULT_PATCH_SIZE,
+    metrics: list = None,
 ) -> Tuple[Dict[str, np.ndarray], list, list]:
     """
     Compute focus metric maps using non-overlapping patches.
 
     Divides the image into a grid of non-overlapping patches and computes
-    all focus metrics for each patch.
+    the requested focus metrics for each patch.
 
     The image is internally normalized to 8-bit scale [0, 255] using percentile
     normalization before computing metrics. This ensures thresholds are portable
@@ -300,6 +315,9 @@ def compute_patch_focus_maps(
     Arguments:
         image: 2D grayscale image (any dtype/bit-depth)
         patch_size: tuple (height, width) for patches
+        metrics: list of metric names to compute (default: all).
+                 Valid names: "VarianceLaplacian", "LaplaceEnergy",
+                 "Sobel", "Brenner", "FocusScore".
 
     Returns:
         maps: dict mapping metric name to 2D score array
@@ -308,6 +326,18 @@ def compute_patch_focus_maps(
     """
     if image.ndim != 2:
         raise ValueError(f"Expected 2D image, got shape {image.shape}")
+
+    # Resolve which metrics to compute
+    if metrics is None:
+        selected = ALL_PATCH_METRICS
+    else:
+        unknown = set(metrics) - set(ALL_PATCH_METRICS)
+        if unknown:
+            raise ValueError(
+                f"Unknown metric(s): {unknown}. "
+                f"Available: {list(ALL_PATCH_METRICS)}"
+            )
+        selected = {m: ALL_PATCH_METRICS[m] for m in metrics}
 
     h, w = image.shape
     ph, pw = patch_size
@@ -325,23 +355,14 @@ def compute_patch_focus_maps(
     # Normalize entire image to 8-bit scale for consistent metrics
     image_norm = _normalize_to_8bit(image)
 
-    # Initialize maps
-    maps = {
-        "VarianceLaplacian": np.zeros((n_y, n_x)),
-        "LaplaceEnergy": np.zeros((n_y, n_x)),
-        "Sobel": np.zeros((n_y, n_x)),
-        "Brenner": np.zeros((n_y, n_x)),
-        "FocusScore": np.zeros((n_y, n_x)),
-    }
+    # Initialize maps only for selected metrics
+    maps = {name: np.zeros((n_y, n_x)) for name in selected}
 
     for i, y in enumerate(ys):
         for j, x in enumerate(xs):
             patch = image_norm[y:y+ph, x:x+pw]
-            maps["VarianceLaplacian"][i, j] = variance_of_laplacian(patch)
-            maps["LaplaceEnergy"][i, j] = laplace_energy(patch)
-            maps["Sobel"][i, j] = sobel_metric(patch)
-            maps["Brenner"][i, j] = brenner_metric(patch)
-            maps["FocusScore"][i, j] = focus_score(patch)
+            for name, func in selected.items():
+                maps[name][i, j] = func(patch)
 
     return maps, ys, xs
 
@@ -365,10 +386,7 @@ def generate_blur_mask(
     Returns:
         blur_mask: boolean array, True where image is blurry
     """
-    maps, ys, xs = compute_patch_focus_maps(image, patch_size)
-
-    if metric not in maps:
-        raise ValueError(f"Unknown metric '{metric}'. Available: {list(maps.keys())}")
+    maps, ys, xs = compute_patch_focus_maps(image, patch_size, metrics=[metric])
 
     score_map = maps[metric]
     blur_flags = score_map < threshold

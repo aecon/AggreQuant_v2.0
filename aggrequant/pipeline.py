@@ -202,7 +202,9 @@ class SegmentationPipeline:
 
         # Patch-based metrics
         if quality.compute_patch_metrics and quality.patch_metrics:
-            maps, _, _ = compute_patch_focus_maps(image, patch_size=quality.patch_size)
+            maps, _, _ = compute_patch_focus_maps(
+                image, patch_size=quality.patch_size, metrics=quality.patch_metrics,
+            )
             for metric_name in quality.patch_metrics:
                 score_map = maps[metric_name]
                 results[f"patch_{metric_name}_mean"] = float(score_map.mean())
