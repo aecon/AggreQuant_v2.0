@@ -16,92 +16,22 @@ logger = get_logger(__name__)
 UNKNOWN_WELL_ID = "unknown"
 
 
-def parse_operetta_filename(filename: str) -> Dict[str, str]:
-    """
-    Parse Operetta/Harmony microscope filename format.
-
-    Expected format: r{row}c{col}f{field}-ch{channel}sk{z}fk{timepoint}fl{filter}.tiff
-
-    Arguments:
-        filename: Filename to parse
-
-    Returns:
-        Dictionary with parsed components
-    """
-    # Pattern for Operetta format
-    pattern = r"r(\d+)c(\d+)f(\d+)-ch(\d+)sk(\d+)fk(\d+)fl(\d+)"
-    match = re.search(pattern, filename)
-
-    if match:
-        return {
-            "row": match.group(1),
-            "col": match.group(2),
-            "field": match.group(3),
-            "channel": match.group(4),
-            "z": match.group(5),
-            "timepoint": match.group(6),
-            "filter": match.group(7),
-        }
-
-    # Fallback: try simpler patterns
-    simple_pattern = r"r(\d+)c(\d+).*ch(\d+)"
-    match = re.search(simple_pattern, filename)
-    if match:
-        return {
-            "row": match.group(1),
-            "col": match.group(2),
-            "channel": match.group(3),
-        }
-
-    return {}
-
-
-def parse_imageexpress_filename(filename: str) -> Dict[str, str]:
-    """
-    Parse ImageXpress microscope filename format.
-
-    Expected format: {plate}_{well}_{site}_w{wavelength}*.tif
-
-    Arguments:
-        filename: Filename to parse
-
-    Returns:
-        Dictionary with parsed components
-    """
-    # Pattern for ImageXpress format
-    # Example: Plate1_A01_s1_w1.tif
-    pattern = r"(.+?)_([A-H]\d{2})_s(\d+)_w(\d+)"
-    match = re.search(pattern, filename)
-
-    if match:
-        return {
-            "plate": match.group(1),
-            "well": match.group(2),
-            "site": match.group(3),
-            "wavelength": match.group(4),
-        }
-
-    return {}
-
-
 def parse_incell_filename(filename: str) -> Dict[str, str]:
     """
     Parse GE InCell Analyzer microscope filename format.
 
-    Expected format: A - 01(fld 1 wv 390 - Blue).tif
-    Where:
-        - A - 01: well (row letter - column number)
-        - fld 1: field of view
-        - wv 390: wavelength/channel
+    Expected formats (optional prefix before well ID):
+        A - 01(fld 1 wv 390 - Blue).tif
+        Plate1_B - 01(fld 01 wv 390 - Blue).tif
+        Plate1_HA41_B - 01(fld 01 wv 390 - Blue).tif
 
     Arguments:
         filename: Filename to parse
 
     Returns:
-        Dictionary with parsed components
+        Dictionary with keys: row, col, field, wavelength
+        Empty dict if the filename doesn't match.
     """
-    # Pattern for InCell format: "A - 01(fld 1 wv 390 - Blue).tif"
-    # Also handles: "A - 01(fld 01 wv 390 - Blue).tif" with zero-padded field
     pattern = r"([A-P])\s*-\s*(\d+)\(fld\s*(\d+)\s+wv\s+(\d+)"
     match = re.search(pattern, filename, re.IGNORECASE)
 
@@ -143,66 +73,29 @@ def find_channel_files(
     return sorted(matches)
 
 
-def group_files_by_well(
-    files: List[Path],
-    filename_parser: str = "auto"
-) -> Dict[str, List[Path]]:
+def group_files_by_well(files: List[Path]) -> Dict[str, List[Path]]:
     """
     Group image files by well identifier.
 
     Arguments:
         files: List of file paths
-        filename_parser: Parser to use ("operetta", "imageexpress", "auto")
 
     Returns:
-        Dictionary mapping well ID to list of files
+        Dictionary mapping well ID (e.g. "A01") to list of files
     """
     wells: Dict[str, List[Path]] = {}
 
     for f in files:
-        # Try to extract well info
-        if filename_parser == "auto":
-            # Try Operetta first, then InCell, then ImageXpress
-            info = parse_operetta_filename(f.name)
-            if not info:
-                info = parse_incell_filename(f.name)
-            if not info:
-                info = parse_imageexpress_filename(f.name)
-        elif filename_parser == "operetta":
-            info = parse_operetta_filename(f.name)
-        elif filename_parser == "imageexpress":
-            info = parse_imageexpress_filename(f.name)
-        elif filename_parser == "incell":
-            info = parse_incell_filename(f.name)
-        else:
-            info = {}
+        info = parse_incell_filename(f.name)
 
-        # Create well ID
-        if "well" in info:
-            well_id = info["well"]
-        elif "row" in info and "col" in info:
-            # Row can be a letter (InCell) or number (Operetta)
-            row_val = info["row"]
-            col_num = int(info["col"])
-            if row_val.isalpha():
-                # InCell format: row is already a letter
-                row_letter = row_val.upper()
-            else:
-                # Operetta format: row is a number (1-indexed)
-                row_num = int(row_val)
-                row_letter = chr(ord('A') + row_num - 1)
-            well_id = f"{row_letter}{col_num:02d}"
+        if "row" in info and "col" in info:
+            well_id = f"{info['row']}{int(info['col']):02d}"
         else:
-            # Fallback: try to extract from filename
-            match = re.search(r"([A-H])(\d{1,2})", f.name)
-            if match:
-                well_id = f"{match.group(1)}{int(match.group(2)):02d}"
-            else:
-                warnings.warn(
-                    f"Could not parse well ID from filename: {f.name} "
-                    f"(parser={filename_parser}). Grouping as '{UNKNOWN_WELL_ID}'."
-                )
-                well_id = UNKNOWN_WELL_ID
+            warnings.warn(
+                f"Could not parse well ID from filename: {f.name}. "
+                f"Grouping as '{UNKNOWN_WELL_ID}'."
+            )
+            well_id = UNKNOWN_WELL_ID
 
         if well_id not in wells:
             wells[well_id] = []
@@ -224,22 +117,8 @@ def group_files_by_field(files: List[Path]) -> Dict[str, List[Path]]:
     fields: Dict[str, List[Path]] = {}
 
     for f in files:
-        # Try Operetta format first
-        info = parse_operetta_filename(f.name)
-        if "field" in info:
-            field_id = info["field"]
-        else:
-            # Try InCell format
-            info = parse_incell_filename(f.name)
-            if "field" in info:
-                field_id = info["field"]
-            else:
-                # Try to extract field/site from filename
-                match = re.search(r"[fs](\d+)", f.name.lower())
-                if match:
-                    field_id = match.group(1)
-                else:
-                    field_id = "1"
+        info = parse_incell_filename(f.name)
+        field_id = info.get("field", "1")
 
         if field_id not in fields:
             fields[field_id] = []
@@ -260,7 +139,6 @@ class ImageLoader:
         self,
         directory: Path,
         channel_patterns: Optional[Dict[str, str]] = None,
-        filename_parser: str = "auto",
         verbose: bool = False
     ):
         """
@@ -270,12 +148,10 @@ class ImageLoader:
             directory: Root directory containing images
             channel_patterns: Dict mapping channel names to file patterns
                               e.g., {"DAPI": "C01", "GFP": "C02"}
-            filename_parser: Parser for filenames ("operetta", "imageexpress", "auto")
             verbose: Print progress messages
         """
         self.directory = Path(directory)
         self.channel_patterns = channel_patterns or {}
-        self.filename_parser = filename_parser
         self.verbose = verbose
 
         # Discover files on init
@@ -287,7 +163,7 @@ class ImageLoader:
         if self.verbose:
             logger.info(f"Found {len(all_files)} image files")
 
-        self.files_by_well = group_files_by_well(all_files, self.filename_parser)
+        self.files_by_well = group_files_by_well(all_files)
         if self.verbose:
             logger.info(f"Organized into {len(self.files_by_well)} wells")
 

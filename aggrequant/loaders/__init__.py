@@ -11,8 +11,7 @@ from aggrequant.loaders.config import (
 from aggrequant.loaders.images import (
     load_image,
     load_image_stack,
-    parse_operetta_filename,
-    parse_imageexpress_filename,
+    parse_incell_filename,
     find_channel_files,
     group_files_by_well,
     group_files_by_field,
@@ -40,8 +39,7 @@ __all__ = [
     # Images
     "load_image",
     "load_image_stack",
-    "parse_operetta_filename",
-    "parse_imageexpress_filename",
+    "parse_incell_filename",
     "find_channel_files",
     "group_files_by_well",
     "group_files_by_field",
