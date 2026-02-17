@@ -13,8 +13,7 @@ from aggrequant.common.image_utils import load_image
 from aggrequant.common.logging import get_logger
 from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
 from aggrequant.quality.focus import compute_patch_focus_maps, compute_global_focus_metrics
-from aggrequant.quantification.measurements import compute_field_measurements
-from aggrequant.quantification.results import FieldResult
+from aggrequant.quantification.colocalization import quantify_field
 from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
 from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
 from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
@@ -84,7 +83,7 @@ class SegmentationPipeline:
             configure_tensorflow_memory_growth()
 
         # Accumulated results (saved to CSV at end of run)
-        self._field_results: List[FieldResult] = []
+        self._field_results: List[dict] = []
 
     def run(self, max_fields: Optional[int] = None):
         """
@@ -163,17 +162,21 @@ class SegmentationPipeline:
         nuclei_labels, cell_labels = relabel_consecutive(nuclei_labels, cell_labels)
 
         # Quantification
-        result, _ = compute_field_measurements(
+        measurements = quantify_field(
             cell_labels, aggregate_labels, nuclei_labels,
             min_aggregate_area=self.config.segmentation.aggregate_min_size,
-            verbose=self.verbose,
         )
-        result.well_id = well_id
-        result.field = int(field_id)
-        result.focus_metrics = focus_metrics
-        self._field_results.append(result)
-        logger.info(f"    Quantification: {result.n_cells} cells, {result.n_aggregates} aggregates, "
-                  f"{result.pct_aggregate_positive_cells:.1f}% agg-positive")
+        row = {
+            "plate_name": self._plate_name,
+            "well_id": well_id,
+            "field": int(field_id),
+            **measurements,
+            **focus_metrics,
+        }
+        self._field_results.append(row)
+        logger.info(f"    Quantification: {measurements['n_cells']} cells, "
+                    f"{measurements['n_aggregates']} aggregates, "
+                    f"{measurements['pct_aggregate_positive_cells']:.1f}% agg-positive")
 
         # Save masks
         if self.config.output.save_masks:
@@ -223,7 +226,7 @@ class SegmentationPipeline:
         output_dir.mkdir(parents=True, exist_ok=True)
         path = output_dir / "field_measurements.csv"
 
-        df = pd.DataFrame([r.to_dict() for r in self._field_results])
+        df = pd.DataFrame(self._field_results)
         df.to_csv(path, index=False)
         logger.info(f"Field measurements saved to {path} ({len(df)} rows)")
 

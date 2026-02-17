@@ -1,7 +1,25 @@
-"""Post-processing utilities for segmentation label maps."""
+"""Utilities for segmentation label maps: counting, filtering, relabeling."""
 
 import numpy as np
 import skimage.morphology
+
+
+def count_labels(labels):
+    """
+    Count objects and total foreground area in a label image.
+
+    Arguments:
+        labels: 2D integer label image (0 = background)
+
+    Returns:
+        n_objects: number of distinct labeled objects
+        total_area: total foreground area in pixels
+    """
+    counts = np.bincount(labels.ravel())
+    if len(counts) <= 1:
+        return 0, 0
+    foreground = counts[1:]  # skip background (label 0)
+    return int(np.count_nonzero(foreground)), int(foreground.sum())
 
 
 def remove_border_objects(
