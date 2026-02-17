@@ -1,9 +1,8 @@
-"""Training infrastructure for neural networks.
+"""
+Training infrastructure for neural networks.
 
 This module provides loss functions and training loops for
 segmentation model training.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.training import DiceBCELoss, Trainer

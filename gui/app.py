@@ -6,8 +6,6 @@ Provides a user-friendly interface for biologists to:
 - Configure analysis parameters
 - Run the analysis pipeline
 - Monitor progress
-
-Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk

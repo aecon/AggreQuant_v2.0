@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-"""
-Benchmark script for focus/blur metrics visualization.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Benchmark script for focus/blur metrics visualization."""
 
 from pathlib import Path
 

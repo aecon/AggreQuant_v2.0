@@ -1,9 +1,8 @@
-"""Basic convolution blocks for UNet architectures.
+"""
+Basic convolution blocks for UNet architectures.
 
 This module provides the fundamental building blocks used in the encoder
 and decoder paths of UNet-style networks.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

@@ -1,9 +1,8 @@
-"""Loss functions for segmentation training.
+"""
+Loss functions for segmentation training.
 
 This module provides loss functions commonly used for binary and multi-class
 segmentation, including support for deep supervision.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.training.losses import DiceBCELoss

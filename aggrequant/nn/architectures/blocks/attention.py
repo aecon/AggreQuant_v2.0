@@ -1,4 +1,5 @@
-"""Attention gates for Attention U-Net architecture.
+"""
+Attention gates for Attention U-Net architecture.
 
 This module implements attention gates as described in:
 "Attention U-Net: Learning Where to Look for the Pancreas"
@@ -6,8 +7,6 @@ This module implements attention gates as described in:
 
 Attention gates help the network focus on relevant features in skip
 connections by using the decoder features as a gating signal.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

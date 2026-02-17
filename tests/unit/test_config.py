@@ -1,8 +1,4 @@
-"""
-Unit tests for aggrequant.loaders.config module.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Unit tests for aggrequant.loaders.config module."""
 
 import tempfile
 from pathlib import Path
@@ -109,6 +105,18 @@ class TestPipelineConfig:
         with pytest.raises(ValueError, match="plate_format must be one of"):
             PipelineConfig(input_dir=Path("/data"), plate_format="48")
 
+    def test_plate_name_default(self):
+        """plate_name should default to empty string."""
+        config = PipelineConfig(input_dir=Path("/data"), plate_format="96")
+        assert config.plate_name == ""
+
+    def test_plate_name_set(self):
+        """plate_name should be stored when provided."""
+        config = PipelineConfig(
+            input_dir=Path("/data"), plate_format="96", plate_name="MyPlate"
+        )
+        assert config.plate_name == "MyPlate"
+
     def test_default_nested_configs(self):
         """Should have default nested config objects."""
         config = PipelineConfig(
@@ -149,6 +157,7 @@ class TestPipelineConfigYamlRoundTrip:
             loaded = PipelineConfig.from_yaml(config_path)
 
             # Verify key fields match
+            assert loaded.plate_name == original.plate_name
             assert loaded.plate_format == original.plate_format
             assert len(loaded.channels) == len(original.channels)
             assert loaded.channels[0].name == "DAPI"

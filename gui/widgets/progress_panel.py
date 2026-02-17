@@ -2,8 +2,6 @@
 Progress panel widget for displaying analysis progress.
 
 Shows progress bar, status messages, and log output.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk

@@ -1,12 +1,11 @@
-"""Squeeze-and-Excitation blocks for channel recalibration.
+"""
+Squeeze-and-Excitation blocks for channel recalibration.
 
 This module implements SE blocks as described in:
 "Squeeze-and-Excitation Networks" (Hu et al., 2018)
 
 SE blocks adaptively recalibrate channel-wise feature responses by
 explicitly modeling interdependencies between channels.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

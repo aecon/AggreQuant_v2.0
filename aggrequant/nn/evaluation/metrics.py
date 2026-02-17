@@ -1,9 +1,8 @@
-"""Evaluation metrics for segmentation.
+"""
+Evaluation metrics for segmentation.
 
 This module provides metrics commonly used for evaluating segmentation models,
 including Dice, IoU, precision, recall, and F1 score.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.evaluation.metrics import dice_score, iou_score

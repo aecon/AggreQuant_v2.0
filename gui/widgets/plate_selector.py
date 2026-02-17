@@ -3,8 +3,6 @@ Interactive plate grid widget for well selection.
 
 Allows users to select wells and assign control types by clicking
 or dragging on a 96/384-well plate visualization.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk

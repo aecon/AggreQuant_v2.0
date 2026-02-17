@@ -1,9 +1,8 @@
-"""Building blocks for modular UNet architectures.
+"""
+Building blocks for modular UNet architectures.
 
 This module provides pluggable components that can be swapped via configuration
 to enable systematic benchmarking of different UNet variants.
-
-Author: Athena Economides, 2026, UZH
 
 Available blocks:
 

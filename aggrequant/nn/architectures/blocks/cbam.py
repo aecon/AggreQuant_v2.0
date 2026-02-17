@@ -1,12 +1,11 @@
-"""Convolutional Block Attention Module (CBAM).
+"""
+Convolutional Block Attention Module (CBAM).
 
 This module implements CBAM as described in:
 "CBAM: Convolutional Block Attention Module" (Woo et al., 2018)
 
 CBAM sequentially applies channel attention and spatial attention to
 refine feature maps along both dimensions.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

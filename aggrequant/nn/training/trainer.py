@@ -1,9 +1,8 @@
-"""Training loop for segmentation models.
+"""
+Training loop for segmentation models.
 
 This module provides a standard PyTorch training loop with checkpointing,
 metrics logging, and support for deep supervision.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.training.trainer import Trainer

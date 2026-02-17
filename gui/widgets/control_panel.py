@@ -2,8 +2,6 @@
 Control panel widget for assigning control types to wells.
 
 Provides buttons for common control types and allows custom types.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk

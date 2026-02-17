@@ -1,4 +1,5 @@
-"""Atrous Spatial Pyramid Pooling (ASPP) for multi-scale context.
+"""
+Atrous Spatial Pyramid Pooling (ASPP) for multi-scale context.
 
 This module implements ASPP as described in:
 "Rethinking Atrous Convolution for Semantic Image Segmentation" (Chen et al., 2017)
@@ -6,8 +7,6 @@ This module implements ASPP as described in:
 ASPP captures multi-scale context by applying parallel atrous (dilated)
 convolutions with different dilation rates, useful for the bridge/bottleneck
 of UNet architectures.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

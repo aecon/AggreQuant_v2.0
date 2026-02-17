@@ -1,7 +1,4 @@
-"""Unit tests for evaluation metrics.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Unit tests for evaluation metrics."""
 
 import pytest
 import torch

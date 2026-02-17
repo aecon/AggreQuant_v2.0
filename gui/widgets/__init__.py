@@ -1,8 +1,4 @@
-"""
-GUI widgets for AggreQuant.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""GUI widgets for AggreQuant."""
 
 from .plate_selector import PlateSelector, CONTROL_COLORS
 from .control_panel import ControlPanel

@@ -4,11 +4,11 @@
 # Usage:
 #   python scripts/run_pipeline.py configs/test_384well.yaml
 #
-# Author: Athena Economides, 2026, UZH
 
 # Input data location
 input_dir: "../AggreQuant_testdata/data_384wells"
 plate_format: "384"
+plate_name: "test_384well"
 
 # Channel configuration
 # Patterns should match substrings in your image filenames

@@ -1,8 +1,4 @@
-"""
-GUI application for AggreQuant.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""GUI application for AggreQuant."""
 
 from .app import AggreQuantApp, main
 

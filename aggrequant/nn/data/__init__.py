@@ -1,9 +1,8 @@
-"""Data loading and augmentation for neural network training.
+"""
+Data loading and augmentation for neural network training.
 
 This module provides PyTorch datasets and data augmentation pipelines
 for aggregate segmentation training.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.data import AggregateDataset, get_training_augmentation

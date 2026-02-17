@@ -1,10 +1,9 @@
-"""Residual blocks for ResUNet architectures.
+"""
+Residual blocks for ResUNet architectures.
 
 This module provides residual connection blocks inspired by ResNet (He et al., 2016)
 adapted for UNet encoder/decoder paths. Residual connections help with gradient
 flow and enable training of deeper networks.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import torch

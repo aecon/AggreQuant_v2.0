@@ -1,8 +1,4 @@
-"""
-Pytest configuration and shared fixtures.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Pytest configuration and shared fixtures."""
 
 import sys
 from pathlib import Path

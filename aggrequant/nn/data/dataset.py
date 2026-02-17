@@ -1,9 +1,8 @@
-"""PyTorch Dataset for aggregate segmentation training.
+"""
+PyTorch Dataset for aggregate segmentation training.
 
 This module provides dataset classes for loading image/mask pairs with
 support for patch extraction and integration with albumentations.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.data.dataset import AggregateDataset

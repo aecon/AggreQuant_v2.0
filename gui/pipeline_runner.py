@@ -2,8 +2,6 @@
 GUI-specific pipeline runner that builds config from user selections.
 
 This module is internal to the GUI and not part of the public API.
-
-Author: Athena Economides, 2026, UZH
 """
 
 from pathlib import Path

@@ -4,8 +4,6 @@ Launch the AggreQuant GUI application.
 
 Usage:
     python scripts/run_gui.py
-
-Author: Athena Economides, 2026, UZH
 """
 
 import sys

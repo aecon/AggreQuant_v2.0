@@ -1,8 +1,4 @@
-"""
-Unit tests for aggrequant.quality.focus module.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Unit tests for aggrequant.quality.focus module."""
 
 import numpy as np
 import pytest

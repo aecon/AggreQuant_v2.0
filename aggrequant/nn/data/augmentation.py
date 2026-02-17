@@ -1,9 +1,8 @@
-"""Albumentations augmentation pipelines for aggregate segmentation.
+"""
+Albumentations augmentation pipelines for aggregate segmentation.
 
 This module provides data augmentation pipelines following nnU-Net best
 practices for microscopy image segmentation.
-
-Author: Athena Economides, 2026, UZH
 
 Example:
     >>> from aggrequant.nn.data.augmentation import get_training_augmentation

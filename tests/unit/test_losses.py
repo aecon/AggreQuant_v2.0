@@ -1,7 +1,4 @@
-"""Unit tests for loss functions.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Unit tests for loss functions."""
 
 import pytest
 import torch

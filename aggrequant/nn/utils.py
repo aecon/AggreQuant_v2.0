@@ -1,7 +1,4 @@
-"""PyTorch utility functions.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""PyTorch utility functions."""
 
 from typing import Optional, Union
 import torch

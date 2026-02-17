@@ -82,6 +82,8 @@ class SegmentationPipeline:
         if self.config.use_gpu:
             configure_tensorflow_memory_growth()
 
+        self._plate_name = self.config.plate_name
+
         # Accumulated results (saved to CSV at end of run)
         self._field_results: List[dict] = []
 

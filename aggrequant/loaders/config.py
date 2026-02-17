@@ -103,6 +103,7 @@ class PipelineConfig:
     # Required fields
     input_dir: Path
     plate_format: str  # "96" or "384"
+    plate_name: str = ""
 
     # Channel configuration
     channels: List[ChannelConfig] = field(default_factory=list)
@@ -186,6 +187,7 @@ class PipelineConfig:
         data = {
             "input_dir": str(self.input_dir),
             "plate_format": self.plate_format,
+            "plate_name": self.plate_name,
             "channels": [
                 {"name": ch.name, "pattern": ch.pattern, "purpose": ch.purpose,
                  "normalize_method": ch.normalize_method}

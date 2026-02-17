@@ -1,8 +1,4 @@
-"""
-Unit tests for aggrequant.loaders.plate module.
-
-Author: Athena Economides, 2026, UZH
-"""
+"""Unit tests for aggrequant.loaders.plate module."""
 
 import numpy as np
 import pytest

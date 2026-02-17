@@ -3,8 +3,6 @@ Settings panel widget for configuring analysis parameters.
 
 Provides controls for segmentation methods, quality thresholds,
 and output options.
-
-Author: Athena Economides, 2026, UZH
 """
 
 import customtkinter as ctk
