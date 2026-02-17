@@ -12,9 +12,6 @@ logger = get_logger(__name__)
 # Default parameters
 DEFAULT_PATCH_SIZE = (80, 80)
 
-# All available patch-level focus metrics (name -> function)
-# Populated after function definitions below.
-ALL_PATCH_METRICS: Dict[str, callable] = {}
 DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian (calibrated for 8-bit scale)
 
 # Percentile normalization parameters (similar to csbdeep defaults)
@@ -158,14 +155,14 @@ def focus_score(patch: np.ndarray) -> float:
     return float(V / (M + eps))
 
 
-# Dispatch table: metric name -> function
-ALL_PATCH_METRICS.update({
+# All available patch-level focus metrics (name -> function)
+ALL_PATCH_METRICS: Dict[str, callable] = {
     "VarianceLaplacian": variance_of_laplacian,
     "LaplaceEnergy": laplace_energy,
     "Sobel": sobel_metric,
     "Brenner": brenner_metric,
     "FocusScore": focus_score,
-})
+}
 
 
 # =============================================================================
