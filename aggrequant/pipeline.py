@@ -11,7 +11,6 @@ from typing import Optional, Dict, List
 
 import numpy as np
 import pandas as pd
-import skimage.morphology
 import tifffile
 
 from .loaders.config import PipelineConfig
@@ -22,6 +21,11 @@ from .quantification.measurements import compute_field_measurements
 from .segmentation.nuclei.stardist import StarDistSegmenter
 from .segmentation.cells.cellpose import CellposeSegmenter
 from .segmentation.aggregates.filter_based import FilterBasedSegmenter
+from .segmentation.postprocessing import (
+    remove_border_objects,
+    filter_aggregates_by_cells,
+    relabel_consecutive,
+)
 
 
 class SegmentationPipeline:
@@ -158,9 +162,9 @@ class SegmentationPipeline:
         aggregate_labels = self._aggregate_segmenter.segment(aggregate_img)
 
         # Post-processing
-        cell_labels, nuclei_labels = self._remove_border_objects(cell_labels, nuclei_labels)
-        aggregate_labels = self._filter_aggregates_by_cells(aggregate_labels, cell_labels)
-        nuclei_labels, cell_labels = self._relabel_consecutive(nuclei_labels, cell_labels)
+        cell_labels, nuclei_labels = remove_border_objects(cell_labels, nuclei_labels)
+        aggregate_labels = filter_aggregates_by_cells(aggregate_labels, cell_labels)
+        nuclei_labels, cell_labels = relabel_consecutive(nuclei_labels, cell_labels)
 
         # Quantification
         result, _ = compute_field_measurements(
@@ -255,58 +259,6 @@ class SegmentationPipeline:
             if pattern.lower() in f.name.lower():
                 return load_image(f)
         return None
-
-    def _remove_border_objects(
-        self, cell_labels: np.ndarray, nuclei_labels: np.ndarray
-    ) -> tuple:
-        """Remove cells touching image border and their corresponding nuclei."""
-        cell_labels = cell_labels.copy()
-        nuclei_labels = nuclei_labels.copy()
-
-        # Find labels touching any border
-        border_ids = set()
-        border_ids.update(np.unique(cell_labels[0, :]))       # top
-        border_ids.update(np.unique(cell_labels[-1, :]))      # bottom
-        border_ids.update(np.unique(cell_labels[:, 0]))       # left
-        border_ids.update(np.unique(cell_labels[:, -1]))      # right
-        border_ids.discard(0)
-
-        # Remove from both cell and nuclei labels (they share IDs)
-        for label_id in border_ids:
-            cell_labels[cell_labels == label_id] = 0
-            nuclei_labels[nuclei_labels == label_id] = 0
-
-        return cell_labels, nuclei_labels
-
-    def _filter_aggregates_by_cells(
-        self, aggregate_labels: np.ndarray, cell_labels: np.ndarray
-    ) -> np.ndarray:
-        """Remove aggregates that are outside detected cells."""
-        # Create mask of cell regions
-        cell_mask = cell_labels > 0
-
-        # Zero out aggregates outside cells
-        aggregate_labels = aggregate_labels.copy()
-        aggregate_labels[~cell_mask] = 0
-
-        # Relabel to remove gaps from deleted aggregates
-        aggregate_labels = skimage.morphology.label(aggregate_labels > 0)
-
-        return aggregate_labels.astype(np.uint32)
-
-    def _relabel_consecutive(
-        self, nuclei_labels: np.ndarray, cell_labels: np.ndarray
-    ) -> tuple:
-        """Relabel nuclei and cells to consecutive IDs, maintaining correspondence."""
-        unique_ids = np.unique(nuclei_labels[nuclei_labels > 0])
-
-        # Build lookup table: old_id -> new_id
-        max_id = max(nuclei_labels.max(), cell_labels.max())
-        lookup = np.zeros(max_id + 1, dtype=nuclei_labels.dtype)
-        for new_id, old_id in enumerate(sorted(unique_ids), start=1):
-            lookup[old_id] = new_id
-
-        return lookup[nuclei_labels], lookup[cell_labels]
 
     def _save_masks(
         self,

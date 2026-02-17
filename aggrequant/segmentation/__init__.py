@@ -13,6 +13,11 @@ from .base import BaseSegmenter
 from .nuclei import StarDistSegmenter
 from .cells import CellposeSegmenter
 from .aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
+from .postprocessing import (
+    remove_border_objects,
+    filter_aggregates_by_cells,
+    relabel_consecutive,
+)
 
 __all__ = [
     # Base class
@@ -24,4 +29,8 @@ __all__ = [
     # Aggregates
     "FilterBasedSegmenter",
     "NeuralNetworkSegmenter",
+    # Post-processing
+    "remove_border_objects",
+    "filter_aggregates_by_cells",
+    "relabel_consecutive",
 ]
