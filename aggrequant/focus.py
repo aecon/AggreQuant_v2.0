@@ -6,6 +6,7 @@ from scipy import ndimage
 from typing import Tuple, Dict
 
 from aggrequant.common.logging import get_logger
+from aggrequant.common.image_utils import normalize_image
 
 logger = get_logger(__name__)
 
@@ -13,47 +14,6 @@ logger = get_logger(__name__)
 DEFAULT_PATCH_SIZE = (80, 80)
 
 DEFAULT_BLUR_THRESHOLD = 15.0  # for Variance of Laplacian (calibrated for 8-bit scale)
-
-# Percentile normalization parameters (similar to csbdeep defaults)
-DEFAULT_PMIN = 1.0
-DEFAULT_PMAX = 99.8
-
-
-# =============================================================================
-# Internal Utilities
-# =============================================================================
-
-def _normalize_to_8bit(
-    image: np.ndarray,
-    pmin: float = DEFAULT_PMIN,
-    pmax: float = DEFAULT_PMAX,
-) -> np.ndarray:
-    """
-    Normalize image to 8-bit scale [0, 255] using percentile normalization.
-
-    Similar to csbdeep.utils.normalize but scales to [0, 255] instead of [0, 1].
-    This ensures focus metric thresholds are portable across different bit depths.
-
-    Arguments:
-        image: Input image of any dtype
-        pmin: Lower percentile for clipping (default: 1.0)
-        pmax: Upper percentile for clipping (default: 99.8)
-
-    Returns:
-        Image as float64 in range [0, 255]
-    """
-    img = image.astype(np.float64)
-
-    p_low = np.percentile(img, pmin)
-    p_high = np.percentile(img, pmax)
-
-    if p_high - p_low < 1e-10:
-        # Constant or near-constant image - return zeros (no edges/features)
-        return np.zeros_like(img, dtype=np.float64)
-
-    # Clip and scale to [0, 255]
-    img_clipped = np.clip(img, p_low, p_high)
-    return (img_clipped - p_low) / (p_high - p_low) * 255.0
 
 
 # =============================================================================
@@ -249,13 +209,14 @@ def compute_global_focus_metrics(image: np.ndarray) -> Dict[str, float]:
             - high_freq_ratio: Ratio of high to low frequency energy
     """
     # Normalize for consistent VoL
-    img_norm = _normalize_to_8bit(image)
+    image_norm = normalize_image(image, method="percentile",
+                                 percentile_low=1.0, percentile_high=99.8) * 255
 
     # PLLS (on original image, not normalized)
     plls = power_log_log_slope(image)
 
     # Global Variance of Laplacian
-    global_vol = variance_of_laplacian(img_norm)
+    global_vol = variance_of_laplacian(image_norm)
 
     # High frequency ratio (simple FFT-based measure)
     f = np.fft.fft2(image.astype(np.float64))
@@ -340,7 +301,8 @@ def compute_patch_focus_maps(
         raise ValueError(f"Image size {h}x{w} too small for patch size {patch_size}")
 
     # Normalize entire image to 8-bit scale for consistent metrics
-    image_norm = _normalize_to_8bit(image)
+    image_norm = normalize_image(image, method="percentile",
+                                 percentile_low=1.0, percentile_high=99.8) * 255
 
     # Initialize maps only for selected metrics
     maps = {name: np.zeros((n_y, n_x)) for name in selected}
