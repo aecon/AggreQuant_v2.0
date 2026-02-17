@@ -23,7 +23,9 @@ INPUT_DIR = Path("/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/benchmark_n
 OUTPUT_DIR = INPUT_DIR / "output_focus"
 
 # Focus metrics parameters
-PATCH_SIZE = (80, 80)
+#PATCH_SIZE = (80, 80)
+#PATCH_SIZE = (136, 136)
+PATCH_SIZE = (255, 255)
 
 
 def load_image(path: Path) -> np.ndarray:

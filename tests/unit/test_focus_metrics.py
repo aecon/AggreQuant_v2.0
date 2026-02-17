@@ -148,7 +148,7 @@ class TestGenerateBlurMask:
 
     def test_constant_image_high_mask(self):
         """Constant image should have mostly True (blurry) mask."""
-        img = np.ones((200, 200), dtype=np.uint8) * 128
+        img = np.ones((240, 240), dtype=np.uint8) * 128
         mask = generate_blur_mask(img, threshold=15)
         assert np.mean(mask) > 0.9
 
