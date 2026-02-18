@@ -77,7 +77,7 @@ def main():
     print_step("Step 3: Nuclei segmentation (StarDist)")
 
     try:
-        from aggrequant.segmentation.nuclei import StarDistSegmenter
+        from aggrequant.segmentation.stardist import StarDistSegmenter
 
         nuclei_segmenter = StarDistSegmenter(
             model_name="2D_versatile_fluo",
@@ -107,7 +107,7 @@ def main():
     print_step("Step 4: Cell segmentation (Cellpose)")
 
     try:
-        from aggrequant.segmentation.cells import CellposeSegmenter
+        from aggrequant.segmentation.cellpose import CellposeSegmenter
 
         cell_segmenter = CellposeSegmenter(
             model_type="cyto2",

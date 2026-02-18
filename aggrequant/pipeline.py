@@ -14,8 +14,8 @@ from aggrequant.common.logging import get_logger
 from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
 from aggrequant.focus import compute_focus_metrics
 from aggrequant.colocalization import quantify_field
-from aggrequant.segmentation.nuclei.stardist import StarDistSegmenter
-from aggrequant.segmentation.cells.cellpose import CellposeSegmenter
+from aggrequant.segmentation.stardist import StarDistSegmenter
+from aggrequant.segmentation.cellpose import CellposeSegmenter
 from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
 from aggrequant.segmentation.postprocessing import (
     remove_border_objects,

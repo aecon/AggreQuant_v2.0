@@ -1,8 +1,8 @@
 """Segmentation backends for nuclei, cells, and aggregates."""
 
 from aggrequant.segmentation.base import BaseSegmenter
-from aggrequant.segmentation.nuclei import StarDistSegmenter
-from aggrequant.segmentation.cells import CellposeSegmenter
+from aggrequant.segmentation.stardist import StarDistSegmenter
+from aggrequant.segmentation.cellpose import CellposeSegmenter
 from aggrequant.segmentation.aggregates import FilterBasedSegmenter, NeuralNetworkSegmenter
 from aggrequant.segmentation.postprocessing import (
     remove_border_objects,
