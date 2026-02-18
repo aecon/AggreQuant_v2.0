@@ -71,15 +71,39 @@ output:
 # Adjust these to match your actual control well positions
 control_wells:
   negative:
-    - A01
-    - A02
-    - B01
-    - B02
+    - A13
+    - B13
+    - C13
+    - D13
+    - E13
+    - F13
+    - G13
+    - H13
+    - I05
+    - J05
+    - K05
+    - L05
+    - M05
+    - N05
+    - O05
+    - P05
   NT:
-    - A23
-    - A24
-    - B23
-    - B24
+    - A05
+    - B05
+    - C05
+    - D05
+    - E05
+    - F05
+    - G05
+    - H05
+    - I13
+    - J13
+    - K13
+    - L13
+    - M13
+    - N13
+    - O13
+    - P13
 
 # Processing options
 n_workers: 4
