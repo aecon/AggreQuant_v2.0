@@ -1,7 +1,8 @@
 """Unit tests for aggrequant.loaders.images module."""
 
 import pytest
-from aggrequant.loaders.images import parse_incell_filename
+from pathlib import Path
+from aggrequant.loaders.images import parse_incell_filename, build_field_triplets
 
 
 class TestParseIncellFilename:
@@ -74,3 +75,82 @@ class TestParseIncellFilename:
     def test_partial_match_missing_wavelength(self):
         """Should return empty dict if pattern is incomplete."""
         assert parse_incell_filename("A - 01(fld 1).tif") == {}
+
+
+class TestBuildFieldTriplets:
+    """Tests for build_field_triplets()."""
+
+    PURPOSES = {"nuclei": "390", "cells": "548", "aggregates": "650"}
+
+    def _make_files(self, tmp_path, filenames):
+        """Create empty .tif files and return the directory."""
+        for name in filenames:
+            (tmp_path / name).write_bytes(b"")
+        return tmp_path
+
+    def test_complete_triplets(self, tmp_path):
+        """Should discover complete triplets for all fields."""
+        self._make_files(tmp_path, [
+            "A - 01(fld 1 wv 390 - Blue).tif",
+            "A - 01(fld 1 wv 548 - Green).tif",
+            "A - 01(fld 1 wv 650 - Red).tif",
+            "A - 01(fld 2 wv 390 - Blue).tif",
+            "A - 01(fld 2 wv 548 - Green).tif",
+            "A - 01(fld 2 wv 650 - Red).tif",
+        ])
+        triplets = build_field_triplets(tmp_path, self.PURPOSES)
+        assert len(triplets) == 2
+        assert triplets[0].well_id == "A01"
+        assert triplets[0].field_id == "1"
+        assert triplets[1].field_id == "2"
+        assert set(triplets[0].paths.keys()) == {"nuclei", "cells", "aggregates"}
+
+    def test_incomplete_triplet_skipped(self, tmp_path):
+        """Should skip fields missing a channel."""
+        self._make_files(tmp_path, [
+            "A - 01(fld 1 wv 390 - Blue).tif",
+            "A - 01(fld 1 wv 548 - Green).tif",
+            # missing 650 for field 1
+            "A - 01(fld 2 wv 390 - Blue).tif",
+            "A - 01(fld 2 wv 548 - Green).tif",
+            "A - 01(fld 2 wv 650 - Red).tif",
+        ])
+        triplets = build_field_triplets(tmp_path, self.PURPOSES)
+        assert len(triplets) == 1
+        assert triplets[0].field_id == "2"
+
+    def test_sorted_by_well_then_field(self, tmp_path):
+        """Should return triplets sorted by (well_id, field_id)."""
+        self._make_files(tmp_path, [
+            # Well B02 field 1
+            "B - 02(fld 1 wv 390 - Blue).tif",
+            "B - 02(fld 1 wv 548 - Green).tif",
+            "B - 02(fld 1 wv 650 - Red).tif",
+            # Well A01 field 2
+            "A - 01(fld 2 wv 390 - Blue).tif",
+            "A - 01(fld 2 wv 548 - Green).tif",
+            "A - 01(fld 2 wv 650 - Red).tif",
+            # Well A01 field 1
+            "A - 01(fld 1 wv 390 - Blue).tif",
+            "A - 01(fld 1 wv 548 - Green).tif",
+            "A - 01(fld 1 wv 650 - Red).tif",
+        ])
+        triplets = build_field_triplets(tmp_path, self.PURPOSES)
+        keys = [(t.well_id, t.field_id) for t in triplets]
+        assert keys == [("A01", "1"), ("A01", "2"), ("B02", "1")]
+
+    def test_empty_directory(self, tmp_path):
+        """Should return empty list for a directory with no images."""
+        triplets = build_field_triplets(tmp_path, self.PURPOSES)
+        assert triplets == []
+
+    def test_non_matching_files_ignored(self, tmp_path):
+        """Should ignore files that don't match InCell format."""
+        self._make_files(tmp_path, [
+            "random_image.tif",
+            "A - 01(fld 1 wv 390 - Blue).tif",
+            "A - 01(fld 1 wv 548 - Green).tif",
+            "A - 01(fld 1 wv 650 - Red).tif",
+        ])
+        triplets = build_field_triplets(tmp_path, self.PURPOSES)
+        assert len(triplets) == 1

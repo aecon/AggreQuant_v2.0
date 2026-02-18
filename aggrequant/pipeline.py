@@ -1,14 +1,14 @@
 """Segmentation pipeline for nuclei, cells, and aggregates."""
 
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, List
 
 import numpy as np
 import pandas as pd
 import tifffile
 
 from aggrequant.loaders.config import PipelineConfig
-from aggrequant.loaders.images import ImageLoader, group_files_by_field
+from aggrequant.loaders.images import FieldTriplet, build_field_triplets
 from aggrequant.common.image_utils import load_image
 from aggrequant.common.logging import get_logger
 from aggrequant.common.gpu_utils import configure_tensorflow_memory_growth
@@ -45,11 +45,9 @@ class SegmentationPipeline:
             import logging
             logging.getLogger("aggrequant").setLevel(logging.INFO)
 
-        # Build channel pattern mappings
-        self._channel_patterns = {}
+        # Build purpose -> pattern mapping for triplet discovery
         self._channel_by_purpose = {}
         for ch in self.config.channels:
-            self._channel_patterns[ch.name] = ch.pattern
             self._channel_by_purpose[ch.purpose] = ch.pattern
 
         # Initialize segmenters
@@ -96,54 +94,31 @@ class SegmentationPipeline:
         """
         logger.info(f"Loading images from {self.config.input_dir}")
 
-        loader = ImageLoader(
-            directory=self.config.input_dir,
-            channel_patterns=self._channel_patterns,
-            verbose=self.verbose,
+        triplets = build_field_triplets(
+            self.config.input_dir, self._channel_by_purpose,
         )
-
-        logger.info(f"Found {loader.n_wells} wells")
+        logger.info(f"Found {len(triplets)} complete fields")
 
         self._field_results = []
-        fields_processed = 0
-        for well_id in loader.wells:
-            well_files = loader.get_well_files(well_id)
-            if not well_files:
-                logger.info(f"Skipping {well_id}: no files")
-                continue
-
-            fields = group_files_by_field(well_files)
-            if not fields:
-                logger.info(f"Skipping {well_id}: no valid fields")
-                continue
-
-            logger.info(f"Processing well {well_id} ({len(fields)} fields)")
-
-            for field_id, field_files in sorted(fields.items()):
-                self._process_field(well_id, field_id, field_files)
-                fields_processed += 1
-                if max_fields is not None and fields_processed >= max_fields:
-                    logger.info(f"Reached max_fields={max_fields}, stopping")
-                    self._save_results()
-                    self._generate_plots()
-                    return
+        for i, triplet in enumerate(triplets):
+            self._process_field(triplet)
+            if max_fields is not None and (i + 1) >= max_fields:
+                logger.info(f"Reached max_fields={max_fields}, stopping")
+                break
 
         self._save_results()
         self._generate_plots()
         logger.info("Pipeline complete")
 
-    def _process_field(self, well_id: str, field_id: str, field_files: list):
+    def _process_field(self, triplet: FieldTriplet):
         """Process a single field of view."""
-        # Load images by matching channel patterns
-        nuclei_img = self._load_channel(field_files, "nuclei")
-        cell_img = self._load_channel(field_files, "cells")
-        aggregate_img = self._load_channel(field_files, "aggregates")
-
-        if nuclei_img is None or cell_img is None or aggregate_img is None:
-            logger.info(f"  Skipping {well_id}/f{field_id}: missing channel(s)")
-            return
-
+        well_id, field_id = triplet.well_id, triplet.field_id
         logger.info(f"  Processing {well_id}/f{field_id}")
+
+        # Load images directly from triplet paths
+        nuclei_img = load_image(triplet.paths["nuclei"])
+        cell_img = load_image(triplet.paths["cells"])
+        aggregate_img = load_image(triplet.paths["aggregates"])
 
         # Focus quality metrics
         focus_metrics = {}
@@ -221,17 +196,6 @@ class SegmentationPipeline:
             csv_path, plate_format=self.config.plate_format,
         )
         logger.info(f"Heatmaps saved to {plots_dir}")
-
-    def _load_channel(self, field_files: list, purpose: str) -> Optional[np.ndarray]:
-        """Load image for a specific channel purpose."""
-        pattern = self._channel_by_purpose.get(purpose)
-        if pattern is None:
-            return None
-
-        for f in field_files:
-            if pattern.lower() in f.name.lower():
-                return load_image(f)
-        return None
 
     def _save_masks(
         self,

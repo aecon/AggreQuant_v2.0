@@ -2,8 +2,9 @@
 
 import re
 import warnings
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 import numpy as np
 
 from aggrequant.common.logging import get_logger
@@ -46,33 +47,6 @@ def parse_incell_filename(filename: str) -> Dict[str, str]:
     return {}
 
 
-def find_channel_files(
-    directory: Path,
-    channel_pattern: str,
-    well: Optional[str] = None
-) -> List[Path]:
-    """
-    Find all files matching a channel pattern.
-
-    Arguments:
-        directory: Directory to search
-        channel_pattern: Pattern to match (e.g., "C01", "ch1", "w1")
-        well: Optional well filter (e.g., "A01")
-
-    Returns:
-        List of matching file paths
-    """
-    all_files = find_image_files(directory, recursive=True)
-
-    matches = []
-    for f in all_files:
-        if channel_pattern.lower() in f.name.lower():
-            if well is None or well in f.name:
-                matches.append(f)
-
-    return sorted(matches)
-
-
 def group_files_by_well(files: List[Path]) -> Dict[str, List[Path]]:
     """
     Group image files by well identifier.
@@ -104,27 +78,64 @@ def group_files_by_well(files: List[Path]) -> Dict[str, List[Path]]:
     return wells
 
 
-def group_files_by_field(files: List[Path]) -> Dict[str, List[Path]]:
+class FieldTriplet(NamedTuple):
+    """One field of view with all its channel image paths."""
+    well_id: str
+    field_id: str
+    paths: Dict[str, Path]  # purpose ("nuclei", "cells", ...) -> file path
+
+
+def build_field_triplets(
+    directory: Path,
+    channel_purposes: Dict[str, str],
+) -> List[FieldTriplet]:
     """
-    Group files within a well by field of view.
+    Discover image files and group them into per-field triplets.
+
+    Scans the directory once, parses every filename, matches channel patterns,
+    and returns a sorted list of complete triplets (fields that have all channels).
 
     Arguments:
-        files: List of file paths (typically from one well)
+        directory: Root directory containing images
+        channel_purposes: Mapping of purpose to filename pattern,
+            e.g. {"nuclei": "390", "cells": "548", "aggregates": "650"}
 
     Returns:
-        Dictionary mapping field ID to list of files
+        List of FieldTriplet sorted by (well_id, field_id), containing only
+        fields where every expected channel was found.
     """
-    fields: Dict[str, List[Path]] = {}
+    all_files = find_image_files(directory, recursive=True)
 
-    for f in files:
+    # (well_id, field_id) -> {purpose: path}
+    grouped: Dict[Tuple[str, str], Dict[str, Path]] = defaultdict(dict)
+
+    for f in all_files:
         info = parse_incell_filename(f.name)
-        field_id = info.get("field", "1")
+        if not info:
+            continue
 
-        if field_id not in fields:
-            fields[field_id] = []
-        fields[field_id].append(f)
+        well_id = f"{info['row']}{int(info['col']):02d}"
+        field_id = info["field"]
 
-    return fields
+        # Match against channel patterns
+        for purpose, pattern in channel_purposes.items():
+            if pattern.lower() in f.name.lower():
+                grouped[(well_id, field_id)][purpose] = f
+                break  # each file matches at most one purpose
+
+    # Keep only complete triplets (all purposes present)
+    expected = set(channel_purposes.keys())
+    triplets = []
+    for (well_id, field_id), paths in sorted(grouped.items()):
+        if paths.keys() >= expected:
+            triplets.append(FieldTriplet(well_id, field_id, paths))
+        else:
+            missing = expected - paths.keys()
+            logger.warning(
+                f"Skipping {well_id}/f{field_id}: missing channel(s) {missing}"
+            )
+
+    return triplets
 
 
 class ImageLoader:
@@ -180,64 +191,3 @@ class ImageLoader:
     def get_well_files(self, well: str) -> List[Path]:
         """Get all files for a specific well."""
         return self.files_by_well.get(well, [])
-
-    def load_well_channel(
-        self,
-        well: str,
-        channel: str
-    ) -> Tuple[List[np.ndarray], List[Path]]:
-        """
-        Load all images for a well and channel.
-
-        Arguments:
-            well: Well ID (e.g., "A01")
-            channel: Channel name (must be in channel_patterns)
-
-        Returns:
-            Tuple of (list of images, list of file paths)
-        """
-        if channel not in self.channel_patterns:
-            raise ValueError(f"Unknown channel '{channel}'. Known: {list(self.channel_patterns.keys())}")
-
-        pattern = self.channel_patterns[channel]
-        well_files = self.get_well_files(well)
-
-        # Filter by channel pattern
-        channel_files = [f for f in well_files if pattern.lower() in f.name.lower()]
-
-        if self.verbose:
-            logger.info(f"Loading {len(channel_files)} images for {well}/{channel}")
-
-        images = [load_image(f) for f in channel_files]
-        return images, channel_files
-
-    def load_field(
-        self,
-        well: str,
-        field: str
-    ) -> Dict[str, np.ndarray]:
-        """
-        Load all channels for a specific field of view.
-
-        Arguments:
-            well: Well ID
-            field: Field ID
-
-        Returns:
-            Dictionary mapping channel name to image
-        """
-        well_files = self.get_well_files(well)
-        field_groups = group_files_by_field(well_files)
-
-        if field not in field_groups:
-            raise ValueError(f"Field '{field}' not found. Available: {list(field_groups.keys())}")
-
-        field_files = field_groups[field]
-        result = {}
-
-        for channel_name, pattern in self.channel_patterns.items():
-            matching = [f for f in field_files if pattern.lower() in f.name.lower()]
-            if matching:
-                result[channel_name] = load_image(matching[0])
-
-        return result

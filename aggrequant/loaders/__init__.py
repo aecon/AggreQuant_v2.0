@@ -12,9 +12,9 @@ from aggrequant.loaders.images import (
     load_image,
     load_image_stack,
     parse_incell_filename,
-    find_channel_files,
     group_files_by_well,
-    group_files_by_field,
+    FieldTriplet,
+    build_field_triplets,
     ImageLoader,
 )
 from aggrequant.loaders.plate import (
@@ -40,9 +40,9 @@ __all__ = [
     "load_image",
     "load_image_stack",
     "parse_incell_filename",
-    "find_channel_files",
     "group_files_by_well",
-    "group_files_by_field",
+    "FieldTriplet",
+    "build_field_triplets",
     "ImageLoader",
     # Plate
     "PLATE_LAYOUTS",
