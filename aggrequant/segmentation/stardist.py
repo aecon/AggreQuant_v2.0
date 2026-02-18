@@ -112,11 +112,13 @@ class StarDistSegmenter(BaseSegmenter):
         img = image.astype(np.float32)
 
         # Denoise
-        denoised = skimage.filters.gaussian(img, sigma=self.sigma_denoise)
+        denoised = skimage.filters.gaussian(
+            img, sigma=self.sigma_denoise, mode='reflect', preserve_range=True
+        )
 
         # Background estimation
         background = skimage.filters.gaussian(
-            denoised, sigma=self.sigma_background, mode='nearest', preserve_range=True
+            denoised, sigma=self.sigma_background, mode='reflect', preserve_range=True
         )
 
         # Normalize

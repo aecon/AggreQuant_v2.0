@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.ndimage
+import skimage.filters
 import skimage.morphology
 from typing import Optional
 
@@ -150,8 +151,8 @@ class FilterBasedSegmenter(BaseSegmenter):
         capped = np.clip(img, 0, self.intensity_cap)
 
         # Estimate background
-        background = scipy.ndimage.gaussian_filter(
-            capped, sigma=self.sigma_background, mode='reflect'
+        background = skimage.filters.gaussian(
+            capped, sigma=self.sigma_background, mode='reflect', preserve_range=True
         )
 
         # Normalize
@@ -159,8 +160,8 @@ class FilterBasedSegmenter(BaseSegmenter):
         assert np.min(normalized) >= 0
 
         # Noise reduction
-        normalized = scipy.ndimage.gaussian_filter(
-            normalized, sigma=self.sigma_noise_reduction, mode='reflect'
+        normalized = skimage.filters.gaussian(
+            normalized, sigma=self.sigma_noise_reduction, mode='reflect', preserve_range=True
         )
 
         self._debug(f"Normalized range: [{normalized.min():.3f}, {normalized.max():.3f}]")
