@@ -1,5 +1,6 @@
 """Plate heatmap visualization from field_measurements CSV."""
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -7,7 +8,16 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from aggrequant.focus import ALL_GLOBAL_METRICS
 from aggrequant.loaders.plate import PLATE_LAYOUTS, well_id_to_indices
+
+# Patterns for auto-detecting focus quality columns in the CSV.
+# Patch metrics: {channel}_patch_{MetricName}_{stat}
+# Global metrics: {channel}_{global_metric_name}
+_FOCUS_PATCH_RE = re.compile(r"^(nuclei|cells)_patch_.+_(mean|min|max)$")
+_FOCUS_GLOBAL_RE = re.compile(
+    r"^(nuclei|cells)_(" + "|".join(ALL_GLOBAL_METRICS) + r")$"
+)
 
 
 def load_field_measurements(csv_path):
@@ -127,8 +137,27 @@ def make_plate_heatmap(grid, title="", plate_format="96",
     return fig
 
 
+def detect_focus_columns(columns):
+    """Return the subset of column names that are focus quality metrics.
+
+    Matches patch metrics ({channel}_patch_{Name}_{stat}) and global
+    metrics ({channel}_{global_metric_name}).
+
+    Arguments:
+        columns: Iterable of column name strings.
+
+    Returns:
+        Sorted list of focus column names.
+    """
+    focus_cols = []
+    for col in columns:
+        if _FOCUS_PATCH_RE.match(col) or _FOCUS_GLOBAL_RE.match(col):
+            focus_cols.append(col)
+    return sorted(focus_cols)
+
+
 def generate_all_heatmaps(csv_path, plate_format="96", output_dir=None):
-    """Generate and save heatmaps for standard metrics.
+    """Generate and save heatmaps for standard metrics and focus quality.
 
     Saves interactive HTML files to output_dir/plots/. Called automatically
     by the pipeline, but can also be called standalone on any
@@ -188,6 +217,14 @@ def generate_all_heatmaps(csv_path, plate_format="96", output_dir=None):
     _save_ratio("total_aggregate_area_px", "total_cell_area_px", 100.0,
                 "% aggregate area / cell area per well",
                 "pct_aggregate_area_over_cell.html")
+
+    # Focus quality metrics (averaged across fields per well)
+    for col in detect_focus_columns(df.columns):
+        title = col.replace("_", " ").title() + " per well (mean)"
+        vals = aggregate_per_well(df, col, "mean")
+        grid = well_values_to_plate_grid(vals, plate_format)
+        fig = make_plate_heatmap(grid, title=title, plate_format=plate_format)
+        fig.write_html(plots_dir / f"focus_{col}.html")
 
     return plots_dir
 

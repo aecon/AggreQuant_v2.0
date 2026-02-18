@@ -11,6 +11,7 @@ from aggrequant.visualization.heatmaps import (
     make_plate_heatmap,
     load_field_measurements,
     generate_all_heatmaps,
+    detect_focus_columns,
     plot_metric,
 )
 
@@ -164,3 +165,79 @@ def test_plot_metric_no_show(sample_csv):
     heatmap_data = fig.data[0]
     # A01 is row 0, col 0 → should be 240
     assert heatmap_data.z[0][0] == pytest.approx(240.0)
+
+
+# ── detect_focus_columns ─────────────────────────────────────────────
+
+def test_detect_focus_columns_patch():
+    cols = ["well_id", "n_cells", "nuclei_patch_VarianceLaplacian_mean",
+            "nuclei_patch_VarianceLaplacian_min", "cells_patch_Sobel_max"]
+    result = detect_focus_columns(cols)
+    assert result == [
+        "cells_patch_Sobel_max",
+        "nuclei_patch_VarianceLaplacian_mean",
+        "nuclei_patch_VarianceLaplacian_min",
+    ]
+
+
+def test_detect_focus_columns_global():
+    cols = ["well_id", "nuclei_power_log_log_slope", "cells_high_freq_ratio",
+            "n_nuclei"]
+    result = detect_focus_columns(cols)
+    assert result == ["cells_high_freq_ratio", "nuclei_power_log_log_slope"]
+
+
+def test_detect_focus_columns_mixed():
+    cols = ["nuclei_patch_Brenner_mean", "cells_global_variance_laplacian",
+            "plate_name", "field"]
+    result = detect_focus_columns(cols)
+    assert result == ["cells_global_variance_laplacian",
+                      "nuclei_patch_Brenner_mean"]
+
+
+def test_detect_focus_columns_none():
+    cols = ["well_id", "n_cells", "n_nuclei", "pct_aggregate_positive_cells"]
+    assert detect_focus_columns(cols) == []
+
+
+# ── focus heatmaps in generate_all_heatmaps ──────────────────────────
+
+@pytest.fixture
+def focus_csv(tmp_path):
+    """CSV with standard columns + focus quality columns."""
+    df = pd.DataFrame({
+        "plate_name": ["plate1"] * 4,
+        "well_id": ["A01", "A01", "B02", "B02"],
+        "field": [1, 2, 1, 2],
+        "n_cells": [100, 120, 80, 90],
+        "n_nuclei": [110, 130, 85, 95],
+        "n_aggregates": [10, 15, 5, 8],
+        "n_aggregate_positive_cells": [30, 40, 10, 20],
+        "pct_aggregate_positive_cells": [30.0, 33.3, 12.5, 22.2],
+        "total_cell_area_px": [50000.0, 60000.0, 40000.0, 45000.0],
+        "total_aggregate_area_px": [5000.0, 7000.0, 2000.0, 3000.0],
+        "nuclei_patch_VarianceLaplacian_mean": [42.1, 38.5, 40.0, 41.2],
+        "nuclei_patch_VarianceLaplacian_min": [10.2, 8.7, 9.5, 11.0],
+        "nuclei_power_log_log_slope": [-2.3, -2.1, -2.5, -2.4],
+    })
+    path = tmp_path / "field_measurements.csv"
+    df.to_csv(path, index=False)
+    return path
+
+
+def test_generate_heatmaps_includes_focus(focus_csv):
+    plots_dir = generate_all_heatmaps(focus_csv, plate_format="96")
+    expected_focus = [
+        "focus_nuclei_patch_VarianceLaplacian_mean.html",
+        "focus_nuclei_patch_VarianceLaplacian_min.html",
+        "focus_nuclei_power_log_log_slope.html",
+    ]
+    for name in expected_focus:
+        assert (plots_dir / name).exists(), f"Missing {name}"
+
+
+def test_generate_heatmaps_no_focus_without_columns(sample_csv):
+    """No focus_*.html files when CSV has no focus columns."""
+    plots_dir = generate_all_heatmaps(sample_csv, plate_format="96")
+    focus_files = list(plots_dir.glob("focus_*.html"))
+    assert focus_files == []
