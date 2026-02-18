@@ -9,13 +9,9 @@ from aggrequant.loaders.config import (
     create_default_config,
 )
 from aggrequant.loaders.images import (
-    load_image,
-    load_image_stack,
     parse_incell_filename,
-    group_files_by_well,
     FieldTriplet,
     build_field_triplets,
-    ImageLoader,
 )
 from aggrequant.loaders.plate import (
     PLATE_LAYOUTS,
@@ -37,13 +33,9 @@ __all__ = [
     "PipelineConfig",
     "create_default_config",
     # Images
-    "load_image",
-    "load_image_stack",
     "parse_incell_filename",
-    "group_files_by_well",
     "FieldTriplet",
     "build_field_triplets",
-    "ImageLoader",
     # Plate
     "PLATE_LAYOUTS",
     "well_id_to_indices",

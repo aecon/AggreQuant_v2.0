@@ -1,20 +1,14 @@
 """Image loading utilities for microscopy data."""
 
 import re
-import warnings
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union
-import numpy as np
+from typing import Dict, List, NamedTuple, Tuple
 
 from aggrequant.common.logging import get_logger
-from aggrequant.common.image_utils import load_image, load_image_stack, find_image_files
+from aggrequant.common.image_utils import find_image_files
 
 logger = get_logger(__name__)
-
-
-# Sentinel value for unparseable well IDs
-UNKNOWN_WELL_ID = "unknown"
 
 
 def parse_incell_filename(filename: str) -> Dict[str, str]:
@@ -45,37 +39,6 @@ def parse_incell_filename(filename: str) -> Dict[str, str]:
         }
 
     return {}
-
-
-def group_files_by_well(files: List[Path]) -> Dict[str, List[Path]]:
-    """
-    Group image files by well identifier.
-
-    Arguments:
-        files: List of file paths
-
-    Returns:
-        Dictionary mapping well ID (e.g. "A01") to list of files
-    """
-    wells: Dict[str, List[Path]] = {}
-
-    for f in files:
-        info = parse_incell_filename(f.name)
-
-        if "row" in info and "col" in info:
-            well_id = f"{info['row']}{int(info['col']):02d}"
-        else:
-            warnings.warn(
-                f"Could not parse well ID from filename: {f.name}. "
-                f"Grouping as '{UNKNOWN_WELL_ID}'."
-            )
-            well_id = UNKNOWN_WELL_ID
-
-        if well_id not in wells:
-            wells[well_id] = []
-        wells[well_id].append(f)
-
-    return wells
 
 
 class FieldTriplet(NamedTuple):
@@ -136,58 +99,3 @@ def build_field_triplets(
             )
 
     return triplets
-
-
-class ImageLoader:
-    """
-    High-level image loader for HCS data.
-
-    Handles discovery and loading of multi-channel microscopy images
-    organized by plate, well, and field of view.
-    """
-
-    def __init__(
-        self,
-        directory: Path,
-        channel_patterns: Optional[Dict[str, str]] = None,
-        verbose: bool = False
-    ):
-        """
-        Initialize image loader.
-
-        Arguments:
-            directory: Root directory containing images
-            channel_patterns: Dict mapping channel names to file patterns
-                              e.g., {"DAPI": "C01", "GFP": "C02"}
-            verbose: Print progress messages
-        """
-        self.directory = Path(directory)
-        self.channel_patterns = channel_patterns or {}
-        self.verbose = verbose
-
-        # Discover files on init
-        self._discover_files()
-
-    def _discover_files(self):
-        """Scan directory and organize files."""
-        all_files = find_image_files(self.directory, recursive=True)
-        if self.verbose:
-            logger.info(f"Found {len(all_files)} image files")
-
-        self.files_by_well = group_files_by_well(all_files)
-        if self.verbose:
-            logger.info(f"Organized into {len(self.files_by_well)} wells")
-
-    @property
-    def wells(self) -> List[str]:
-        """List of discovered well IDs."""
-        return sorted(self.files_by_well.keys())
-
-    @property
-    def n_wells(self) -> int:
-        """Number of discovered wells."""
-        return len(self.files_by_well)
-
-    def get_well_files(self, well: str) -> List[Path]:
-        """Get all files for a specific well."""
-        return self.files_by_well.get(well, [])
