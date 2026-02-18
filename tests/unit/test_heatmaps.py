@@ -6,6 +6,7 @@ import pytest
 
 from aggrequant.visualization.heatmaps import (
     aggregate_per_well,
+    compute_ratio_per_well,
     well_values_to_plate_grid,
     make_plate_heatmap,
     load_field_measurements,
@@ -26,6 +27,10 @@ def sample_df():
         "n_cells": [100, 120, 80, 90],
         "n_nuclei": [110, 130, 85, 95],
         "n_aggregates": [10, 15, 5, 8],
+        "n_aggregate_positive_cells": [30, 40, 10, 20],
+        "pct_aggregate_positive_cells": [30.0, 33.3, 12.5, 22.2],
+        "total_cell_area_px": [50000.0, 60000.0, 40000.0, 45000.0],
+        "total_aggregate_area_px": [5000.0, 7000.0, 2000.0, 3000.0],
     })
 
 
@@ -53,6 +58,28 @@ def test_aggregate_mean(sample_df):
 def test_aggregate_max(sample_df):
     result = aggregate_per_well(sample_df, "n_cells", "max")
     assert result == {"A01": 120, "B02": 90}
+
+
+# ── compute_ratio_per_well ────────────────────────────────────────────
+
+def test_ratio_per_well(sample_df):
+    # A01: (30+40)/(100+120)*100 = 70/220*100 = 31.818...
+    # B02: (10+20)/(80+90)*100  = 30/170*100 = 17.647...
+    result = compute_ratio_per_well(
+        sample_df, "n_aggregate_positive_cells", "n_cells", scale=100.0,
+    )
+    assert result["A01"] == pytest.approx(70 / 220 * 100)
+    assert result["B02"] == pytest.approx(30 / 170 * 100)
+
+
+def test_ratio_per_well_zero_denominator():
+    df = pd.DataFrame({
+        "well_id": ["X01"],
+        "n_aggregate_positive_cells": [5],
+        "n_cells": [0],
+    })
+    result = compute_ratio_per_well(df, "n_aggregate_positive_cells", "n_cells")
+    assert result["X01"] == 0.0
 
 
 # ── well_values_to_plate_grid ────────────────────────────────────────
@@ -111,7 +138,17 @@ def test_load_csv(sample_csv):
 def test_generate_all_heatmaps(sample_csv, tmp_path):
     plots_dir = generate_all_heatmaps(sample_csv, plate_format="96")
     assert plots_dir.exists()
-    assert (plots_dir / "n_nuclei.html").exists()
+    expected = [
+        "n_nuclei.html",
+        "n_aggregates.html",
+        "n_aggregate_positive_cells.html",
+        "total_cell_area_px.html",
+        "total_aggregate_area_px.html",
+        "pct_aggregate_positive_cells.html",
+        "pct_aggregate_area_over_cell.html",
+    ]
+    for name in expected:
+        assert (plots_dir / name).exists(), f"Missing {name}"
 
 
 def test_generate_all_heatmaps_custom_output_dir(sample_csv, tmp_path):

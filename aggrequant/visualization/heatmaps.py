@@ -38,6 +38,30 @@ def aggregate_per_well(df, metric, agg_func="sum"):
     return grouped.to_dict()
 
 
+def compute_ratio_per_well(df, numerator, denominator, scale=100.0):
+    """Compute a ratio metric per well from two field-level count columns.
+
+    Sums numerator and denominator across fields first, then divides.
+    Use this for percentage metrics where averaging field-level percentages
+    would be incorrect (e.g. pct_aggregate_positive_cells).
+
+    Arguments:
+        df: DataFrame from load_field_measurements.
+        numerator: Column to sum for the numerator (e.g. "n_aggregate_positive_cells").
+        denominator: Column to sum for the denominator (e.g. "n_cells").
+        scale: Multiply the ratio by this value (100 for percentage).
+
+    Returns:
+        Dictionary mapping well_id (str) to the computed value.
+    """
+    grouped = df.groupby("well_id")[[numerator, denominator]].sum()
+    result = {}
+    for well_id, row in grouped.iterrows():
+        denom = row[denominator]
+        result[well_id] = (row[numerator] / denom * scale) if denom > 0 else 0.0
+    return result
+
+
 def well_values_to_plate_grid(well_values, plate_format="96"):
     """Convert a {well_id: value} dict to a plate-shaped 2D array.
 
@@ -130,12 +154,40 @@ def generate_all_heatmaps(csv_path, plate_format="96", output_dir=None):
 
     df = load_field_measurements(csv_path)
 
-    if "n_nuclei" in df.columns:
-        well_values = aggregate_per_well(df, "n_nuclei", "sum")
-        grid = well_values_to_plate_grid(well_values, plate_format)
-        fig = make_plate_heatmap(grid, title="Total nuclei per well",
-                                 plate_format=plate_format)
-        fig.write_html(plots_dir / "n_nuclei.html")
+    def _save_sum(col, title, filename):
+        if col not in df.columns:
+            return
+        vals = aggregate_per_well(df, col, "sum")
+        grid = well_values_to_plate_grid(vals, plate_format)
+        fig = make_plate_heatmap(grid, title=title, plate_format=plate_format)
+        fig.write_html(plots_dir / filename)
+
+    def _save_ratio(num, denom, scale, title, filename):
+        if num not in df.columns or denom not in df.columns:
+            return
+        vals = compute_ratio_per_well(df, num, denom, scale=scale)
+        grid = well_values_to_plate_grid(vals, plate_format)
+        fig = make_plate_heatmap(grid, title=title, plate_format=plate_format)
+        fig.write_html(plots_dir / filename)
+
+    # Count metrics (summed across fields)
+    _save_sum("n_nuclei", "Total nuclei per well", "n_nuclei.html")
+    _save_sum("n_aggregates", "Total aggregates per well", "n_aggregates.html")
+    _save_sum("n_aggregate_positive_cells",
+              "Total aggregate-positive cells per well",
+              "n_aggregate_positive_cells.html")
+    _save_sum("total_cell_area_px", "Total cell area (px) per well",
+              "total_cell_area_px.html")
+    _save_sum("total_aggregate_area_px", "Total aggregate area (px) per well",
+              "total_aggregate_area_px.html")
+
+    # Ratio metrics (sum numerator / sum denominator per well)
+    _save_ratio("n_aggregate_positive_cells", "n_cells", 100.0,
+                "% aggregate-positive cells per well",
+                "pct_aggregate_positive_cells.html")
+    _save_ratio("total_aggregate_area_px", "total_cell_area_px", 100.0,
+                "% aggregate area / cell area per well",
+                "pct_aggregate_area_over_cell.html")
 
     return plots_dir
 
