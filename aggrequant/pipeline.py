@@ -125,9 +125,11 @@ class SegmentationPipeline:
                 if max_fields is not None and fields_processed >= max_fields:
                     logger.info(f"Reached max_fields={max_fields}, stopping")
                     self._save_results()
+                    self._generate_plots()
                     return
 
         self._save_results()
+        self._generate_plots()
         logger.info("Pipeline complete")
 
     def _process_field(self, well_id: str, field_id: str, field_files: list):
@@ -204,6 +206,21 @@ class SegmentationPipeline:
         df = pd.DataFrame(self._field_results)
         df.to_csv(path, index=False)
         logger.info(f"Field measurements saved to {path} ({len(df)} rows)")
+
+    def _generate_plots(self):
+        """Generate plate heatmaps from field measurements."""
+        csv_path = self.config.output_dir / "field_measurements.csv"
+        if not csv_path.exists():
+            return
+        try:
+            from aggrequant.visualization.heatmaps import generate_all_heatmaps
+        except ImportError:
+            logger.warning("plotly not installed — skipping heatmap generation")
+            return
+        plots_dir = generate_all_heatmaps(
+            csv_path, plate_format=self.config.plate_format,
+        )
+        logger.info(f"Heatmaps saved to {plots_dir}")
 
     def _load_channel(self, field_files: list, purpose: str) -> Optional[np.ndarray]:
         """Load image for a specific channel purpose."""
