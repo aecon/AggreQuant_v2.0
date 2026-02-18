@@ -7,8 +7,8 @@ from typing import Optional
 
 from aggrequant.segmentation.base import BaseSegmenter
 from aggrequant.segmentation.postprocessing import (
-    remove_small_holes_compat,
-    remove_small_objects_compat,
+    remove_small_holes,
+    remove_small_objects,
 )
 
 
@@ -103,14 +103,14 @@ class FilterBasedSegmenter(BaseSegmenter):
         self._debug(f"Initial connected components: {labels.max()}")
 
         # Step 5: Remove small holes
-        no_holes = remove_small_holes_compat(
+        no_holes = remove_small_holes(
             segmented, area_threshold=self.small_hole_area, connectivity=2
         )
         labels = skimage.morphology.label(no_holes, connectivity=2)
         self._debug(f"After removing small holes: {labels.max()}")
 
         # Step 6: Remove small objects
-        no_small = remove_small_objects_compat(
+        no_small = remove_small_objects(
             labels, min_size=self.min_aggregate_area, connectivity=2
         )
         labels = skimage.morphology.label(no_small, connectivity=2)
