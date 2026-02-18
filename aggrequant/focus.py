@@ -132,7 +132,7 @@ ALL_GLOBAL_METRICS = {"power_log_log_slope", "global_variance_laplacian", "high_
 # Global Image Quality Metrics (Frequency Domain)
 # =============================================================================
 
-def power_log_log_slope(image: np.ndarray) -> float:
+def power_log_log_slope(image: np.ndarray, _fft_shifted: np.ndarray = None) -> float:
     """
     Compute Power Log-Log Slope (PLLS) - frequency domain metric for global defocus.
 
@@ -148,16 +148,16 @@ def power_log_log_slope(image: np.ndarray) -> float:
 
     Arguments:
         image: 2D grayscale image (any dtype)
+        _fft_shifted: Pre-computed fftshift(fft2(image)) to avoid redundant FFT.
 
     Returns:
         Slope of log-log power spectrum (typically -1 to -4, more negative = blurrier)
     """
-    img = image.astype(np.float64)
+    if _fft_shifted is None:
+        f = np.fft.fft2(image.astype(np.float64))
+        _fft_shifted = np.fft.fftshift(f)
 
-    # Compute 2D FFT
-    f = np.fft.fft2(img)
-    f_shift = np.fft.fftshift(f)
-    magnitude = np.abs(f_shift) ** 2
+    magnitude = np.abs(_fft_shifted) ** 2
 
     # Compute radial average (azimuthal integration)
     h, w = magnitude.shape
@@ -212,15 +212,16 @@ def compute_global_focus_metrics(image: np.ndarray) -> Dict[str, float]:
     image_norm = normalize_image(image, method="percentile",
                                  percentile_low=1.0, percentile_high=99.8) * 255
 
-    # PLLS (on original image, not normalized)
-    plls = power_log_log_slope(image)
+    # Compute FFT once, reuse for PLLS and high_freq_ratio
+    f = np.fft.fft2(image.astype(np.float64))
+    f_shift = np.fft.fftshift(f)
+
+    plls = power_log_log_slope(image, _fft_shifted=f_shift)
 
     # Global Variance of Laplacian
     global_vol = variance_of_laplacian(image_norm)
 
     # High frequency ratio (simple FFT-based measure)
-    f = np.fft.fft2(image.astype(np.float64))
-    f_shift = np.fft.fftshift(f)
     magnitude = np.abs(f_shift)
 
     h, w = magnitude.shape
