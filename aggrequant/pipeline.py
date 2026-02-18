@@ -209,7 +209,7 @@ class SegmentationPipeline:
         logger.info(f"Field measurements saved to {path} ({len(df)} rows)")
 
     def _generate_plots(self):
-        """Generate plate heatmaps from field measurements."""
+        """Generate plate heatmaps and QC plots from field measurements."""
         csv_path = self.config.output_dir / "field_measurements.csv"
         if not csv_path.exists():
             return
@@ -222,6 +222,12 @@ class SegmentationPipeline:
             csv_path, plate_format=self.config.plate_format,
         )
         logger.info(f"Heatmaps saved to {plots_dir}")
+
+        if self.config.control_wells:
+            from aggrequant.visualization.qc_plots import plot_control_strip
+            qc_path = self.config.output_dir / "plots" / "qc_control_strip.png"
+            plot_control_strip(csv_path, self.config.control_wells, output_path=qc_path)
+            logger.info(f"QC strip plot saved to {qc_path}")
 
     def _save_masks(
         self,
