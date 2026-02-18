@@ -32,6 +32,11 @@ def main():
         default=None,
         help="Stop after processing this many fields (for quick testing)"
     )
+    parser.add_argument(
+        "--segmentation-only",
+        action="store_true",
+        help="Only run segmentation (skip quantification, CSV output, and plots)"
+    )
 
     args = parser.parse_args()
 
@@ -47,7 +52,10 @@ def main():
             config_path=args.config,
             verbose=args.verbose,
         )
-        pipeline.run(max_fields=args.max_fields)
+        pipeline.run(
+            max_fields=args.max_fields,
+            segmentation_only=args.segmentation_only,
+        )
 
     except KeyboardInterrupt:
         print("\n\nAnalysis cancelled by user.")

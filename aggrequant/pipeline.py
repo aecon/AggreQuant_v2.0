@@ -85,13 +85,15 @@ class SegmentationPipeline:
         # Accumulated results (saved to CSV at end of run)
         self._field_results: List[dict] = []
 
-    def run(self, max_fields: Optional[int] = None):
+    def run(self, max_fields: Optional[int] = None, segmentation_only: bool = False):
         """
         Run the segmentation pipeline on all images.
 
         Arguments:
             max_fields: If set, stop after processing this many fields.
+            segmentation_only: If True, skip quantification, CSV output, and plots.
         """
+        self._segmentation_only = segmentation_only
         logger.info(f"Loading images from {self.config.input_dir}")
 
         triplets = build_field_triplets(
@@ -100,12 +102,13 @@ class SegmentationPipeline:
         logger.info(f"Found {len(triplets)} complete fields")
 
         # Load existing results when resuming (so skipped fields keep their data)
-        csv_path = self.config.output_dir / "field_measurements.csv"
-        if not self.config.output.overwrite_masks and csv_path.exists():
-            self._field_results = pd.read_csv(csv_path).to_dict("records")
-            logger.info(f"Loaded {len(self._field_results)} existing results")
-        else:
-            self._field_results = []
+        if not segmentation_only:
+            csv_path = self.config.output_dir / "field_measurements.csv"
+            if not self.config.output.overwrite_masks and csv_path.exists():
+                self._field_results = pd.read_csv(csv_path).to_dict("records")
+                logger.info(f"Loaded {len(self._field_results)} existing results")
+            else:
+                self._field_results = []
 
         for i, triplet in enumerate(triplets):
             self._process_field(triplet)
@@ -113,8 +116,9 @@ class SegmentationPipeline:
                 logger.info(f"Reached max_fields={max_fields}, stopping")
                 break
 
-        self._save_results()
-        self._generate_plots()
+        if not segmentation_only:
+            self._save_results()
+            self._generate_plots()
         logger.info("Pipeline complete")
 
     def _mask_paths(self, well_id: str, field_id: str) -> dict:
@@ -175,21 +179,22 @@ class SegmentationPipeline:
         nuclei_labels, cell_labels = relabel_consecutive(nuclei_labels, cell_labels)
 
         # Quantification
-        measurements = quantify_field(
-            cell_labels, aggregate_labels, nuclei_labels,
-            min_aggregate_area=self.config.segmentation.aggregate_min_size,
-        )
-        row = {
-            "plate_name": self._plate_name,
-            "well_id": well_id,
-            "field": int(field_id),
-            **measurements,
-            **focus_metrics,
-        }
-        self._field_results.append(row)
-        logger.info(f"    Quantification: {measurements['n_cells']} cells, "
-                    f"{measurements['n_aggregates']} aggregates, "
-                    f"{measurements['pct_aggregate_positive_cells']:.1f}% agg-positive")
+        if not self._segmentation_only:
+            measurements = quantify_field(
+                cell_labels, aggregate_labels, nuclei_labels,
+                min_aggregate_area=self.config.segmentation.aggregate_min_size,
+            )
+            row = {
+                "plate_name": self._plate_name,
+                "well_id": well_id,
+                "field": int(field_id),
+                **measurements,
+                **focus_metrics,
+            }
+            self._field_results.append(row)
+            logger.info(f"    Quantification: {measurements['n_cells']} cells, "
+                        f"{measurements['n_aggregates']} aggregates, "
+                        f"{measurements['pct_aggregate_positive_cells']:.1f}% agg-positive")
 
         # Save masks
         if self.config.output.save_masks:
