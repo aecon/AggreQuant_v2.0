@@ -22,7 +22,6 @@ class TestChannelConfig:
         assert ch.name == "DAPI"
         assert ch.pattern == "C01"
         assert ch.purpose == "nuclei"
-        assert ch.normalize_method == "percentile"
 
     def test_all_valid_purposes(self):
         """All valid purposes should be accepted."""
@@ -62,7 +61,6 @@ class TestOutputConfig:
         assert oc.output_subdir == "aggrequant_output"
         assert oc.save_masks is True
         assert oc.overwrite_masks is False
-        assert oc.statistics_format == "parquet"
 
     def test_output_dir_resolved_via_pipeline_config(self):
         """output_dir should be resolved relative to input_dir."""

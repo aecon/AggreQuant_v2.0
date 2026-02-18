@@ -14,7 +14,6 @@ class ChannelConfig:
     name: str
     pattern: str  # File pattern (e.g., "C01" for DAPI)
     purpose: str  # "nuclei", "cells", "aggregates", "other"
-    normalize_method: str = "percentile"
 
     def __post_init__(self):
         valid_purposes = {"nuclei", "cells", "aggregates", "other"}
@@ -88,9 +87,6 @@ class OutputConfig:
     output_subdir: str = "aggrequant_output"
     save_masks: bool = True
     overwrite_masks: bool = False
-    save_overlays: bool = True
-    save_statistics: bool = True
-    statistics_format: str = "parquet"  # "parquet", "csv", "both"
 
 
 @dataclass
@@ -190,8 +186,7 @@ class PipelineConfig:
             "plate_format": self.plate_format,
             "plate_name": self.plate_name,
             "channels": [
-                {"name": ch.name, "pattern": ch.pattern, "purpose": ch.purpose,
-                 "normalize_method": ch.normalize_method}
+                {"name": ch.name, "pattern": ch.pattern, "purpose": ch.purpose}
                 for ch in self.channels
             ],
             "segmentation": {
@@ -217,9 +212,6 @@ class PipelineConfig:
                 "output_subdir": self.output.output_subdir,
                 "save_masks": self.output.save_masks,
                 "overwrite_masks": self.output.overwrite_masks,
-                "save_overlays": self.output.save_overlays,
-                "save_statistics": self.output.save_statistics,
-                "statistics_format": self.output.statistics_format,
             },
             "control_wells": self.control_wells,
             "n_workers": self.n_workers,

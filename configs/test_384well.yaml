@@ -16,17 +16,14 @@ channels:
   - name: DAPI
     pattern: "390"           # Matches "wv 390" or "C01" depending on your naming
     purpose: nuclei
-    normalize_method: percentile
 
   - name: GFP
     pattern: "473"           # Matches "wv 473" or "C02" for aggregate channel
     purpose: aggregates
-    normalize_method: percentile
 
   - name: CellMask
     pattern: "631"           # Matches "wv 631" or "C03" for cell channel
     purpose: cells
-    normalize_method: percentile
 
 # Segmentation settings
 segmentation:
@@ -63,9 +60,6 @@ output:
   output_subdir: "aggrequant_output"
   save_masks: true
   overwrite_masks: false
-  save_overlays: true
-  save_statistics: true
-  statistics_format: "both"    # Generate both CSV and Parquet
 
 # Control wells for SSMD calculation
 # Adjust these to match your actual control well positions
