@@ -106,7 +106,7 @@ class StarDistSegmenter(BaseSegmenter):
         Pre-process image for StarDist.
 
         Applies Gaussian denoising and background normalization.
-        Output: I_normalized = Gaussian(sigma=2) / Gaussian(sigma=50)
+        Output: I_normalized = Gaussian(sigma_denoise) / Gaussian(sigma_background)
         """
         # Convert to float
         img = image.astype(np.float32)
