@@ -87,6 +87,7 @@ class OutputConfig:
     """Configuration for output files."""
     output_subdir: str = "aggrequant_output"
     save_masks: bool = True
+    overwrite_masks: bool = False
     save_overlays: bool = True
     save_statistics: bool = True
     statistics_format: str = "parquet"  # "parquet", "csv", "both"
@@ -215,6 +216,7 @@ class PipelineConfig:
             "output": {
                 "output_subdir": self.output.output_subdir,
                 "save_masks": self.output.save_masks,
+                "overwrite_masks": self.output.overwrite_masks,
                 "save_overlays": self.output.save_overlays,
                 "save_statistics": self.output.save_statistics,
                 "statistics_format": self.output.statistics_format,

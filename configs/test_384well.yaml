@@ -62,6 +62,7 @@ quality:
 output:
   output_subdir: "aggrequant_output"
   save_masks: true
+  overwrite_masks: false
   save_overlays: true
   save_statistics: true
   statistics_format: "both"    # Generate both CSV and Parquet

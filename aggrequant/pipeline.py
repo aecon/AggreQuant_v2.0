@@ -99,7 +99,14 @@ class SegmentationPipeline:
         )
         logger.info(f"Found {len(triplets)} complete fields")
 
-        self._field_results = []
+        # Load existing results when resuming (so skipped fields keep their data)
+        csv_path = self.config.output_dir / "field_measurements.csv"
+        if not self.config.output.overwrite_masks and csv_path.exists():
+            self._field_results = pd.read_csv(csv_path).to_dict("records")
+            logger.info(f"Loaded {len(self._field_results)} existing results")
+        else:
+            self._field_results = []
+
         for i, triplet in enumerate(triplets):
             self._process_field(triplet)
             if max_fields is not None and (i + 1) >= max_fields:
@@ -110,9 +117,28 @@ class SegmentationPipeline:
         self._generate_plots()
         logger.info("Pipeline complete")
 
+    def _mask_paths(self, well_id: str, field_id: str) -> dict:
+        """Return dict of {type: Path} for the 3 label TIFs."""
+        labels_dir = self.config.output_dir / "labels"
+        return {
+            "nuclei": labels_dir / f"{well_id}_f{field_id}_nuclei.tif",
+            "cells": labels_dir / f"{well_id}_f{field_id}_cells.tif",
+            "aggregates": labels_dir / f"{well_id}_f{field_id}_aggregates.tif",
+        }
+
+    def _masks_exist(self, well_id: str, field_id: str) -> bool:
+        """Return True if all 3 label TIFs exist on disk."""
+        return all(p.exists() for p in self._mask_paths(well_id, field_id).values())
+
     def _process_field(self, triplet: FieldTriplet):
         """Process a single field of view."""
         well_id, field_id = triplet.well_id, triplet.field_id
+
+        # Skip entirely if masks already exist (previous run completed this field)
+        if not self.config.output.overwrite_masks and self._masks_exist(well_id, field_id):
+            logger.info(f"  Skipping {well_id}/f{field_id} (cached)")
+            return
+
         logger.info(f"  Processing {well_id}/f{field_id}")
 
         # Load images directly from triplet paths

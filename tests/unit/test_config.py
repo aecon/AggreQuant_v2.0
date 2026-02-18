@@ -60,7 +60,8 @@ class TestOutputConfig:
         """Should have correct default values."""
         oc = OutputConfig()
         assert oc.output_subdir == "aggrequant_output"
-        assert oc.save_masks == True
+        assert oc.save_masks is True
+        assert oc.overwrite_masks is False
         assert oc.statistics_format == "parquet"
 
     def test_output_dir_resolved_via_pipeline_config(self):
@@ -164,7 +165,26 @@ class TestPipelineConfigYamlRoundTrip:
             assert loaded.channels[0].purpose == "nuclei"
             assert loaded.control_wells == original.control_wells
             assert loaded.n_workers == 8
-            assert loaded.verbose == True
+            assert loaded.verbose is True
+
+    def test_overwrite_masks_round_trip(self):
+        """overwrite_masks should survive YAML save/load cycle."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            input_dir = tmpdir / "data"
+            input_dir.mkdir()
+
+            original = PipelineConfig(
+                input_dir=input_dir,
+                plate_format="96",
+                output=OutputConfig(overwrite_masks=True),
+            )
+
+            config_path = tmpdir / "config.yaml"
+            original.to_yaml(config_path)
+            loaded = PipelineConfig.from_yaml(config_path)
+
+            assert loaded.output.overwrite_masks is True
 
     def test_quality_config_tuple_preserved(self):
         """patch_size should be tuple after YAML round-trip."""
