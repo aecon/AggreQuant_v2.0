@@ -39,7 +39,7 @@ def main():
         print(f"Error: Config file not found: {args.config}")
         sys.exit(1)
 
-    from aggrequant import SegmentationPipeline
+    from aggrequant.pipeline import SegmentationPipeline
 
     try:
         print(f"Loading configuration from {args.config}")

@@ -131,7 +131,7 @@ def main():
     # =========================================================================
     print_step("Step 5: Aggregate segmentation (filter-based)")
 
-    from aggrequant.segmentation.aggregates import FilterBasedSegmenter
+    from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
 
     agg_segmenter = FilterBasedSegmenter(
         normalized_threshold=1.6,

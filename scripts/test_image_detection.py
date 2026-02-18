@@ -26,7 +26,7 @@ from collections import defaultdict
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from aggrequant.common import print_config_summary, print_section_header
+from aggrequant.common.cli_utils import print_config_summary, print_section_header
 from aggrequant.loaders.config import PipelineConfig
 from aggrequant.loaders.images import build_field_triplets
 
