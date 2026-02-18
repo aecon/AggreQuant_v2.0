@@ -66,3 +66,6 @@ Tracking progress toward a working pipeline and its companion manuscript.
 - Move `remove_small_*_compat` from `image_utils` to `segmentation/postprocessing.py`
 - Remove Operetta/ImageXpress parsers, keep only InCell format
 - Add `plate_name` config field and InCell parser tests
+- Integration test: run_pipeline end-to-end on real data
+- Test focus metric selection via run_pipeline
+- Test per-field quantification correctness
