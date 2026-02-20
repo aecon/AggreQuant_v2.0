@@ -1,6 +1,6 @@
 # Nuclei Segmentation Benchmark — Current Work Status
 
-**Last updated**: 2026-02-19 (evening — benchmark complete, figures generated)
+**Last updated**: 2026-02-20 (Panel A redesigned, Panels D & E added)
 **Purpose**: Handoff document so any Claude instance can continue this work.
 
 ---
@@ -239,7 +239,10 @@ All FarRed images were copied with standardized names matching the DAPI naming c
   - 95 unique mask files per model (5 images appear in 2 categories — intentional cross-listing)
   - `results/counts.csv`: 1,300 rows (13 models × 100 entries)
   - `results/timing.csv`: 1,200 rows with valid timing (StarDist has NaN — see note below)
-- [x] **Wrote `plot_results.py`** — generates 3 separate figure panels (PDF + PNG each)
+- [x] **Wrote `plot_results.py`** — generates 5 separate figure panels (A–E, PDF + PNG each)
+- [x] **Panel A redesigned**: magma colormap, SD error bars with x-offsets, uniform line thickness
+- [x] **Panel D added**: per-image rank grid (2×5), one subplot per rank position within categories
+- [x] **Panel E added**: per-category grid (3×3), per-image counts with tab20 colormap
 
 ### Known data notes
 - **5 images appear in 2 categories each** (intentional — one image can exhibit multiple difficulties):
@@ -350,36 +353,35 @@ To force CPU: `--no-gpu`
 | `BENCHMARK_PLAN.md` | Full technical plan: env setup, model APIs, code architecture, output specs |
 | `WORK_STATUS.md` | This file — current state and handoff context |
 | `run_benchmark.py` | Main benchmark script — runs all 13 models on curated images (with checkpoint) |
-| `plot_results.py` | Generates 3 supplementary figure panels (counts, agreement, timing) |
+| `plot_results.py` | Generates 5 supplementary figure panels (A–E) |
 | `select_images.py` | Image selection script (used during curation, not needed for benchmark) |
 | `paper_text_image_selection.md` | Draft supplementary methods text for image selection |
 | `requirements_frozen.txt` | Exact pip freeze of the nuclei-bench environment |
 | `results/counts.csv` | Nuclei counts + area stats per image × model (1,300 rows) |
 | `results/timing.csv` | Inference timing per image × model (1,200 with valid times) |
 | `results/masks/<model_id>/*.tif` | Saved label masks (uint16, zlib compressed), 95 per model |
-| `results/figures/panel_A_counts.{pdf,png}` | Line plot: mean count per model across categories |
+| `results/figures/panel_A_counts.{pdf,png}` | Line plot: mean count ± SD per model across categories |
 | `results/figures/panel_B_agreement.{pdf,png}` | Box plot: inter-model count CV per category |
 | `results/figures/panel_C_timing.{pdf,png}` | Bar chart: GPU inference time per model |
+| `results/figures/panel_D_per_image.{pdf,png}` | 2×5 grid: per-rank-position counts across categories |
+| `results/figures/panel_E_per_category.{pdf,png}` | 3×3 grid: per-image counts within each category |
 | `docs/supplementary_nuclei_segmentation_benchmark.md` | High-level figure design (panels, narrative) |
 
 ---
 
 ## plot_results.py Design
 
-Generates 3 separate figures (each saved as PDF + PNG in `results/figures/`):
+Generates 5 separate figures (each saved as PDF + PNG in `results/figures/`):
 
 ### Panel A — Count line plot (`panel_A_counts`)
 - One line per model, x = categories sorted by median count (ascending), y = mean nuclei count
-- **Color scheme by model family** (user-specified):
-  - Black: StarDist
-  - Orange: Cellpose nuclei
-  - Pink shades (RdPu cmap): Cellpose cyto2 variants
-  - Red shades (Reds cmap): Cellpose cyto3 variants
-  - Green shades (Greens cmap): DeepCell / Mesmer
-  - Blue shades (Blues cmap): InstanSeg
+- **SD error bars** on each point (alpha=0.2, capsize=1) showing within-category spread
+- Small per-model x-offset (±0.15) to prevent error bar overlap
+- **Magma colormap** (sequential, trimmed: n_models+2 slots to avoid lightest yellows)
+- Uniform line thickness (1.5pt) for all models
 - Different marker symbol per model (circle, square, diamond, triangles, etc.)
 - Legend ordered: StarDist → Cellpose (nuclei, cyto2, cyto3) → DeepCell → InstanSeg
-- Legend uses column-first layout (2 columns, reading top-to-bottom per column)
+- Legend in single column, outside plot on the right
 
 ### Panel B — Agreement box plot (`panel_B_agreement`)
 - Per-image coefficient of variation (CV%) of counts across the 9 single-channel models
@@ -388,8 +390,21 @@ Generates 3 separate figures (each saved as PDF + PNG in `results/figures/`):
 ### Panel C — Timing bar chart (`panel_C_timing`)
 - Horizontal bars: mean inference time per model, sorted fastest on top
 - Error bars = SD across images
-- Colored by framework: red = TensorFlow, blue = PyTorch
+- Colored by framework: purple = TensorFlow, blue = PyTorch
 - Models with no timing data (StarDist) are excluded with a console warning
+
+### Panel D — Per-image rank grid (`panel_D_per_image`)
+- 2×5 grid of subplots, one per within-category image rank (1–10)
+- Within each category, images ranked by median count across all models
+- Subplot k shows each model's count for the k-th ranked image in every category
+- Same category x-axis order as Panel A; magma colormap
+- No error bars (single image per point)
+
+### Panel E — Per-category image grid (`panel_E_per_category`)
+- 3×3 grid, one subplot per difficulty category
+- x = individual images sorted by median count (ascending), y = nuclei count
+- One line per model; **tab20 colormap** (categorical, maximally distinct colors)
+- Horizontal grid lines only; marker size 5.5
 
 ### Running
 ```bash
