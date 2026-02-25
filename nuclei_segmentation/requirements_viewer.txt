@@ -1,0 +1,13 @@
+# Requirements for viewer.py (nuclei benchmark interactive mask viewer)
+# Install into the nuclei-bench conda env:
+#   pip install -r requirements_viewer.txt
+#
+# All packages except streamlit are already present in nuclei-bench.
+
+streamlit>=1.32.0
+
+# Already in nuclei-bench — listed for completeness:
+# tifffile
+# scikit-image
+# numpy
+# pillow
