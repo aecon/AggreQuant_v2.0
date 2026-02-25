@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-25
 **Location**: `AggreQuant_paper/benchmarks/cell_segmentation/`
-**Conda environment**: `nuclei-bench` (shared with nuclei benchmark)
+**Conda environment**: `cell-bench`
 
 ---
 
@@ -33,7 +33,12 @@ SpeedDrive directory:
   channel, with DAPI available as a nuclear hint for two-channel configurations.
 
 `data/images` is a symlink to the same SpeedDrive directory.
-Reuses the `nuclei-bench` conda environment (Cellpose, DeepCell, InstanSeg).
+`cell-bench` is a separate conda env cloned from `nuclei-bench` (`pip install --no-deps -r requirements_frozen.txt`).
+
+**Environment note (2026-02-25):** During setup, `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`
+was temporarily added to the conda activate scripts to work around a DeepCell/protobuf incompatibility.
+The definitive fix was downgrading protobuf to 3.20.3 (`pip install "protobuf>=3.9.2,<4"`),
+after which the env var was removed. The same downgrade was applied to `nuclei-bench`.
 
 ---
 
