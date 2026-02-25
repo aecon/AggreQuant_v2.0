@@ -11,24 +11,27 @@ with `wv 390 - Blue` (DAPI) available as an optional nuclear hint for the `_with
 ## Run the benchmark
 
 ```bash
-conda activate nuclei-bench
+conda activate cell-bench
 python run_benchmark.py --data-dir data/images
 ```
 
 Outputs saved to `results/masks/`, `results/counts.csv`, `results/timing.csv`.
-Supports checkpoint/resume.
+Supports checkpoint/resume — re-run the same command to continue after interruption.
 
 Useful options:
 - `--models cellpose_cyto2 deepcell_mesmer` — run specific models only
-- `--no-masks` — skip saving mask files
+- `--no-masks` — skip saving mask files (faster, saves disk)
 - `--no-gpu` — force CPU
+
+> **Important:** use `conda activate` (not `conda run`) so the activate scripts fire and
+> set `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`, which is required for DeepCell.
 
 ---
 
 ## Re-generate figures
 
 ```bash
-conda activate nuclei-bench
+conda activate cell-bench
 python plot_results.py          # all 8 models → results/figures/
 ```
 
@@ -37,7 +40,7 @@ python plot_results.py          # all 8 models → results/figures/
 ## Generate mask gallery (Panel F)
 
 ```bash
-conda activate nuclei-bench
+conda activate cell-bench
 python plot_masks.py \
     --data-dir data/images \
     [--masks-dir results/masks] \
