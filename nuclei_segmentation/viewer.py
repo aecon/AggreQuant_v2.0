@@ -325,10 +325,9 @@ def main() -> None:
         # Display mode
         display_mode = st.radio(
             "Overlay mode",
-            ["Filled — single model", "Contours — multi-model", "Consensus heatmap"],
+            ["Filled — single model", "Consensus heatmap"],
             help=(
-                "**Filled**: colorized instance labels for one model.\n\n"
-                "**Contours**: outlines from multiple models, each a different color.\n\n"
+                "**Filled**: colorized instance labels with contour outlines for one model.\n\n"
                 "**Consensus**: pixel count of how many models agree on foreground."
             ),
         )
@@ -346,16 +345,6 @@ def main() -> None:
             )
             selected_models = [available_models[model_idx]]
             alpha = st.slider("Fill opacity", 0.1, 0.9, 0.4, 0.05)
-
-        elif display_mode.startswith("Contours"):
-            sel_indices = st.multiselect(
-                "Models",
-                range(len(available_models)),
-                default=list(range(min(7, len(available_models)))),
-                format_func=lambda i: display_names[i],
-            )
-            selected_models = [available_models[i] for i in sel_indices]
-            contour_thickness = st.slider("Contour thickness (px)", 1, 4, 1)
 
         else:  # Consensus
             sel_indices = st.multiselect(
@@ -391,10 +380,6 @@ def main() -> None:
     n_images = len(images)
     st.caption(f"{n_images} images · downsample {downsample}× · {len(available_models)} model dirs found")
 
-    # Color key for contour mode
-    if display_mode.startswith("Contours") and selected_models:
-        _model_color_key(selected_models)
-
     # Colorbar for consensus mode
     if display_mode.startswith("Consensus") and selected_models:
         fig_cb = _consensus_colorbar(len(selected_models))
@@ -413,14 +398,6 @@ def main() -> None:
                 mask = load_mask(str(masks_dir), mid, fname, downsample)
                 rendered = render_filled(dapi, mask, alpha)
                 no_mask = mask is None
-
-            elif display_mode.startswith("Contours"):
-                model_masks = [
-                    (mid, load_mask(str(masks_dir), mid, fname, downsample))
-                    for mid in selected_models
-                ]
-                rendered = render_contours(dapi, model_masks, contour_thickness)
-                no_mask = not any(m is not None for _, m in model_masks)
 
             else:  # Consensus
                 model_masks = [
@@ -450,14 +427,11 @@ def main() -> None:
             mid = selected_models[0]
             mask = load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2))
             img_out = render_filled(dapi_large, mask, alpha)
+            if mask is not None and mask.max() > 0:
+                boundaries = find_boundaries(mask, mode="outer")
+                img_out = img_out.copy()
+                img_out[boundaries] = (255, 255, 255)
             caption = MODEL_LABELS.get(mid, mid)
-        elif display_mode.startswith("Contours"):
-            model_masks = [
-                (mid, load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2)))
-                for mid in selected_models
-            ]
-            img_out = render_contours(dapi_large, model_masks, contour_thickness)
-            caption = "Contour overlay — " + ", ".join(MODEL_LABELS.get(m, m) for m in selected_models)
         else:  # Consensus
             model_masks = [
                 (mid, load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2)))
