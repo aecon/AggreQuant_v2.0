@@ -22,6 +22,7 @@ import tifffile
 from skimage.color import label2rgb
 from skimage.segmentation import find_boundaries
 from skimage.morphology import dilation, square
+import plotly.graph_objects as go
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +336,7 @@ def main() -> None:
         # Mode-specific controls
         alpha = 0.4          # default (used by Filled)
         contour_thickness = 1  # default (used by Contours)
+        show_raw_only = False
         selected_models: list[str] = []
 
         if display_mode.startswith("Filled"):
@@ -345,6 +347,7 @@ def main() -> None:
             )
             selected_models = [available_models[model_idx]]
             alpha = st.slider("Fill opacity", 0.1, 0.9, 0.4, 0.05)
+            show_raw_only = st.checkbox("Raw image only", value=False)
 
         else:  # Consensus
             sel_indices = st.multiselect(
@@ -394,10 +397,14 @@ def main() -> None:
             dapi = load_dapi(str(data_dir), cat_folder, fname, downsample)
 
             if display_mode.startswith("Filled"):
-                mid = selected_models[0]
-                mask = load_mask(str(masks_dir), mid, fname, downsample)
-                rendered = render_filled(dapi, mask, alpha)
-                no_mask = mask is None
+                if show_raw_only:
+                    rendered = dapi
+                    no_mask = False
+                else:
+                    mid = selected_models[0]
+                    mask = load_mask(str(masks_dir), mid, fname, downsample)
+                    rendered = render_filled(dapi, mask, alpha)
+                    no_mask = mask is None
 
             else:  # Consensus
                 model_masks = [
@@ -423,15 +430,22 @@ def main() -> None:
     if sel_fname:
         dapi_large = load_dapi(str(data_dir), cat_folder, sel_fname, max(1, downsample // 2))
 
+        fig_cons = None
+
         if display_mode.startswith("Filled"):
-            mid = selected_models[0]
-            mask = load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2))
-            img_out = render_filled(dapi_large, mask, alpha)
-            if mask is not None and mask.max() > 0:
-                boundaries = find_boundaries(mask, mode="outer")
-                img_out = img_out.copy()
-                img_out[boundaries] = (255, 255, 255)
-            caption = MODEL_LABELS.get(mid, mid)
+            if show_raw_only:
+                img_out = dapi_large
+                caption = "Raw DAPI"
+            else:
+                mid = selected_models[0]
+                mask = load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2))
+                img_out = render_filled(dapi_large, mask, alpha)
+                if mask is not None and mask.max() > 0:
+                    boundaries = find_boundaries(mask, mode="outer")
+                    img_out = img_out.copy()
+                    img_out[boundaries] = (255, 255, 255)
+                caption = MODEL_LABELS.get(mid, mid)
+
         else:  # Consensus
             model_masks = [
                 (mid, load_mask(str(masks_dir), mid, sel_fname, max(1, downsample // 2)))
@@ -440,9 +454,45 @@ def main() -> None:
             img_out = render_consensus(dapi_large, model_masks)
             caption = f"Consensus — {len(selected_models)} models"
 
+            # Per-pixel model-contribution data for hover tooltip
+            h, w = dapi_large.shape[:2]
+            cd_channels = []
+            for _mid, _mask in model_masks:
+                ch = ((_mask > 0).astype(np.uint8)
+                      if (_mask is not None and _mask.shape == (h, w))
+                      else np.zeros((h, w), dtype=np.uint8))
+                cd_channels.append(ch)
+            vote_counts = (np.sum(cd_channels, axis=0).astype(np.uint8)
+                           if cd_channels else np.zeros((h, w), dtype=np.uint8))
+            cd_channels.append(vote_counts)
+            customdata = np.stack(cd_channels, axis=-1)  # (H, W, N_sel+1)
+
+            n_sel = len(selected_models)
+            hover_lines = [f"<b>Votes: %{{customdata[{n_sel}]}}</b>"]
+            for i, _mid in enumerate(selected_models):
+                lbl = MODEL_LABELS.get(_mid, _mid)
+                hover_lines.append(f"{lbl}: %{{customdata[{i}]}}")
+            hovertemplate = "<br>".join(hover_lines) + "<extra></extra>"
+
+            fig_cons = go.Figure(go.Image(
+                z=img_out,
+                customdata=customdata,
+                hovertemplate=hovertemplate,
+            ))
+            fig_cons.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
+                yaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
+            )
+
         zoom = st.slider("Image width (%)", 20, 100, 60, step=5, key="single_zoom")
         col_img, _ = st.columns([zoom, 100 - zoom])
-        col_img.image(img_out, caption=caption, use_container_width=True)
+        if fig_cons is not None:
+            with col_img:
+                st.caption(caption)
+                st.plotly_chart(fig_cons, use_container_width=True)
+        else:
+            col_img.image(img_out, caption=caption, use_container_width=True)
 
 
 if __name__ == "__main__":
