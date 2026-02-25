@@ -365,6 +365,11 @@ def main() -> None:
                 format_func=lambda i: display_names[i],
             )
             selected_models = [available_models[i] for i in sel_indices]
+            pixel_hover = st.checkbox(
+                "Per-pixel model hover",
+                value=False,
+                help="Show which models are active at each pixel on hover (slower to load).",
+            )
 
         st.markdown("---")
 
@@ -462,7 +467,7 @@ def main() -> None:
             img_out = render_consensus(dapi_large, model_masks)
             caption = f"Consensus — {len(selected_models)} models"
 
-            # Per-pixel model-contribution data for hover tooltip
+            # Build per-pixel hover text listing only the active models.
             h, w = dapi_large.shape[:2]
             cd_channels = []
             for _mid, _mask in model_masks:
@@ -470,36 +475,47 @@ def main() -> None:
                       if (_mask is not None and _mask.shape == (h, w))
                       else np.zeros((h, w), dtype=np.uint8))
                 cd_channels.append(ch)
-            vote_counts = (np.sum(cd_channels, axis=0).astype(np.uint8)
-                           if cd_channels else np.zeros((h, w), dtype=np.uint8))
-            cd_channels.append(vote_counts)
-            customdata = np.stack(cd_channels, axis=-1)  # (H, W, N_sel+1)
 
             n_sel = len(selected_models)
-            hover_lines = [f"<b>Votes: %{{customdata[{n_sel}]}}</b>"]
-            for i, _mid in enumerate(selected_models):
-                lbl = MODEL_LABELS.get(_mid, _mid)
-                hover_lines.append(f"{lbl}: %{{customdata[{i}]}}")
-            hovertemplate = "<br>".join(hover_lines) + "<extra></extra>"
 
-            fig_cons = go.Figure(go.Image(
-                z=img_out,
-                customdata=customdata,
-                hovertemplate=hovertemplate,
-            ))
+            if pixel_hover:
+                labels = [MODEL_LABELS.get(mid, mid) for mid in selected_models]
+
+                # Vectorised: encode each pixel as a bitmask over active models,
+                # then build a lookup table (≤2^N_sel entries) and map back.
+                fg = np.array(cd_channels, dtype=np.uint16)            # (N_sel, H, W)
+                shifts = (1 << np.arange(n_sel, dtype=np.uint16))[:, None, None]
+                bitmask = (fg * shifts).sum(axis=0)                    # (H, W)
+
+                lut: dict[int, str] = {}
+                for sig in np.unique(bitmask):
+                    sig_int = int(sig)
+                    active_here = [labels[i] for i in range(n_sel) if sig_int & (1 << i)]
+                    lut[sig_int] = "<br>".join(active_here) if active_here else ""
+
+                hovertext = np.vectorize(lambda s: lut[int(s)])(bitmask)  # (H, W) str
+                fig_cons = go.Figure(go.Image(
+                    z=img_out,
+                    text=hovertext,
+                    hovertemplate="%{text}<extra></extra>",
+                ))
+            else:
+                fig_cons = go.Figure(go.Image(
+                    z=img_out,
+                    hoverinfo="skip",
+                ))
             fig_cons.update_layout(
                 margin=dict(l=0, r=0, t=0, b=0),
                 xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
                 yaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
             )
 
-        zoom = st.slider("Image width (%)", 20, 100, 60, step=5, key="single_zoom")
-        col_img, _ = st.columns([zoom, 100 - zoom])
         if fig_cons is not None:
-            with col_img:
-                st.caption(caption)
-                st.plotly_chart(fig_cons, use_container_width=True)
+            st.caption(caption)
+            st.plotly_chart(fig_cons, use_container_width=True)
         else:
+            zoom = st.slider("Image width (%)", 20, 100, 60, step=5, key="single_zoom")
+            col_img, _ = st.columns([zoom, 100 - zoom])
             col_img.image(img_out, caption=caption, use_container_width=True)
 
 
