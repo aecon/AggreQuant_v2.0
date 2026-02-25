@@ -11,6 +11,7 @@ Usage:
     streamlit run viewer.py -- --masks-dir /path/to/results/masks
 """
 
+import colorsys
 import sys
 import argparse
 from pathlib import Path
@@ -171,6 +172,9 @@ def load_mask(masks_dir: str, model_id: str, filename: str, downsample: int) -> 
 # Rendering
 # ---------------------------------------------------------------------------
 
+_LABEL_COLORS = [plt.cm.hsv(i / 100)[:3] for i in range(100)]
+
+
 def render_filled(
     dapi_rgb: np.ndarray,
     mask: np.ndarray | None,
@@ -180,7 +184,8 @@ def render_filled(
     if mask is None or mask.max() == 0:
         return dapi_rgb
     dapi_float = dapi_rgb.astype(np.float64) / 255.0
-    overlay = label2rgb(mask, image=dapi_float, bg_label=0, alpha=alpha, kind="overlay")
+    overlay = label2rgb(mask, image=dapi_float, bg_label=0, alpha=alpha,
+                        kind="overlay", colors=_LABEL_COLORS)
     return (np.clip(overlay, 0.0, 1.0) * 255).astype(np.uint8)
 
 
