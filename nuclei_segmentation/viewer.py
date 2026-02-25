@@ -28,11 +28,9 @@ from skimage.morphology import dilation, square
 # Default paths — edit here or override with CLI args after `--`
 # ---------------------------------------------------------------------------
 
-_DEFAULT_DATA_DIR = Path(
-    "/media/athena/SpeedDrive/ATHENA/PROJECT_AggreQuant/"
-    "2026_02_18_BENCHMARCKS/NUCLEI-BENCHMARK_AE-CURATED-2026-02-19"
-)
-_DEFAULT_MASKS_DIR = Path(__file__).parent / "results" / "masks"
+_SCRIPT_DIR = Path(__file__).parent
+_DEFAULT_DATA_DIR = _SCRIPT_DIR / "data" / "images"
+_DEFAULT_MASKS_DIR = _SCRIPT_DIR / "results" / "masks"
 
 
 # ---------------------------------------------------------------------------
