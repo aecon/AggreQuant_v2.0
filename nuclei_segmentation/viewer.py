@@ -467,18 +467,17 @@ def main() -> None:
             img_out = render_consensus(dapi_large, model_masks)
             caption = f"Consensus — {len(selected_models)} models"
 
-            # Build per-pixel hover text listing only the active models.
-            h, w = dapi_large.shape[:2]
-            cd_channels = []
-            for _mid, _mask in model_masks:
-                ch = ((_mask > 0).astype(np.uint8)
-                      if (_mask is not None and _mask.shape == (h, w))
-                      else np.zeros((h, w), dtype=np.uint8))
-                cd_channels.append(ch)
-
-            n_sel = len(selected_models)
-
             if pixel_hover:
+                # Build per-pixel hover text listing only the active models.
+                h, w = dapi_large.shape[:2]
+                cd_channels = []
+                for _mid, _mask in model_masks:
+                    ch = ((_mask > 0).astype(np.uint8)
+                          if (_mask is not None and _mask.shape == (h, w))
+                          else np.zeros((h, w), dtype=np.uint8))
+                    cd_channels.append(ch)
+
+                n_sel = len(selected_models)
                 labels = [MODEL_LABELS.get(mid, mid) for mid in selected_models]
 
                 # Vectorised: encode each pixel as a bitmask over active models,
@@ -499,21 +498,19 @@ def main() -> None:
                     text=hovertext,
                     hovertemplate="%{text}<extra></extra>",
                 ))
-            else:
-                fig_cons = go.Figure(go.Image(
-                    z=img_out,
-                    hoverinfo="skip",
-                ))
-            fig_cons.update_layout(
-                margin=dict(l=0, r=0, t=0, b=0),
-                xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
-                yaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
-            )
+                fig_cons.update_layout(
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
+                    yaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
+                )
+            # else: fig_cons stays None → fast st.image path below
 
         if fig_cons is not None:
+            # Consensus + pixel hover: Plotly for interactive tooltip (no zoom slider)
             st.caption(caption)
             st.plotly_chart(fig_cons, use_container_width=True)
         else:
+            # Consensus (no hover) or Filled/Raw: fast st.image with zoom slider
             zoom = st.slider("Image width (%)", 20, 100, 60, step=5, key="single_zoom")
             col_img, _ = st.columns([zoom, 100 - zoom])
             col_img.image(img_out, caption=caption, use_container_width=True)
