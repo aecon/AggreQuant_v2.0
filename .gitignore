@@ -42,12 +42,13 @@ env/
 htmlcov/
 
 # Data and outputs (large files)
-/data/
+data/
 /experiments/
 weights/*.keras
 weights/*.pt
 weights/*.pth
 !weights/.gitkeep
+results/
 
 # OS
 .DS_Store
