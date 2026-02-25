@@ -1,6 +1,6 @@
 # Nuclei Segmentation Benchmark — Current Work Status
 
-**Last updated**: 2026-02-20 (Panel A redesigned, Panels D & E added)
+**Last updated**: 2026-02-25 (plot_masks.py implemented; viewer hover + raw-only features added)
 **Purpose**: Handoff document so any Claude instance can continue this work.
 
 ---
@@ -243,6 +243,10 @@ All FarRed images were copied with standardized names matching the DAPI naming c
 - [x] **Panel A redesigned**: magma colormap, SD error bars with x-offsets, uniform line thickness
 - [x] **Panel D added**: per-image rank grid (2×5), one subplot per rank position within categories
 - [x] **Panel E added**: per-category grid (3×3), per-image counts with tab20 colormap
+- [x] **`plot_masks.py` written** — Panel F Part A: 10 rows × 7 columns (intensity histogram + raw DAPI + 7 models + consensus), 1024×1024 crops, steelblue fill + white contours, hardcoded curated images per category (High confluency excluded)
+- [x] **Viewer: raw-only mode** — "Raw image only" checkbox in Filled mode skips mask overlay
+- [x] **Viewer: consensus hover** — single image view uses Plotly `go.Image`; hovering shows per-model contributions at each pixel
+- [x] **Viewer: stale-transition removed** — CSS override disables Streamlit's opacity fade between re-runs
 
 ### Known data notes
 - **5 images appear in 2 categories each** (intentional — one image can exhibit multiple difficulties):
@@ -256,10 +260,10 @@ All FarRed images were copied with standardized names matching the DAPI naming c
   re-run with `--models stardist_2d_fluo`.
 
 ### Next steps
-- [ ] **Run `plot_masks.py`** to generate Part A of the mask gallery figure (see `mask_visualization_options.md`)
-- [ ] Part B of mask gallery: add `--normalise` support to `plot_masks.py` and re-run inference on selected images
+- [ ] **Run `plot_masks.py`** to generate Panel F Part A (run on nuclei-bench env; check output at `results/figures/panel_F_masks_partA.{pdf,png}`)
+- [ ] Part B of mask gallery: add `--normalise` support to `plot_masks.py` and re-run inference on the 7 selected images
 - [ ] **Re-run StarDist** to get timing data (optional, see note above)
-- [ ] Integrate figure reference into manuscript
+- [ ] Integrate Panel F reference into manuscript
 - [ ] Write supplementary methods text describing the benchmark
 
 ### How to resume / run the benchmark
@@ -367,8 +371,8 @@ To force CPU: `--no-gpu`
 | `results/figures/panel_C_timing.{pdf,png}` | Bar chart: GPU inference time per model |
 | `results/figures/panel_D_per_image.{pdf,png}` | 2×5 grid: per-rank-position counts across categories |
 | `results/figures/panel_E_per_category.{pdf,png}` | 3×3 grid: per-image counts within each category |
-| `plot_masks.py` | Mask gallery figure (Part A) — 9×8 grid, 512×512 crops, single fill colour + white contours |
-| `results/figures/panel_F_masks_partA.{pdf,png}` | Gallery: 9 categories × 8 cols (raw DAPI + 7 models) |
+| `plot_masks.py` | Mask gallery figure (Part A) — 10×7 grid, 1024×1024 crops, steelblue fill + white contours + consensus heatmap |
+| `results/figures/panel_F_masks_partA.{pdf,png}` | Gallery: 10 rows (hist+raw+7 models+consensus) × 7 category columns |
 | `docs/supplementary_nuclei_segmentation_benchmark.md` | High-level figure design (panels, narrative) |
 
 ---

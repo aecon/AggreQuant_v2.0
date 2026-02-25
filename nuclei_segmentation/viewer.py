@@ -294,6 +294,14 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
 
+    # Remove Streamlit's stale-content fade: when a widget triggers a re-run,
+    # Streamlit dims existing content with a slow opacity transition while
+    # recomputing. This CSS disables that so the new content snaps in immediately.
+    st.markdown(
+        "<style>[data-stale='true'] { opacity: 1 !important; transition: none !important; }</style>",
+        unsafe_allow_html=True,
+    )
+
     data_dir, masks_dir = _get_paths()
 
     # ---- Sidebar ----

@@ -53,40 +53,48 @@ The implementation would be a new `plot_masks.py` script in `benchmarks/nuclei_s
 
 ## Chosen Design: Two-Part Supplementary Figure (Option A — Confirmed)
 
-### Part A — Raw inference (no normalization)
+### Part A — Raw inference (no normalization) — IMPLEMENTED
 
-**Layout**: 9 rows × 8 columns (1 raw + 7 models).
+**Layout**: 10 rows × 7 columns.
 
-- **Rows**: One per difficulty category (9 categories). One image randomly selected per category (fixed seed for reproducibility).
-- **Columns**: Column 0 = raw DAPI image (percentile-stretched to [0,1]). Columns 1–N = one per model.
+- **Rows**: intensity histogram | raw DAPI | 7 single-channel models | consensus heatmap.
+- **Columns**: 7 curated difficulty categories (one hardcoded image per category):
+  Low confluency, Clustered, Mitotic, Debris, Flat-field, High intensity, Defocused.
+  (High confluency excluded — too visually similar to Clustered at the chosen crop.)
 - **Models shown** (7 family representatives, `_with_nuc` and `_with_cell` variants excluded):
-  `stardist_2d_fluo`, `cellpose_nuclei`, `cellpose_cyto2_no_nuc`, `cellpose_cyto3_no_nuc`, `deepcell_nuclear`, `deepcell_mesmer`, `instanseg_fluorescence`.
-- **Crop**: 512×512 center crop of each 2040×2040 image.
-- **Label rendering**: All nuclei filled in a single solid color (e.g., steelblue). White contour lines overlaid on instance boundaries (via `skimage.segmentation.find_boundaries`, mode='inner') to separate touching nuclei.
-- **Row labels**: Category names on the left. Column headers: model names on top.
-- **Image selection**: random with fixed seed (no data-driven CV selection — random is sufficient for a visual gallery).
+  `stardist_2d_fluo`, `cellpose_nuclei`, `cellpose_cyto2_no_nuc`, `cellpose_cyto3_no_nuc`,
+  `deepcell_nuclear`, `deepcell_mesmer`, `instanseg_fluorescence`.
+- **Crop**: 1024×1024 center crop of each 2040×2040 image.
+- **Label rendering**: all nuclei filled in a single solid steelblue color. White contour lines
+  overlaid on instance boundaries (`skimage.segmentation.find_boundaries`, mode='inner').
+- **Intensity histogram**: raw uint16 intensity distribution (64 bins, grey bars on white).
+  x-axis max = 95th percentile across all 7 selected images (shared axis for comparability).
+- **Consensus heatmap**: pixel-wise sum of binary masks from all 7 models → jet colormap
+  (blue = 1 model, red = all 7 agree; black background = 0 votes). Vertical colorbar on the right.
+- **Column headers**: category names. **Row labels**: on the left.
+- **Image selection**: hardcoded per category (see `SELECTED_IMAGES` dict in `plot_masks.py`).
 
-### Part B — Normalized inference
+Output: `results/figures/panel_F_masks_partA.{pdf,png}`
 
-**Identical layout to Part A**, but each DAPI image is passed through a **percentile normalization** (e.g., `csbdeep.utils.normalize(img, 1, 99.8)` or equivalent) before being fed to every model. This tests whether pre-normalization improves segmentation for edge cases (low intensity, high intensity, defocused).
-
-- Same randomly selected images as Part A (same seed), same 512×512 center crops.
-- Same visual rendering (single fill color + white contours).
-- Same 7 models.
-- The normalization step is applied uniformly to all models before inference. Models that already do internal normalization (e.g., InstanSeg) will effectively receive double-normalization — this is intentional (tests robustness to over-normalization).
-
-### Implementation
-
-Script: `plot_masks.py` in `benchmarks/nuclei_segmentation/`
-
-```
+```bash
 python plot_masks.py \
     --data-dir <curated benchmark dir> \
-    --masks-dir results/masks \
-    --output-dir results/figures \
-    --seed 42 \
-    --part A   # or B (B adds percentile normalization before inference)
+    [--masks-dir results/masks] \
+    [--output-dir results/figures] \
+    [--crop-size 1024] \
+    [--dpi 300]
 ```
 
 Part A reads existing saved masks directly (no model re-run needed).
-Part B requires re-running inference with normalization applied — either re-use `run_benchmark.py` with a `--normalize` flag, or run inference inline within `plot_masks.py` (inline preferred to keep the script self-contained).
+
+### Part B — Normalized inference
+
+**Identical layout to Part A**, but each DAPI image is passed through a **percentile normalization**
+(`csbdeep.utils.normalize(img, 1, 99.8)` or equivalent) before being fed to every model.
+This tests whether pre-normalization improves segmentation for edge cases.
+
+- Same hardcoded images as Part A, same 1024×1024 center crops.
+- Same visual rendering (single fill color + white contours, consensus heatmap).
+- Same 7 models.
+- Not yet implemented — requires adding a `--normalise` flag to `plot_masks.py` and re-running
+  inference on the 7 selected images.
