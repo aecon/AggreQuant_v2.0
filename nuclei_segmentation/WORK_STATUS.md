@@ -256,6 +256,8 @@ All FarRed images were copied with standardized names matching the DAPI naming c
   re-run with `--models stardist_2d_fluo`.
 
 ### Next steps
+- [ ] **Run `plot_masks.py`** to generate Part A of the mask gallery figure (see `mask_visualization_options.md`)
+- [ ] Part B of mask gallery: add `--normalise` support to `plot_masks.py` and re-run inference on selected images
 - [ ] **Re-run StarDist** to get timing data (optional, see note above)
 - [ ] Integrate figure reference into manuscript
 - [ ] Write supplementary methods text describing the benchmark
@@ -365,6 +367,8 @@ To force CPU: `--no-gpu`
 | `results/figures/panel_C_timing.{pdf,png}` | Bar chart: GPU inference time per model |
 | `results/figures/panel_D_per_image.{pdf,png}` | 2×5 grid: per-rank-position counts across categories |
 | `results/figures/panel_E_per_category.{pdf,png}` | 3×3 grid: per-image counts within each category |
+| `plot_masks.py` | Mask gallery figure (Part A) — 9×8 grid, 512×512 crops, single fill colour + white contours |
+| `results/figures/panel_F_masks_partA.{pdf,png}` | Gallery: 9 categories × 8 cols (raw DAPI + 7 models) |
 | `docs/supplementary_nuclei_segmentation_benchmark.md` | High-level figure design (panels, narrative) |
 
 ---
