@@ -48,7 +48,7 @@ SELECTED_IMAGES = {
     "high_confluency": ("02_high_confluency",          "HA23_rep1_P - 13(fld 7 wv 390 - Blue).tif",   "High confluency"),
     "clustered":       ("03_clustered_touching",       "HA6_rep1_P - 13(fld 9 wv 390 - Blue).tif",    "Clustered"),
     "mitotic":         ("04_mitotic",                  "HA28_rep1_H - 05(fld 3 wv 390 - Blue).tif",   "Mitotic"),
-    "debris":          ("05_defocused",                "HA24_rep1_E - 05(fld 1 wv 390 - Blue).tif",   "Debris"),
+    "debris":          ("09_debris_artifacts",         "HA1_rep1_N - 24(fld 5 wv 390 - Blue).tif",    "Debris"),
     "flatfield":       ("06_flatfield_inhomogeneity",  "HA43_rep1_N - 05(fld 4 wv 390 - Blue).tif",   "Flat-field"),
     "high_intensity":  ("08_high_intensity",           "HA30_rep1_K - 05(fld 5 wv 390 - Blue).tif",   "High intensity"),
     "defocused":       ("09_debris_artifacts",         "HA16_rep1_E - 13(fld 7 wv 390 - Blue).tif",   "Defocused"),
