@@ -220,23 +220,12 @@ def plot_count_lines(ax, counts_df):
 
     x = np.arange(len(sorted_cats))
 
-    # --- Legend order determines cividis color assignment ---
-    _LEGEND_ORDER = [
-        "stardist_2d_fluo",
-        "cellpose_nuclei",
-        "cellpose_cyto2_no_nuc",
-        "cellpose_cyto2_with_cell",
-        "cellpose_cyto3_no_nuc",
-        "cellpose_cyto3_with_cell",
-        "deepcell_nuclear", "deepcell_mesmer", "deepcell_mesmer_with_cell",
-        "instanseg_fluorescence", "instanseg_fluorescence_with_cell",
-    ]
     cmap = mpl.colormaps["magma"]
-    n_models = len(_LEGEND_ORDER)
+    n_models = len(LEGEND_ORDER)
     n_slots = n_models + 2  # extra slots to trim the yellow end
     model_colors = {
         mid: cmap(i / (n_slots - 1))
-        for i, mid in enumerate(_LEGEND_ORDER)
+        for i, mid in enumerate(LEGEND_ORDER)
     }
 
     _MARKERS = ["o", "s", "D", "^", "v", "<", ">", "P", "X", "p", "h", "*", "d"]
@@ -245,7 +234,7 @@ def plot_count_lines(ax, counts_df):
     offsets = np.linspace(-0.15, 0.15, n_models)
 
     # Plot in legend order so zorder is consistent
-    for idx, mid in enumerate(_LEGEND_ORDER):
+    for idx, mid in enumerate(LEGEND_ORDER):
         if mid not in pivot_mean.index:
             continue
         container = ax.errorbar(
@@ -285,8 +274,8 @@ def plot_count_lines(ax, counts_df):
     # --- Legend outside plot on the right ---
     handles, labels = ax.get_legend_handles_labels()
     label_to_handle = dict(zip(labels, handles))
-    ord_h = [label_to_handle[MODEL_LABELS[m]] for m in _LEGEND_ORDER if MODEL_LABELS[m] in label_to_handle]
-    ord_l = [MODEL_LABELS[m] for m in _LEGEND_ORDER if MODEL_LABELS[m] in label_to_handle]
+    ord_h = [label_to_handle[MODEL_LABELS[m]] for m in LEGEND_ORDER if MODEL_LABELS[m] in label_to_handle]
+    ord_l = [MODEL_LABELS[m] for m in LEGEND_ORDER if MODEL_LABELS[m] in label_to_handle]
 
     ax.legend(
         ord_h, ord_l,
@@ -432,22 +421,12 @@ def plot_per_image_lines(counts_df, output_dir, dpi):
     ranked image in every category.  Categories on x-axis, same layout as
     Panel A.
     """
-    _LEGEND_ORDER = [
-        "stardist_2d_fluo",
-        "cellpose_nuclei",
-        "cellpose_cyto2_no_nuc",
-        "cellpose_cyto2_with_cell",
-        "cellpose_cyto3_no_nuc",
-        "cellpose_cyto3_with_cell",
-        "deepcell_nuclear", "deepcell_mesmer", "deepcell_mesmer_with_cell",
-        "instanseg_fluorescence", "instanseg_fluorescence_with_cell",
-    ]
     cmap = mpl.colormaps["magma"]
-    n_models = len(_LEGEND_ORDER)
+    n_models = len(LEGEND_ORDER)
     n_slots = n_models + 2
     model_colors = {
         mid: cmap(i / (n_slots - 1))
-        for i, mid in enumerate(_LEGEND_ORDER)
+        for i, mid in enumerate(LEGEND_ORDER)
     }
     _MARKERS = ["o", "s", "D", "^", "v", "<", ">", "P", "X", "p", "h", "*", "d"]
 
@@ -501,7 +480,7 @@ def plot_per_image_lines(counts_df, output_dir, dpi):
         ax = axes[rank_idx]
         rank_data = counts_ranked[counts_ranked["rank"] == rank_idx]
 
-        for idx, mid in enumerate(_LEGEND_ORDER):
+        for idx, mid in enumerate(LEGEND_ORDER):
             mdata = rank_data[rank_data["model_id"] == mid]
             if mdata.empty:
                 continue
@@ -549,9 +528,9 @@ def plot_per_image_lines(counts_df, output_dir, dpi):
     # Legend from first subplot
     handles, labels = axes[0].get_legend_handles_labels()
     label_to_handle = dict(zip(labels, handles))
-    ord_h = [label_to_handle[MODEL_LABELS[m]] for m in _LEGEND_ORDER
+    ord_h = [label_to_handle[MODEL_LABELS[m]] for m in LEGEND_ORDER
              if MODEL_LABELS[m] in label_to_handle]
-    ord_l = [MODEL_LABELS[m] for m in _LEGEND_ORDER
+    ord_l = [MODEL_LABELS[m] for m in LEGEND_ORDER
              if MODEL_LABELS[m] in label_to_handle]
     fig.legend(
         ord_h, ord_l,
@@ -682,6 +661,10 @@ def main():
         "--dpi", type=int, default=300,
         help="Figure resolution (default: 300)",
     )
+    parser.add_argument(
+        "--include-cell", action="store_true",
+        help="Include +cell two-channel model configurations (excluded by default)",
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent
@@ -691,6 +674,12 @@ def main():
     output_dir = (
         Path(args.output_dir) if args.output_dir else results_dir / "figures"
     )
+    if not args.include_cell:
+        MODEL_ORDER[:] = [m for m in MODEL_ORDER if not m.endswith("_with_cell")]
+        LEGEND_ORDER[:] = [m for m in LEGEND_ORDER if not m.endswith("_with_cell")]
+        output_dir = output_dir / "no_cell"
+        print("Excluding +cell models (default). Pass --include-cell to show all models.")
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # --- Load data ---
