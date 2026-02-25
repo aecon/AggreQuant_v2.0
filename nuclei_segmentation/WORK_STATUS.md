@@ -1,6 +1,6 @@
 # Nuclei Segmentation Benchmark — Current Work Status
 
-**Last updated**: 2026-02-25 (plot_masks.py implemented; viewer hover + raw-only features added)
+**Last updated**: 2026-02-25 (plot_masks.py implemented; viewer hover + raw-only features added; viewer consensus UX improvements)
 **Purpose**: Handoff document so any Claude instance can continue this work.
 
 ---
@@ -245,8 +245,8 @@ All FarRed images were copied with standardized names matching the DAPI naming c
 - [x] **Panel E added**: per-category grid (3×3), per-image counts with tab20 colormap
 - [x] **`plot_masks.py` written** — Panel F Part A: 10 rows × 7 columns (intensity histogram + raw DAPI + 7 models + consensus), 1024×1024 crops, steelblue fill + white contours, hardcoded curated images per category (High confluency excluded)
 - [x] **Viewer: raw-only mode** — "Raw image only" checkbox in Filled mode skips mask overlay
-- [x] **Viewer: consensus hover** — single image view uses Plotly `go.Image`; hovering shows per-model contributions at each pixel
 - [x] **Viewer: stale-transition removed** — CSS override disables Streamlit's opacity fade between re-runs
+- [x] **Viewer: per-pixel model hover** — Consensus single-image view has a toggleable "Per-pixel model hover" checkbox (default OFF). When ON: uses Plotly `go.Image` with per-pixel `text` array (bitmask LUT, vectorised); hovering shows only the active models at that pixel (no false 0-vote entries). When OFF: uses fast `st.image` (PNG transfer, ~10–30× faster than Plotly JSON serialisation). Zoom slider available in both Filled mode and Consensus hover-OFF mode; Plotly's built-in pan/zoom used in hover-ON mode.
 
 ### Known data notes
 - **5 images appear in 2 categories each** (intentional — one image can exhibit multiple difficulties):
