@@ -28,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import skimage.filters
 import tifffile
 from tqdm import tqdm
 
@@ -63,6 +64,25 @@ def load_deepcell_mesmer():
 def load_instanseg():
     from instanseg import InstanSeg
     return InstanSeg("fluorescence_nuclei_and_cells", verbosity=0)
+
+
+# ---------------------------------------------------------------------------
+# Optional background normalization (AggreQuant-style)
+# ---------------------------------------------------------------------------
+
+def normalize_background(img, sigma_denoise=2, sigma_background=50):
+    """Background normalization: denoise / background estimate.
+
+    Matches the preprocessing in AggreQuant's StarDistSegmenter._preprocess.
+    """
+    img = img.astype(np.float32)
+    denoised = skimage.filters.gaussian(
+        img, sigma=sigma_denoise, mode='reflect', preserve_range=True,
+    )
+    background = skimage.filters.gaussian(
+        denoised, sigma=sigma_background, mode='reflect', preserve_range=True,
+    )
+    return denoised / (background + 1e-8)
 
 
 # ---------------------------------------------------------------------------
@@ -306,14 +326,20 @@ def main():
         "--no-masks", action="store_true",
         help="Skip saving label masks to disk",
     )
+    parser.add_argument(
+        "--normalize", action="store_true",
+        help="Apply background normalization before model preprocessing "
+             "(results stored in <output_dir>_normalized)",
+    )
     args = parser.parse_args()
 
     gpu = not args.no_gpu
     save_masks = not args.no_masks
     data_dir = Path(args.data_dir)
+    default_results = "results_normalized" if args.normalize else "results"
     output_dir = (
         Path(args.output_dir) if args.output_dir
-        else Path(__file__).parent / "results"
+        else Path(__file__).parent / default_results
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -424,9 +450,13 @@ def main():
             else:
                 # --- New: run inference ---
                 img_nuc = tifffile.imread(img_info["path"])
+                if args.normalize:
+                    img_nuc = normalize_background(img_nuc)
                 img_cell = None
                 if needs_cell:
                     img_cell = tifffile.imread(img_info["cell_path"])
+                    if args.normalize:
+                        img_cell = normalize_background(img_cell)
 
                 try:
                     img_pre = preprocess(cid, img_nuc, img_cell)
