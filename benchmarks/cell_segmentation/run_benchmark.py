@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-Cell segmentation benchmark: 8 model configs x 90 curated HCS images.
+Cell segmentation benchmark: 10 model configs x 90 curated HCS images.
 
 Standalone script (no AggreQuant imports). Runs pretrained Cellpose, DeepCell
-Mesmer, and InstanSeg models on FarRed (cytoplasmic) channel images. Four
-configs also use the paired DAPI channel as a nuclear hint.
+Mesmer, InstanSeg, and CellSAM models on FarRed (cytoplasmic) channel images.
+Five configs also use the paired DAPI channel as a nuclear hint.
 
 Primary images: *wv 631 - FarRed*.tif
 Nuclear hint  : matching *wv 390 - Blue*.tif (always present in this dataset)
@@ -54,6 +54,11 @@ def load_instanseg():
     return InstanSeg("fluorescence_nuclei_and_cells", verbosity=0)
 
 
+def load_cellsam():
+    from cellSAM import get_model
+    return get_model()
+
+
 # ---------------------------------------------------------------------------
 # Preprocessing (excluded from timing)
 # ---------------------------------------------------------------------------
@@ -91,6 +96,16 @@ def preprocess_instanseg_2ch(img_cell, img_nuc):
     return np.stack([img_nuc, img_cell], axis=0).astype(np.float32)
 
 
+def preprocess_cellsam_1ch(img_cell):
+    """CellSAM single-channel: (H, W) — format_image_shape maps to blue."""
+    return img_cell
+
+
+def preprocess_cellsam_2ch(img_cell, img_nuc):
+    """CellSAM two-channel: (H, W, 2) — maps to green=DAPI, blue=FarRed."""
+    return np.stack([img_nuc, img_cell], axis=-1)
+
+
 # ---------------------------------------------------------------------------
 # Inference (only the model call — this is what gets timed)
 # ---------------------------------------------------------------------------
@@ -115,6 +130,13 @@ def infer_instanseg(model, img_pre, image_mpp):
     return result.squeeze().cpu().numpy()
 
 
+def infer_cellsam(model, img_pre, gpu):
+    from cellSAM import segment_cellular_image
+    device = "cuda" if gpu else "cpu"
+    mask, _, _ = segment_cellular_image(img_pre, model, device=device)
+    return mask
+
+
 # ---------------------------------------------------------------------------
 # Config registry
 # ---------------------------------------------------------------------------
@@ -132,6 +154,9 @@ MODEL_CONFIGS = [
     {"id": "cellpose_cyto2_with_nuc",         "model_key": "cp_cyto2",  "framework": "pytorch",    "needs_nuc": True},
     {"id": "cellpose_cyto3_with_nuc",         "model_key": "cp_cyto3",  "framework": "pytorch",    "needs_nuc": True},
     {"id": "instanseg_fluorescence_with_nuc", "model_key": "instanseg", "framework": "pytorch",    "needs_nuc": True},
+    # --- CellSAM (grouped for single model load) ---
+    {"id": "cellsam",                 "model_key": "cellsam", "framework": "pytorch"},
+    {"id": "cellsam_with_nuc",        "model_key": "cellsam", "framework": "pytorch", "needs_nuc": True},
 ]
 
 ALL_MODEL_IDS = [c["id"] for c in MODEL_CONFIGS]
@@ -141,6 +166,7 @@ _LOADERS = {
     "cp_cyto2":  lambda gpu: load_cellpose("cyto2", gpu),
     "cp_cyto3":  lambda gpu: load_cellpose("cyto3", gpu),
     "instanseg": lambda gpu: load_instanseg(),
+    "cellsam":   lambda gpu: load_cellsam(),
 }
 
 
@@ -160,18 +186,24 @@ def preprocess(config_id, img_cell, img_nuc=None):
         return preprocess_instanseg_1ch(img_cell)
     if config_id == "instanseg_fluorescence_with_nuc":
         return preprocess_instanseg_2ch(img_cell, img_nuc)
+    if config_id == "cellsam":
+        return preprocess_cellsam_1ch(img_cell)
+    if config_id == "cellsam_with_nuc":
+        return preprocess_cellsam_2ch(img_cell, img_nuc)
     if config_id.endswith("_with_nuc"):
         return preprocess_cellpose_with_nuc(img_cell, img_nuc)
     # Remaining single-channel Cellpose configs
     return preprocess_cellpose(img_cell)
 
 
-def infer(config_id, model, img_pre, image_mpp):
+def infer(config_id, model, img_pre, image_mpp, gpu=True):
     """Run the model call only (this is what gets timed)."""
     if config_id.startswith("deepcell_mesmer"):
         return infer_deepcell_mesmer(model, img_pre, image_mpp)
     if config_id.startswith("instanseg_"):
         return infer_instanseg(model, img_pre, image_mpp)
+    if config_id.startswith("cellsam"):
+        return infer_cellsam(model, img_pre, gpu)
     # All Cellpose configs: +nuc uses channels=[1, 2], others use [0, 0]
     channels = [1, 2] if config_id.endswith("_with_nuc") else [0, 0]
     return infer_cellpose(model, img_pre, channels)
@@ -231,7 +263,7 @@ def clear_gpu(framework):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Cell segmentation benchmark: 8 models x 90 FarRed images",
+        description="Cell segmentation benchmark: 10 models x 90 FarRed images",
     )
     parser.add_argument(
         "--data-dir", required=True,
@@ -380,7 +412,7 @@ def main():
                 try:
                     img_pre = preprocess(cid, img_cell, img_nuc)
                     t0 = time.perf_counter()
-                    labels = infer(cid, model, img_pre, args.image_mpp)
+                    labels = infer(cid, model, img_pre, args.image_mpp, gpu)
                     elapsed = time.perf_counter() - t0
                 except Exception as e:
                     tqdm.write(f"  ERROR {cid} on {img_info['name']}: {e}")

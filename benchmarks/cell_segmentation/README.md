@@ -8,6 +8,19 @@ with `wv 390 - Blue` (DAPI) available as an optional nuclear hint for the `_with
 
 ---
 
+## Setup
+
+The base `cell-bench` environment covers Cellpose, DeepCell (Mesmer), and InstanSeg.
+CellSAM requires additional packages installed on top:
+
+```bash
+conda activate cell-bench
+pip install torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install git+https://github.com/vanvalenlab/cellSAM.git
+```
+
+---
+
 ## Run the benchmark
 
 ```bash
@@ -25,6 +38,17 @@ Useful options:
 
 > **Important:** use `conda activate` (not `conda run`) so the activate scripts fire and
 > set `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`, which is required for DeepCell.
+
+---
+
+## Model scope note
+
+Mesmer (DeepCell) was trained on TissueNet — multiplexed tissue imaging with membrane-targeted markers
+(E-cadherin, pan-CK, Na/K-ATPase), not diffuse cytoplasmic stains or HCS cell culture images.
+InstanSeg (fluorescence) was trained on a broader mix of fluorescence datasets but was not specifically
+validated on single-channel FarRed cytoplasm HCS images.
+**Both are included for completeness and cross-benchmark comparison, but they are not operating in their
+validated domain. The Cellpose results are the primary comparison.**
 
 ---
 
