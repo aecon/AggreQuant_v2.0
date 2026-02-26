@@ -387,15 +387,30 @@ Key takeaways relevant to this benchmark:
 
 ## 5. Summary and Verdict
 
-| Model | Trained on cytoplasm fluorescence HCS? | Trained on cell culture? | Single-channel cytoplasm supported? | Status in benchmark |
-|---|---|---|---|---|
-| Mesmer | No | No | No (undocumented workaround only) | Included |
-| InstanSeg fluorescence | No | No | No (developers advise against it) | Included |
-| Cellpose cyto2/cyto3 | Yes | Yes | Yes (primary use case) | Included |
-| Cellpose 3 | Yes | Yes | Yes (+ image restoration) | Not yet tested |
-| Omnipose | Bacterial only | No | Yes (but bacterial focus) | Not yet tested |
-| Micro-SAM | Broad microscopy | Mixed | Untested on cytoplasm-only | Not yet tested |
-| CellSAM | Broad microscopy | Mixed | Untested on cytoplasm-only | Not yet tested |
+### 5.1 Model Comparison Table
+
+| Model | Reference | Architecture | Trained on HCS cytoplasm fluorescence? | Single-channel cytoplasm supported? | Weights available? | Compute | Overall fit | Benchmark status |
+|---|---|---|---|---|---|---|---|---|
+| Cellpose cyto3 | Pachitariu & Stringer 2022, *Nat Methods* | Gradient flow (CNN) | **Yes** — explicitly includes HCS fluorescence cell culture | **Yes** (primary use case) | Yes (built-in) | Light | **Excellent** — closest match to our data | Included |
+| Cellpose cyto2 | Pachitariu & Stringer 2022, *Nat Methods* | Gradient flow (CNN) | **Yes** — fluorescence cell culture across cell types | **Yes** (primary use case) | Yes (built-in) | Light | **Excellent** | Included |
+| Cellpose 3 | Stringer & Pachitariu 2025, *Nat Methods* | Gradient flow + learned restoration | **Yes** — same weights as cyto2/cyto3 + denoising net | **Yes** | Yes (built-in) | Light | **Excellent** — adds restoration for noisy/blurry images | Not yet tested |
+| CellSAM | Israel, Marks et al. 2025, *Nat Methods* | CellFinder (AnchorDETR) + SAM | **Partially** — diverse microscopy incl. some fluorescence cell culture | **Yes** (handles grayscale natively) | Yes (auto-download) | Heavy (ViT-B) | **Good** — strong generalist, not specifically optimized for cytoplasm-only | Included |
+| Micro-SAM | Archit, Nair et al. 2024, *Nat Methods* | Fine-tuned SAM for microscopy | **Partially** — broad light + electron microscopy fine-tuning | Untested on cytoplasm-only | Yes (conda-forge) | Heavy (ViT) | **Moderate** — broad generalization but unvalidated on our modality | Not yet tested |
+| Omnipose | Cutler et al. 2022, *Nat Methods* | Modified Cellpose distance fields | **No** — pretrained `bact_fluor` targets bacteria | **Yes** (Cellpose API compatible) | Yes (built-in) | Light | **Low** — bacterial morphology differs from mammalian cells | Not yet tested |
+| MEDIAR | NeurIPS 2022 Cell Seg Challenge winner | Transformer-based | **Partially** — competition data spans diverse modalities | Likely yes | Limited availability | Medium–Heavy | **Moderate** — strong competition results but low community adoption | Not yet tested |
+| SAMCell | bioRxiv 2025.02.06.636835 | SAM-based | **No** — targets label-free imaging (phase, DIC) | Not designed for fluorescence | Preprint stage | Heavy | **Low** — wrong modality | Skip |
+| DeepCell Mesmer | Greenwald et al. 2022, *Nat Biotechnol* | ResNet + FPN | **No** — TissueNet: FFPE/fresh tissue, membrane antibody markers | **No** — requires nuclear + membrane pair; zeroed nuclear is undocumented | Yes (auto-download) | Medium | **Poor** — tissue-only, wrong channel type, cell culture out of scope | Included (for comparison) |
+| InstanSeg | Goldsborough et al. 2024, *bioRxiv* | Embedding-based + ChannelNet | **No** — CPDMI: FFPE tissue, 8–32 antibody channels + DAPI | **No** — developers advise nuclei-only for single-channel | Yes (built-in) | Medium | **Poor** — multi-channel tissue model; lacks nuclear signal it depends on | Included (for comparison) |
+| CellViT / HoverNet | — | Transformer / CNN | **No** — H&E histopathology | No | Yes | Medium | **Not applicable** — brightfield histology, not fluorescence | Skip |
+| MedSAM | — | Fine-tuned SAM | **No** — radiology (CT, X-ray, ultrasound) | No | Yes | Heavy | **Not applicable** — wrong imaging domain entirely | Skip |
+
+Only the Cellpose family (cyto2, cyto3, Cellpose 3) was explicitly trained and validated
+on single-channel cytoplasm fluorescence from cell culture. CellSAM is the strongest
+alternative from a different architecture family. Everything else is either tissue-focused
+(Mesmer, InstanSeg), wrong modality (SAMCell, MedSAM, CellViT), or untested on our
+specific imaging regime (Micro-SAM, MEDIAR).
+
+### 5.2 Detailed Assessment
 
 **Mesmer** is a tissue-imaging model requiring paired nuclear + membrane antibody channels.
 Using it on a single FarRed cytoplasm channel from cell culture is outside its training
