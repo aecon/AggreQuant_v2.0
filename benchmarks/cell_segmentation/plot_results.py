@@ -35,24 +35,28 @@ MODEL_ORDER = [
     "cellpose_cyto2",
     "cellpose_cyto3",
     "instanseg_fluorescence",
+    "cellsam",
     # Two-channel (FarRed + DAPI nuclear hint)
     "deepcell_mesmer_with_nuc",
     "cellpose_cyto2_with_nuc",
     "cellpose_cyto3_with_nuc",
     "instanseg_fluorescence_with_nuc",
+    "cellsam_with_nuc",
 ]
 
-N_SINGLE = 4  # first 4 entries are single-channel
+N_SINGLE = 5  # first 5 entries are single-channel
 
 MODEL_LABELS = {
     "deepcell_mesmer":                  "Mesmer",
     "cellpose_cyto2":                   "Cellpose cyto2",
     "cellpose_cyto3":                   "Cellpose cyto3",
     "instanseg_fluorescence":           "InstanSeg",
+    "cellsam":                          "CellSAM",
     "deepcell_mesmer_with_nuc":         "Mesmer +nuc",
     "cellpose_cyto2_with_nuc":          "Cellpose cyto2 +nuc",
     "cellpose_cyto3_with_nuc":          "Cellpose cyto3 +nuc",
     "instanseg_fluorescence_with_nuc":  "InstanSeg +nuc",
+    "cellsam_with_nuc":                 "CellSAM +nuc",
 }
 
 CATEGORY_ORDER = [
@@ -88,6 +92,8 @@ MODEL_FRAMEWORK = {
     "cellpose_cyto3_with_nuc":          "PyTorch",
     "instanseg_fluorescence":           "PyTorch",
     "instanseg_fluorescence_with_nuc":  "PyTorch",
+    "cellsam":                          "PyTorch",
+    "cellsam_with_nuc":                 "PyTorch",
 }
 
 FW_COLORS = {"TensorFlow": "#CE93D8", "PyTorch": "#64B5F6"}
@@ -95,7 +101,7 @@ FW_COLORS = {"TensorFlow": "#CE93D8", "PyTorch": "#64B5F6"}
 # Legend order for consistent color assignment
 LEGEND_ORDER = list(MODEL_ORDER)
 
-PANEL_MARKERS = ["o", "s", "D", "^", "v", "<", ">", "P"]
+PANEL_MARKERS = ["o", "s", "D", "^", "v", "<", ">", "P", "X", "h"]
 
 
 # ---------------------------------------------------------------------------

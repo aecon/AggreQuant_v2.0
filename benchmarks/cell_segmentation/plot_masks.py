@@ -55,33 +55,50 @@ CATEGORY_ORDER = list(SELECTED_IMAGES.keys())
 
 
 # ---------------------------------------------------------------------------
-# Model configuration (single-channel only for gallery)
+# Model configuration
 # ---------------------------------------------------------------------------
 
-MODELS = [
+MODELS_SINGLE = [
     "cellpose_cyto2",
     "cellpose_cyto3",
     "deepcell_mesmer",
     "instanseg_fluorescence",
+    "cellsam",
+]
+
+MODELS_WITH_NUC = [
+    "cellpose_cyto2",
+    "cellpose_cyto2_with_nuc",
+    "cellpose_cyto3",
+    "cellpose_cyto3_with_nuc",
+    "deepcell_mesmer",
+    "deepcell_mesmer_with_nuc",
+    "instanseg_fluorescence",
+    "instanseg_fluorescence_with_nuc",
+    "cellsam",
+    "cellsam_with_nuc",
 ]
 
 MODEL_LABELS = {
-    "cellpose_cyto2":         "Cellpose cyto2",
-    "cellpose_cyto3":         "Cellpose cyto3",
-    "deepcell_mesmer":        "Mesmer",
-    "instanseg_fluorescence": "InstanSeg",
+    "cellpose_cyto2":                  "Cellpose cyto2",
+    "cellpose_cyto3":                  "Cellpose cyto3",
+    "deepcell_mesmer":                 "Mesmer",
+    "instanseg_fluorescence":          "InstanSeg",
+    "cellsam":                         "CellSAM",
+    "cellpose_cyto2_with_nuc":         "Cellpose cyto2 +nuc",
+    "cellpose_cyto3_with_nuc":         "Cellpose cyto3 +nuc",
+    "deepcell_mesmer_with_nuc":        "Mesmer +nuc",
+    "instanseg_fluorescence_with_nuc": "InstanSeg +nuc",
+    "cellsam_with_nuc":                "CellSAM +nuc",
 }
-
-N_MODELS = len(MODELS)
 
 # Uniform fill colour for all cell instances (R, G, B) in [0, 1]
 FILL_COLOR = (0.18, 0.53, 0.72)   # steel blue (same as nuclei benchmark)
 
-# Row indices
+# Row indices (recomputed in build_figure based on selected models)
 ROW_HIST       = 0
 ROW_RAW        = 1
 ROW_MASK_START = 2
-ROW_CONS       = ROW_MASK_START + N_MODELS
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +152,7 @@ def render_mask(mask):
     return rgb
 
 
-def render_consensus(masks):
+def render_consensus(masks, n_models):
     """Pixel-wise sum of binary masks mapped through the jet colormap.
 
     Vote counts normalised to [0, 1]; background pixels (0 votes) are black.
@@ -146,7 +163,7 @@ def render_consensus(masks):
         return np.zeros((512, 512, 3), dtype=np.float32)
 
     votes = sum((m > 0).astype(np.float32) for m in valid)
-    rgb = mpl.colormaps["jet"](votes / N_MODELS)[:, :, :3].astype(np.float32)
+    rgb = mpl.colormaps["jet"](votes / n_models)[:, :, :3].astype(np.float32)
     rgb[votes == 0] = 0.0
     return rgb
 
@@ -186,7 +203,7 @@ def _draw_intensity_hist(ax, raw_u16, hist_max):
     _clean_ax(ax)
 
 
-def _add_consensus_colorbar(fig, ax_last):
+def _add_consensus_colorbar(fig, ax_last, n_models):
     """Add a thin vertical jet colourbar to the right of the consensus row."""
     pos = ax_last.get_position()
     cbar_ax = fig.add_axes([
@@ -195,12 +212,12 @@ def _add_consensus_colorbar(fig, ax_last):
         0.010,
         pos.height,
     ])
-    norm = mpl.colors.Normalize(vmin=0, vmax=N_MODELS)
+    norm = mpl.colors.Normalize(vmin=0, vmax=n_models)
     sm = mpl.cm.ScalarMappable(norm=norm, cmap="jet")
     sm.set_array([])
     cbar = fig.colorbar(sm, cax=cbar_ax, orientation="vertical")
-    cbar.set_ticks(range(N_MODELS + 1))
-    cbar.set_ticklabels([str(i) for i in range(N_MODELS + 1)])
+    cbar.set_ticks(range(n_models + 1))
+    cbar.set_ticklabels([str(i) for i in range(n_models + 1)])
     cbar.ax.tick_params(labelsize=5, length=2, pad=1)
     cbar.set_label("# models", fontsize=6, labelpad=4)
 
@@ -209,14 +226,16 @@ def _add_consensus_colorbar(fig, ax_last):
 # Figure assembly
 # ---------------------------------------------------------------------------
 
-def build_figure(data_dir, masks_dir, crop_size):
+def build_figure(data_dir, masks_dir, crop_size, models):
     hist_max = compute_hist_max(data_dir, crop_size)
     print(f"  Histogram x-axis max (global 95th percentile): {hist_max}")
 
+    n_models = len(models)
     n_cols = len(CATEGORY_ORDER)
-    n_rows = 1 + 1 + N_MODELS + 1   # hist | raw | models | consensus
+    n_rows = 1 + 1 + n_models + 1   # hist | raw | models | consensus
+    row_cons = ROW_MASK_START + n_models
 
-    height_ratios = [1.5, 4] + [4] * N_MODELS + [4]
+    height_ratios = [1.5, 4] + [4] * n_models + [4]
 
     # Figure geometry (inches)
     cell_inch    = 1.4
@@ -226,7 +245,7 @@ def build_figure(data_dir, masks_dir, crop_size):
     right_margin = 0.35
     bot_margin   = 0.05
 
-    subplots_height = (N_MODELS + 2) * cell_inch + hist_inch
+    subplots_height = (n_models + 2) * cell_inch + hist_inch
     fig_h = top_margin + subplots_height + bot_margin
     fig_w = left_margin + n_cols * cell_inch + right_margin
 
@@ -253,7 +272,7 @@ def build_figure(data_dir, masks_dir, crop_size):
     # --- Row labels ---
     row_labels = (
         ["Intensity", "Raw FarRed"]
-        + [MODEL_LABELS[m] for m in MODELS]
+        + [MODEL_LABELS[m] for m in models]
         + ["Consensus"]
     )
     for row_idx, label in enumerate(row_labels):
@@ -282,7 +301,7 @@ def build_figure(data_dir, masks_dir, crop_size):
 
         # Rows 2+ — model masks; collect for consensus
         all_masks = []
-        for offset, model_id in enumerate(MODELS):
+        for offset, model_id in enumerate(models):
             row_idx   = ROW_MASK_START + offset
             mask_path = masks_dir / model_id / fname
             mask      = load_mask(mask_path, crop_size)
@@ -300,13 +319,13 @@ def build_figure(data_dir, masks_dir, crop_size):
             _clean_ax(ax)
 
         # Last row — consensus heatmap
-        axes[ROW_CONS, col_idx].imshow(
-            render_consensus(all_masks), interpolation="nearest",
+        axes[row_cons, col_idx].imshow(
+            render_consensus(all_masks, n_models), interpolation="nearest",
         )
-        _clean_ax(axes[ROW_CONS, col_idx])
+        _clean_ax(axes[row_cons, col_idx])
 
     # Vertical colourbar
-    _add_consensus_colorbar(fig, axes[ROW_CONS, -1])
+    _add_consensus_colorbar(fig, axes[row_cons, -1], n_models)
 
     return fig
 
@@ -339,6 +358,10 @@ def main():
         "--dpi", type=int, default=300,
         help="Output DPI (default: 300)",
     )
+    parser.add_argument(
+        "--with-nuc", action="store_true",
+        help="Include +nuc (two-channel) models alongside single-channel",
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent
@@ -347,15 +370,17 @@ def main():
     output_dir = Path(args.output_dir) if args.output_dir else script_dir / "results" / "figures"
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    models = MODELS_WITH_NUC if args.with_nuc else MODELS_SINGLE
+
     mpl.rcParams.update({
         "font.family": "sans-serif",
         "font.size":   8,
         "axes.linewidth": 0.6,
     })
 
-    fig = build_figure(data_dir, masks_dir, args.crop_size)
+    fig = build_figure(data_dir, masks_dir, args.crop_size, models)
 
-    stem = "panel_F_masks_partA"
+    stem = "panel_F_masks_partA_with_nuc" if args.with_nuc else "panel_F_masks_partA"
     for ext in ("pdf", "png"):
         out = output_dir / f"{stem}.{ext}"
         fig.savefig(str(out), dpi=args.dpi, bbox_inches="tight")
