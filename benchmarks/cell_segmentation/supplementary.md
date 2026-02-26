@@ -31,9 +31,9 @@ necessary.
 
 **Mesmer** shows a dramatic improvement with +nuc. Single-channel Mesmer (zeroed nuclear input)
 detects very few cells across all difficulty categories. With the DAPI channel restored, detection
-improves substantially. This is consistent with Mesmer's design: it was trained on TissueNet where
+improves substantially. **This is consistent with Mesmer's design: it was trained on TissueNet where
 every image contains a paired DAPI or Histone H3 nuclear stain. The nuclear channel is not optional —
-it is the primary signal Mesmer uses to seed cell detection. The single-channel configuration (zeroed
+it is the primary signal Mesmer uses to seed cell detection**. The single-channel configuration (zeroed
 nuclear input) is an undocumented workaround that places the model entirely outside its training
 distribution. The developers explicitly stated that cell culture segmentation is out of scope
 (Greenwald et al. 2022).
@@ -41,15 +41,15 @@ distribution. The developers explicitly stated that cell culture segmentation is
 **InstanSeg** shows a similarly dramatic improvement with +nuc. The single-channel cytoplasm
 configuration yields sparse detections, while the two-channel configuration performs comparably to
 Cellpose. This aligns with the training data (CPDMI: 8–32 channel tissue images, all including DAPI)
-and the developers' guidance on image.sc: *"If you only have one channel, you should probably only
-choose nuclei as the output."* Without a nuclear signal, InstanSeg's nucleus-detection component has
+and the developers' guidance on image.sc: **"If you only have one channel, you should probably only
+choose nuclei as the output."** Without a nuclear signal, InstanSeg's nucleus-detection component has
 nothing to detect, and cell boundary estimation becomes unreliable.
 
 **CellSAM** also improves substantially with +nuc, though less dramatically than Mesmer or InstanSeg.
 Single-channel CellSAM undersegments (detecting roughly half the cells that Cellpose finds in dense
 categories), while +nuc CellSAM approaches Cellpose-level counts. CellSAM handles grayscale input
-natively, but its CellFinder detector benefits from having two information-rich channels rather than
-one.
+natively, but *its CellFinder detector benefits from having two information-rich channels rather than
+one*.
 
 **Key finding:** The single-channel vs. +nuc comparison confirms that Mesmer, InstanSeg, and CellSAM
 fundamentally depend on a nuclear stain for reliable whole-cell segmentation. Only the Cellpose family
