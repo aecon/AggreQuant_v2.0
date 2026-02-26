@@ -5,7 +5,7 @@ Cell segmentation mask gallery — Part A (raw inference, no normalisation).
 Grid layout (7 rows × 7 columns):
   col  0–6 = one difficulty category each (curated FarRed image)
 
-  row  0   = FarRed intensity distribution (bar histogram, raw uint16)
+  row  0   = FarRed intensity distribution (bar histogram, raw uint16, shared x-axis)
   row  1   = raw FarRed (grayscale, 1–99.8th percentile stretch)
   rows 2–5 = predicted cell masks for the 4 single-channel models
              (uniform fill colour + white instance-boundary contours)
@@ -18,7 +18,7 @@ Images per category are curated (hardcoded in SELECTED_IMAGES).
 Output: <output-dir>/panel_F_masks_partA.{pdf,png}
 
 Usage:
-    conda activate nuclei-bench
+    conda activate cell-bench
     python plot_masks.py \\
         --data-dir "data/images" \\
         [--masks-dir results/masks] \\
@@ -41,8 +41,6 @@ from skimage.segmentation import find_boundaries
 # Curated image selection (one per category)
 # ---------------------------------------------------------------------------
 
-# Filenames use the FarRed channel (wv 631 - FarRed).
-# These are the same FOVs used in the nuclei benchmark, just the cell channel.
 SELECTED_IMAGES = {
     "low_confluency": ("01_low_confluency",         "HA1_rep1_G - 13(fld 6 wv 631 - FarRed).tif",   "Low confluency"),
     "clustered":      ("03_clustered_touching",      "HA6_rep1_P - 13(fld 9 wv 631 - FarRed).tif",   "Clustered"),
@@ -68,68 +66,249 @@ MODELS = [
 ]
 
 MODEL_LABELS = {
-    "cellpose_cyto2":        "Cellpose cyto2",
-    "cellpose_cyto3":        "Cellpose cyto3",
-    "deepcell_mesmer":       "Mesmer",
+    "cellpose_cyto2":         "Cellpose cyto2",
+    "cellpose_cyto3":         "Cellpose cyto3",
+    "deepcell_mesmer":        "Mesmer",
     "instanseg_fluorescence": "InstanSeg",
 }
 
-# Fill colour for each model (used for instance colouring)
-MODEL_COLORS = {
-    "cellpose_cyto2":        "#42A5F5",  # blue
-    "cellpose_cyto3":        "#1565C0",  # navy
-    "deepcell_mesmer":       "#E65100",  # orange
-    "instanseg_fluorescence": "#7B1FA2",  # purple
-}
+N_MODELS = len(MODELS)
+
+# Uniform fill colour for all cell instances (R, G, B) in [0, 1]
+FILL_COLOR = (0.18, 0.53, 0.72)   # steel blue (same as nuclei benchmark)
+
+# Row indices
+ROW_HIST       = 0
+ROW_RAW        = 1
+ROW_MASK_START = 2
+ROW_CONS       = ROW_MASK_START + N_MODELS
 
 
 # ---------------------------------------------------------------------------
-# Utilities
+# Image helpers
 # ---------------------------------------------------------------------------
 
 def centre_crop(arr, size):
-    """Centre-crop a 2D array to (size, size)."""
+    """Return a centre crop of a 2-D array."""
     h, w = arr.shape[:2]
     r0 = max(0, (h - size) // 2)
     c0 = max(0, (w - size) // 2)
     return arr[r0:r0 + size, c0:c0 + size]
 
 
-def stretch(img, plo=1, phi=99.8):
-    """Percentile stretch to [0, 1]."""
-    lo = np.percentile(img, plo)
-    hi = np.percentile(img, phi)
-    if hi == lo:
-        return np.zeros_like(img, dtype=float)
-    return np.clip((img.astype(float) - lo) / (hi - lo), 0, 1)
+def load_farred(path, crop_size):
+    """Load uint16 FarRed TIFF and centre-crop.
+
+    Returns
+    -------
+    raw_u16  : (H, W) uint16 — raw pixel values (used for histogram)
+    norm_f32 : (H, W) float32 in [0, 1] — 1–99.8th-percentile stretch
+    """
+    raw = tifffile.imread(str(path))
+    raw = centre_crop(raw, crop_size)
+    lo, hi = np.percentile(raw, [1.0, 99.8])
+    norm = np.clip((raw.astype(np.float32) - lo) / (hi - lo + 1e-6), 0.0, 1.0)
+    return raw, norm
 
 
-def colorise_labels(labels):
-    """Map integer label mask to an RGBA image with distinct hue per instance."""
-    h, w = labels.shape
-    rgba = np.zeros((h, w, 4), dtype=float)
-    ids = np.unique(labels)
-    ids = ids[ids > 0]
-    cmap = mpl.colormaps["tab20b"]
-    for i, lid in enumerate(ids):
-        mask = labels == lid
-        color = cmap(i % 20)
-        rgba[mask] = color
-    return rgba
+def load_mask(path, crop_size):
+    """Load uint16 instance-label TIFF and centre-crop. Returns None if missing."""
+    if not path.exists():
+        return None
+    return centre_crop(tifffile.imread(str(path)), crop_size)
 
 
-def overlay_with_boundaries(ax, img_grey, labels, fill_color):
-    """Show grey image with colourised fill and white boundary contours."""
-    ax.imshow(img_grey, cmap="gray", vmin=0, vmax=1, interpolation="nearest")
-    if labels.max() > 0:
-        rgba = colorise_labels(labels)
-        rgba[..., 3] = np.where(labels > 0, 0.45, 0.0)
-        ax.imshow(rgba, interpolation="nearest")
-        boundaries = find_boundaries(labels, mode="inner")
-        boundary_rgba = np.zeros((*labels.shape, 4))
-        boundary_rgba[boundaries] = [1, 1, 1, 0.9]
-        ax.imshow(boundary_rgba, interpolation="nearest")
-    ax.axis("off")
+# ---------------------------------------------------------------------------
+# Rendering
+# ---------------------------------------------------------------------------
+
+def render_mask(mask):
+    """Single-colour fill + white instance-boundary contours.
+
+    Returns (H, W, 3) float32 on a black background.
+    """
+    h, w = mask.shape
+    rgb = np.zeros((h, w, 3), dtype=np.float32)
+    rgb[mask > 0] = FILL_COLOR
+    bounds = find_boundaries(mask, mode="inner", background=0)
+    rgb[bounds] = (1.0, 1.0, 1.0)
+    return rgb
+
+
+def render_consensus(masks):
+    """Pixel-wise sum of binary masks mapped through the jet colormap.
+
+    Vote counts normalised to [0, 1]; background pixels (0 votes) are black.
+    Returns (H, W, 3) float32.
+    """
+    valid = [m for m in masks if m is not None]
+    if not valid:
+        return np.zeros((512, 512, 3), dtype=np.float32)
+
+    votes = sum((m > 0).astype(np.float32) for m in valid)
+    rgb = mpl.colormaps["jet"](votes / N_MODELS)[:, :, :3].astype(np.float32)
+    rgb[votes == 0] = 0.0
+    return rgb
+
+
+# ---------------------------------------------------------------------------
+# Axes helpers
+# ---------------------------------------------------------------------------
+
+def _clean_ax(ax):
+    """Remove all ticks and spines."""
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+
+def compute_hist_max(data_dir, crop_size):
+    """Return the 95th-percentile intensity across all selected cropped images."""
+    p95_values = []
+    for folder, fname, _label in SELECTED_IMAGES.values():
+        raw = tifffile.imread(str(data_dir / folder / fname))
+        raw = centre_crop(raw, crop_size)
+        p95_values.append(np.percentile(raw, 95))
+    return int(np.max(p95_values))
+
+
+def _draw_intensity_hist(ax, raw_u16, hist_max):
+    """Horizontal intensity histogram in a thin row."""
+    counts, edges = np.histogram(raw_u16.ravel(), bins=64,
+                                 range=(0, hist_max + 1))
+    bin_centers = (edges[:-1] + edges[1:]) / 2.0
+    bin_w = (edges[1] - edges[0]) * 0.95
+    ax.bar(bin_centers, counts, width=bin_w, color="#909090", edgecolor="none")
+    ax.set_xlim(0, hist_max)
+    ax.set_ylim(bottom=0)
+    ax.set_facecolor("white")
+    _clean_ax(ax)
+
+
+def _add_consensus_colorbar(fig, ax_last):
+    """Add a thin vertical jet colourbar to the right of the consensus row."""
+    pos = ax_last.get_position()
+    cbar_ax = fig.add_axes([
+        pos.x1 + 0.005,
+        pos.y0,
+        0.010,
+        pos.height,
+    ])
+    norm = mpl.colors.Normalize(vmin=0, vmax=N_MODELS)
+    sm = mpl.cm.ScalarMappable(norm=norm, cmap="jet")
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax, orientation="vertical")
+    cbar.set_ticks(range(N_MODELS + 1))
+    cbar.set_ticklabels([str(i) for i in range(N_MODELS + 1)])
+    cbar.ax.tick_params(labelsize=5, length=2, pad=1)
+    cbar.set_label("# models", fontsize=6, labelpad=4)
+
+
+# ---------------------------------------------------------------------------
+# Figure assembly
+# ---------------------------------------------------------------------------
+
+def build_figure(data_dir, masks_dir, crop_size):
+    hist_max = compute_hist_max(data_dir, crop_size)
+    print(f"  Histogram x-axis max (global 95th percentile): {hist_max}")
+
+    n_cols = len(CATEGORY_ORDER)
+    n_rows = 1 + 1 + N_MODELS + 1   # hist | raw | models | consensus
+
+    height_ratios = [1.5, 4] + [4] * N_MODELS + [4]
+
+    # Figure geometry (inches)
+    cell_inch    = 1.4
+    hist_inch    = cell_inch * 1.5 / 4.0
+    left_margin  = 1.5
+    top_margin   = 0.55
+    right_margin = 0.35
+    bot_margin   = 0.05
+
+    subplots_height = (N_MODELS + 2) * cell_inch + hist_inch
+    fig_h = top_margin + subplots_height + bot_margin
+    fig_w = left_margin + n_cols * cell_inch + right_margin
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(fig_w, fig_h),
+        gridspec_kw={"height_ratios": height_ratios},
+    )
+
+    fig.subplots_adjust(
+        left   = left_margin  / fig_w,
+        right  = 1.0 - right_margin / fig_w,
+        bottom = bot_margin   / fig_h,
+        top    = 1.0 - top_margin   / fig_h,
+        wspace = 0.01,
+        hspace = 0.01,
+    )
+
+    # --- Column headers ---
+    for col_idx, cat in enumerate(CATEGORY_ORDER):
+        _folder, _fname, label = SELECTED_IMAGES[cat]
+        axes[0, col_idx].set_title(label, fontsize=7.5, fontweight="bold", pad=4)
+
+    # --- Row labels ---
+    row_labels = (
+        ["Intensity", "Raw FarRed"]
+        + [MODEL_LABELS[m] for m in MODELS]
+        + ["Consensus"]
+    )
+    for row_idx, label in enumerate(row_labels):
+        axes[row_idx, 0].set_ylabel(
+            label, fontsize=7.5, fontweight="bold",
+            rotation=0, ha="right", va="center", labelpad=6,
+        )
+
+    # --- Column by column ---
+    print("Building mask gallery (Part A):")
+    for col_idx, cat in enumerate(CATEGORY_ORDER):
+        folder, fname, label = SELECTED_IMAGES[cat]
+        img_path = data_dir / folder / fname
+        print(f"  {label:<20s}  {fname}")
+
+        raw_u16, norm_f32 = load_farred(img_path, crop_size)
+
+        # Row 0 — intensity histogram
+        _draw_intensity_hist(axes[ROW_HIST, col_idx], raw_u16, hist_max)
+
+        # Row 1 — raw FarRed
+        axes[ROW_RAW, col_idx].imshow(
+            norm_f32, cmap="gray", vmin=0, vmax=1, interpolation="nearest",
+        )
+        _clean_ax(axes[ROW_RAW, col_idx])
+
+        # Rows 2+ — model masks; collect for consensus
+        all_masks = []
+        for offset, model_id in enumerate(MODELS):
+            row_idx   = ROW_MASK_START + offset
+            mask_path = masks_dir / model_id / fname
+            mask      = load_mask(mask_path, crop_size)
+            all_masks.append(mask)
+
+            ax = axes[row_idx, col_idx]
+            if mask is not None:
+                ax.imshow(render_mask(mask), interpolation="nearest")
+            else:
+                ax.set_facecolor("#111111")
+                ax.text(0.5, 0.5, "missing", color="white",
+                        ha="center", va="center",
+                        transform=ax.transAxes, fontsize=6)
+                print(f"    WARNING: mask not found: {mask_path}")
+            _clean_ax(ax)
+
+        # Last row — consensus heatmap
+        axes[ROW_CONS, col_idx].imshow(
+            render_consensus(all_masks), interpolation="nearest",
+        )
+        _clean_ax(axes[ROW_CONS, col_idx])
+
+    # Vertical colourbar
+    _add_consensus_colorbar(fig, axes[ROW_CONS, -1])
+
+    return fig
 
 
 # ---------------------------------------------------------------------------
@@ -168,121 +347,17 @@ def main():
     output_dir = Path(args.output_dir) if args.output_dir else script_dir / "results" / "figures"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    crop = args.crop_size
-    n_cats = len(CATEGORY_ORDER)
-    n_models = len(MODELS)
-    n_rows = 2 + n_models + 1  # histogram + raw + models + consensus
-    n_cols = n_cats
+    mpl.rcParams.update({
+        "font.family": "sans-serif",
+        "font.size":   8,
+        "axes.linewidth": 0.6,
+    })
 
-    fig, axes = plt.subplots(
-        n_rows, n_cols,
-        figsize=(n_cols * 2.8, n_rows * 2.8),
-        gridspec_kw={"hspace": 0.05, "wspace": 0.05},
-    )
+    fig = build_figure(data_dir, masks_dir, args.crop_size)
 
-    row_labels = (
-        ["Histogram", "FarRed (raw)"]
-        + [MODEL_LABELS[m] for m in MODELS]
-        + ["Consensus"]
-    )
-
-    for col_idx, cat_key in enumerate(CATEGORY_ORDER):
-        cat_folder, fname, cat_label = SELECTED_IMAGES[cat_key]
-        img_path = data_dir / cat_folder / fname
-
-        # --- Load and crop image ---
-        if img_path.exists():
-            img_raw = tifffile.imread(str(img_path))
-        else:
-            print(f"  WARNING: image not found: {img_path}")
-            img_raw = np.zeros((crop, crop), dtype=np.uint16)
-
-        img_crop = centre_crop(img_raw, crop)
-        img_grey = stretch(img_crop)
-
-        # --- Row 0: histogram ---
-        ax = axes[0, col_idx]
-        flat = img_crop.ravel()
-        lo, hi = np.percentile(flat, 0.1), np.percentile(flat, 99.9)
-        bins = np.linspace(lo, hi, 64)
-        counts, edges = np.histogram(flat, bins=bins)
-        ax.bar(edges[:-1], counts, width=np.diff(edges), color="#78909C", linewidth=0)
-        ax.set_xlim(lo, hi)
-        ax.set_ylim(bottom=0)
-        ax.axis("off")
-        if col_idx == 0:
-            ax.set_ylabel("Histogram", fontsize=7, rotation=0, ha="right", va="center")
-        ax.set_title(cat_label, fontsize=8, fontweight="bold", pad=4)
-
-        # --- Row 1: raw FarRed ---
-        ax = axes[1, col_idx]
-        ax.imshow(img_grey, cmap="gray", vmin=0, vmax=1, interpolation="nearest")
-        ax.axis("off")
-        if col_idx == 0:
-            ax.set_ylabel("FarRed (raw)", fontsize=7, rotation=0, ha="right", va="center")
-
-        # --- Rows 2 to 2+n_models: model masks ---
-        all_binary = []
-        for model_row, model_id in enumerate(MODELS):
-            ax = axes[2 + model_row, col_idx]
-            mask_path = masks_dir / model_id / fname
-            if mask_path.exists():
-                labels = tifffile.imread(str(mask_path)).astype(np.int32)
-                labels_crop = centre_crop(labels, crop)
-            else:
-                labels_crop = np.zeros((crop, crop), dtype=np.int32)
-                if col_idx == 0:
-                    print(f"  WARNING: mask not found: {mask_path}")
-
-            overlay_with_boundaries(ax, img_grey, labels_crop, MODEL_COLORS[model_id])
-            n_cells = labels_crop.max()
-            ax.text(0.02, 0.97, str(n_cells), transform=ax.transAxes,
-                    color="white", fontsize=7, va="top", ha="left",
-                    bbox=dict(facecolor="black", alpha=0.4, pad=1, boxstyle="round,pad=0.2"))
-            if col_idx == 0:
-                ax.set_ylabel(MODEL_LABELS[model_id], fontsize=7, rotation=0,
-                              ha="right", va="center")
-
-            all_binary.append((labels_crop > 0).astype(np.uint8))
-
-        # --- Last row: consensus heatmap ---
-        ax = axes[n_rows - 1, col_idx]
-        if all_binary:
-            votes = np.sum(all_binary, axis=0).astype(float)
-            # Black background where all models agree on background (votes==0)
-            display = np.zeros((*votes.shape, 3))
-            fg_mask = votes > 0
-            if fg_mask.any():
-                cmap_jet = mpl.colormaps["jet"]
-                normed = votes / n_models
-                colored = cmap_jet(normed)
-                display[fg_mask] = colored[fg_mask, :3]
-            # Blend over grey image where background
-            bg_grey = img_grey[..., np.newaxis] * np.array([0.3, 0.3, 0.3])
-            final = np.where(fg_mask[..., np.newaxis], display, bg_grey)
-            ax.imshow(final, interpolation="nearest")
-        ax.axis("off")
-        if col_idx == 0:
-            ax.set_ylabel("Consensus", fontsize=7, rotation=0, ha="right", va="center")
-
-    # Colourbar for consensus row (rightmost column)
-    cbar_ax = fig.add_axes([0.92, 0.02, 0.012, 0.12])
-    sm = mpl.cm.ScalarMappable(
-        cmap="jet", norm=mpl.colors.Normalize(vmin=0, vmax=n_models)
-    )
-    sm.set_array([])
-    cb = fig.colorbar(sm, cax=cbar_ax)
-    cb.set_label("# models", fontsize=6)
-    cb.set_ticks([0, n_models // 2, n_models])
-    cb.ax.tick_params(labelsize=5)
-
-    fig.suptitle(
-        "F   Cell segmentation masks — single-channel models (FarRed)",
-        fontsize=10, fontweight="bold", x=0.01, ha="left",
-    )
-
+    stem = "panel_F_masks_partA"
     for ext in ("pdf", "png"):
-        out = output_dir / f"panel_F_masks_partA.{ext}"
+        out = output_dir / f"{stem}.{ext}"
         fig.savefig(str(out), dpi=args.dpi, bbox_inches="tight")
         print(f"Saved: {out}")
     plt.close(fig)
