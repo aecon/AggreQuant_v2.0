@@ -176,7 +176,6 @@ class SegmentationPipeline:
         # Post-processing
         cell_labels, nuclei_labels = remove_border_objects(cell_labels, nuclei_labels)
         aggregate_labels = filter_aggregates_by_cells(aggregate_labels, cell_labels)
-        nuclei_labels, cell_labels = relabel_consecutive(nuclei_labels, cell_labels)
 
         # Quantification
         if not self._segmentation_only:
