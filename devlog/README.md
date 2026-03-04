@@ -46,6 +46,14 @@ Tracking progress toward a working pipeline and its companion manuscript.
 
 ## Changelog
 
+**2026-03-04** ([Plan](Plan_2026-03-04.md))
+- Use LUT for consecutive relabeling in `FilterBasedSegmenter` (fast O(N), no re-labeling)
+- Fix hole-filling order in `FilterBasedSegmenter`: label after `remove_small_holes` per skimage recommendation
+- Rewrite `_match_cells_to_nuclei`: greedy matching by nucleus occupancy fraction, drop unmatched cells and nuclei
+- Sync `nuclei_labels` in-place after cell matching (zero out unmatched nuclei inside `CellposeSegmenter.segment()`)
+- Delete all existing tests and write new unit tests for aggregate, nuclei, and cell segmentation
+- Fix stardist LUT dtype to uint16; fix deprecated `binary_dilation` → `dilation`
+
 **2026-02-17** ([Plan](Plan_2026-02-17.md))
 - Optimize `compute_field_measurements` with sparse cross-tabulation (~6x speedup)
 - Extract post-processing into reusable module (`segmentation/postprocessing.py`)
