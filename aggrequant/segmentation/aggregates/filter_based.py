@@ -4,7 +4,6 @@ import numpy as np
 import scipy.ndimage
 import skimage.filters
 import skimage.morphology
-from typing import Optional
 
 from aggrequant.segmentation.base import BaseSegmenter
 from aggrequant.segmentation.postprocessing import (
@@ -102,18 +101,19 @@ class FilterBasedSegmenter(BaseSegmenter):
         # Step 3: Median filter for regularization
         segmented = scipy.ndimage.median_filter(segmented, size=self.median_filter_size)
 
-        # Step 4: Connected components
-        labels = skimage.morphology.label(segmented, connectivity=2)
-        self._debug(f"Initial connected components: {labels.max()}")
-
-        # Step 5: Remove small holes
+        # Step 4: Remove small holes
         no_holes = remove_small_holes(
-            labels, area_threshold=self.small_hole_area, connectivity=2
+            segmented, max_size=self.small_hole_area, connectivity=2
         )
+
+        # Step 5: Connected components - must be done after small hole removal - see recommendation in scikit-image:
+        # https://github.com/scikit-image/scikit-image/blob/main/src/skimage/morphology/misc.py#L257
+        labels = skimage.morphology.label(no_holes, connectivity=2)
+        self._debug(f"Initial connected components: {labels.max()}")
 
         # Step 6: Remove small objects
         no_small = remove_small_objects(
-            no_holes, max_size=self.min_aggregate_area, connectivity=2
+            labels, max_size=self.min_aggregate_area, connectivity=2
         )
 
         # Make labeling consecutive using a LUT (fast O(N), no re-labeling)

@@ -18,6 +18,12 @@ def remove_small_holes(
 
     Returns:
         Binary mask with small holes filled
+
+    Recommendation from scikit-image source code:
+        "If the array type is int, it is assumed that it contains already-labeled
+        objects. The labels are not kept in the output image (this function always
+        outputs a bool image). It is suggested that labeling is completed after
+        using this function."
     """
     return skimage.morphology.remove_small_holes(
         mask.astype(bool), max_size=max_size, connectivity=connectivity
