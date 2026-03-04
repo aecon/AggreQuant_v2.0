@@ -92,11 +92,15 @@ class StarDistSegmenter(BaseSegmenter):
         self._debug(f"StarDist detected {labels.max()} nuclei")
 
         # Post-processing
-        labels = self._postprocess_size_exclusion(labels)
-        labels = self._postprocess_increase_borders(labels)
+        labels_ = self._postprocess_size_exclusion(labels)
+        labels_ = self._postprocess_increase_borders(labels_)
 
-        # Relabel to ensure consecutive labels
-        labels = skimage.morphology.label(labels > 0).astype(np.uint16)
+        # Relabel to ensure consecutive labels, using a LUT (fast O(N), no re-labeling)
+        #labels = skimage.morphology.label(labels > 0).astype(np.uint16)
+        unique = np.unique(labels_)  # sorted unique values including 0 (background)
+        lut = np.zeros(int(unique.max()) + 1, dtype=np.uint32)
+        lut[unique] = np.arange(len(unique), dtype=np.uint32)
+        labels = lut[labels_]
 
         self._log(f"Final count: {labels.max()} nuclei")
         return labels
@@ -168,5 +172,8 @@ class StarDistSegmenter(BaseSegmenter):
         # Create output with borders set to 0
         objects = labels.copy()
         objects[fat_edges] = 0
+
+        # assert that no nuclei were accidentally removed (eroded)
+        assert( len(np.unique(objects)) == len(np.unique(labels)) )
 
         return objects
