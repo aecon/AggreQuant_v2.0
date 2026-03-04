@@ -450,11 +450,26 @@ def main():
         del model
         clear_gpu(fw)
 
-    # --- Save CSVs ---
+    # --- Save CSVs (merge with existing data for models not in this run) ---
     counts_df = pd.DataFrame(count_rows)
     timing_df = pd.DataFrame(timing_rows)
-    counts_df.to_csv(output_dir / "counts.csv", index=False)
-    timing_df.to_csv(output_dir / "timing.csv", index=False)
+
+    run_model_ids = {c["id"] for c in configs}
+
+    counts_path = output_dir / "counts.csv"
+    if counts_path.exists():
+        prev_counts = pd.read_csv(counts_path)
+        kept = prev_counts[~prev_counts["model_id"].isin(run_model_ids)]
+        counts_df = pd.concat([kept, counts_df], ignore_index=True)
+
+    timing_path = output_dir / "timing.csv"
+    if timing_path.exists():
+        prev_timing_df = pd.read_csv(timing_path)
+        kept = prev_timing_df[~prev_timing_df["model_id"].isin(run_model_ids)]
+        timing_df = pd.concat([kept, timing_df], ignore_index=True)
+
+    counts_df.to_csv(counts_path, index=False)
+    timing_df.to_csv(timing_path, index=False)
 
     # --- Summary ---
     sep = "=" * 70
