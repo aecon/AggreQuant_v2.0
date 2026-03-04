@@ -82,6 +82,14 @@ class CellposeSegmenter(BaseSegmenter):
         nuclei_mask = (nuclei_labels > 0).astype(np.float32)
 
         # Create 2-channel input: [cells, nuclei_mask]
+        # https://cellpose.readthedocs.io/en/v3.1.1.1/settings.html#channels
+        # "The first channel is the channel you want to segment.
+        # The second channel is an optional channel that is helpful
+        # in models trained with images with a nucleus channel"
+        # https://cellpose.readthedocs.io/en/v3.1.1.1/models.html#cytoplasm-model-cyto3-cyto2-cyto
+        # "The cytoplasm models in cellpose are trained on two-channel images,
+        # where the first channel is the channel to segment,
+        # and the second channel is an optional nuclear channel"
         h, w = image.shape[:2]
         input_image = np.zeros((2, h, w))
         input_image[0, :, :] = image
@@ -91,7 +99,8 @@ class CellposeSegmenter(BaseSegmenter):
         # channels=[1,2] means: channel 1 is cytoplasm, channel 2 is nuclei
         masks, _, _, _ = self.model.eval(
             input_image,
-            channels=[1, 2]
+            channels=[1, 2],
+            diameter=None   # for automated diameter estimation
         )
 
         self._debug(f"Cellpose detected {masks.max()} cells")
@@ -105,29 +114,49 @@ class CellposeSegmenter(BaseSegmenter):
         """
         Relabel cells to match their corresponding nucleus IDs.
 
-        For each nucleus:
-        - Find the cell with most overlap and assign it the nucleus ID
-        - If no cell overlaps, use nucleus pixels as the cell
+        Builds all (cell, nucleus) overlap pairs, scored by the fraction of
+        nucleus pixels inside the cell. Pairs are sorted by score descending
+        and greedily assigned — each cell and nucleus can only be matched once.
+        Unmatched cells (no nucleus) and unmatched nuclei (no cell) are dropped.
+        This guarantees an identical number of cells and nuclei in the output.
         """
         output = np.zeros_like(cell_labels)
 
-        for nuc_id in np.unique(nuclei_labels):
-            if nuc_id == 0:
+        # Precompute nucleus areas
+        nuc_ids, nuc_areas = np.unique(nuclei_labels, return_counts=True)
+        nucleus_area = dict(zip(nuc_ids, nuc_areas))
+        nucleus_area.pop(0, None)
+
+        # Build all (score, cell_id, nucleus_id) triples
+        triples = []
+        for cell_id in np.unique(cell_labels):
+            if cell_id == 0:
                 continue
+            nuclei_in_cell = nuclei_labels[cell_labels == cell_id]
+            nuclei_in_cell = nuclei_in_cell[nuclei_in_cell > 0]
+            if len(nuclei_in_cell) == 0:
+                continue
+            for nuc_id, overlap in zip(*np.unique(nuclei_in_cell, return_counts=True)):
+                score = overlap / nucleus_area[nuc_id]
+                triples.append((score, int(cell_id), int(nuc_id)))
 
-            nuc_mask = nuclei_labels == nuc_id
+        # Sort by score descending; greedily assign
+        triples.sort(key=lambda t: t[0], reverse=True)
 
-            # Find cells overlapping with this nucleus
-            overlapping = cell_labels[nuc_mask]
-            overlapping = overlapping[overlapping > 0]
+        assigned_cells = set()
+        assigned_nuclei = set()
+        for score, cell_id, nuc_id in triples:
+            if cell_id not in assigned_cells and nuc_id not in assigned_nuclei:
+                output[cell_labels == cell_id] = nuc_id
+                assigned_cells.add(cell_id)
+                assigned_nuclei.add(nuc_id)
 
-            if len(overlapping) > 0:
-                # Use the cell with most overlap
-                best_cell = np.bincount(overlapping).argmax()
-                output[cell_labels == best_cell] = nuc_id
-            else:
-                # No cell detected - use nucleus pixels as cell
-                output[nuc_mask] = nuc_id
-                self._debug(f"No cell for nucleus {nuc_id}, using nucleus mask")
+        n_cells = int(np.sum(np.unique(cell_labels) > 0))
+        n_matched = len(assigned_cells)
+        if n_cells > n_matched:
+            self._debug(f"Dropped {n_cells - n_matched} unmatched cells/nuclei")
 
         return output
+
+
+
