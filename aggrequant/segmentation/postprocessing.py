@@ -6,41 +6,41 @@ import skimage.morphology
 
 def remove_small_holes(
     mask: np.ndarray,
-    area_threshold: int,
+    max_size: int,
     connectivity: int = 2,
 ) -> np.ndarray:
     """Remove small holes from a binary mask.
 
     Arguments:
         mask: Binary mask (will be converted to bool)
-        area_threshold: Maximum area of holes to remove
+        max_size: Maximum area of holes to remove
         connectivity: Connectivity for hole detection (1 or 2)
 
     Returns:
         Binary mask with small holes filled
     """
     return skimage.morphology.remove_small_holes(
-        mask.astype(bool), max_size=area_threshold, connectivity=connectivity
+        mask.astype(bool), max_size=max_size, connectivity=connectivity
     )
 
 
 def remove_small_objects(
     labels: np.ndarray,
-    min_size: int,
+    max_size: int,
     connectivity: int = 2,
 ) -> np.ndarray:
     """Remove small objects from a label image.
 
     Arguments:
         labels: Label image (integer array)
-        min_size: Minimum size of objects to keep
+        max_size: Maximum size of objects to remove
         connectivity: Connectivity for object detection (1 or 2)
 
     Returns:
         Label image with small objects removed
     """
     return skimage.morphology.remove_small_objects(
-        labels, max_size=min_size, connectivity=connectivity
+        labels, max_size=max_size, connectivity=connectivity
     )
 
 
