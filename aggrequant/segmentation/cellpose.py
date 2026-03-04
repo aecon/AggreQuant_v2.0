@@ -58,7 +58,9 @@ class CellposeSegmenter(BaseSegmenter):
 
         Arguments:
             image: Input cell image (2D grayscale)
-            nuclei_labels: Nuclei labels from nuclei segmentation
+            nuclei_labels: Nuclei labels from nuclei segmentation.
+                           Modified in-place: unmatched nuclei (no corresponding
+                           cell) are zeroed out to keep nuclei and cells in sync.
 
         Returns:
             labels: Instance segmentation labels (uint16)
@@ -72,6 +74,10 @@ class CellposeSegmenter(BaseSegmenter):
 
         # Match cells to nuclei (relabel cells to match nucleus IDs)
         labels = self._match_cells_to_nuclei(cell_labels, nuclei_labels)
+
+        # Zero out nuclei with no matched cell, in-place (includes background 0)
+        matched_ids = np.unique(labels)
+        nuclei_labels[~np.isin(nuclei_labels, matched_ids)] = 0
 
         self._log(f"Final count: {labels.max()} cells")
         return labels.astype(np.uint16)

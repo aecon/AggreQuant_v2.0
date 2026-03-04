@@ -98,8 +98,8 @@ class StarDistSegmenter(BaseSegmenter):
         # Relabel to ensure consecutive labels, using a LUT (fast O(N), no re-labeling)
         #labels = skimage.morphology.label(labels > 0).astype(np.uint16)
         unique = np.unique(labels_)  # sorted unique values including 0 (background)
-        lut = np.zeros(int(unique.max()) + 1, dtype=np.uint32)
-        lut[unique] = np.arange(len(unique), dtype=np.uint32)
+        lut = np.zeros(int(unique.max()) + 1, dtype=np.uint16)
+        lut[unique] = np.arange(len(unique), dtype=np.uint16)
         labels = lut[labels_]
 
         self._log(f"Final count: {labels.max()} nuclei")

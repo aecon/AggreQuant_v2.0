@@ -105,6 +105,28 @@ def test_match_output_ids_are_subset_of_nucleus_ids():
     assert output_ids.issubset(nucleus_ids)
 
 
+def test_segment_zeros_unmatched_nuclei_inplace():
+    # nucleus 2 is outside any cell → should be zeroed in nuclei_labels after segment()
+    from unittest.mock import patch
+    seg = CellposeSegmenter()
+    nuclei_labels = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 2, 2],  # nucleus 2 — no cell will cover it
+        [0, 0, 2, 2],
+    ], dtype=np.int32)
+    mock_cells = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 0, 0],  # no cell over nucleus 2
+        [0, 0, 0, 0],
+    ], dtype=np.int32)
+    with patch.object(seg, '_segment_with_nuclei', return_value=mock_cells):
+        seg.segment(np.zeros((4, 4), dtype=np.uint16), nuclei_labels)
+    assert 2 not in np.unique(nuclei_labels)
+    assert 1 in np.unique(nuclei_labels)
+
+
 def test_match_equal_cell_and_nucleus_count():
     cell_labels = np.array([
         [1, 1, 0, 0],
@@ -128,31 +150,23 @@ def test_match_equal_cell_and_nucleus_count():
 # --- segment (slow: loads Cellpose model) ---
 
 @pytest.mark.slow
-def test_segment_output_shape(cell_image, nuclei_labels):
-    seg = CellposeSegmenter()
-    cell_labels = seg.segment(cell_image, nuclei_labels)
+def test_segment_output_shape(cell_labels, cell_image):
     assert cell_labels.shape == cell_image.shape
 
 
 @pytest.mark.slow
-def test_segment_output_dtype(cell_image, nuclei_labels):
-    seg = CellposeSegmenter()
-    cell_labels = seg.segment(cell_image, nuclei_labels)
+def test_segment_output_dtype(cell_labels):
     assert cell_labels.dtype == np.uint16
 
 
 @pytest.mark.slow
-def test_segment_detects_cells(cell_image, nuclei_labels):
-    seg = CellposeSegmenter()
-    cell_labels = seg.segment(cell_image, nuclei_labels)
+def test_segment_detects_cells(cell_labels):
     assert cell_labels.max() > 0
 
 
 @pytest.mark.slow
-def test_segment_cell_ids_are_valid_nucleus_ids(cell_image, nuclei_labels):
+def test_segment_cell_ids_are_valid_nucleus_ids(cell_labels, nuclei_labels):
     # Every cell ID in the output must correspond to a nucleus ID in the input
-    seg = CellposeSegmenter()
-    cell_labels = seg.segment(cell_image, nuclei_labels)
     cell_ids = set(np.unique(cell_labels)) - {0}
     nucleus_ids = set(np.unique(nuclei_labels)) - {0}
     assert cell_ids.issubset(nucleus_ids)

@@ -37,3 +37,14 @@ def nuclei_labels(nuclei_image):
     """Run StarDist on the nuclei image once per session (slow)."""
     from aggrequant.segmentation.stardist import StarDistSegmenter
     return StarDistSegmenter().segment(nuclei_image)
+
+
+@pytest.fixture(scope="session")
+def cell_labels(cell_image, nuclei_labels):
+    """Run Cellpose on the cell image once per session (slow).
+
+    Uses a copy of nuclei_labels so the session fixture is not mutated.
+    """
+    from aggrequant.segmentation.cellpose import CellposeSegmenter
+    nuclei_copy = nuclei_labels.copy()
+    return CellposeSegmenter().segment(cell_image, nuclei_copy)
