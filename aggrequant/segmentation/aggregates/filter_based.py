@@ -13,14 +13,14 @@ from aggrequant.segmentation.postprocessing import (
 )
 
 
-# Default parameters
-MEDIAN_FILTER_SIZE = 4
-SIGMA_NOISE_REDUCTION = 1
-SIGMA_BACKGROUND = 20
-INTENSITY_CAP = 3500
-NORMALIZED_INTENSITY_THRESHOLD = 1.60
-SMALL_HOLE_AREA_THRESHOLD = 6000
-MIN_AGGREGATE_AREA = 9
+# Default parameters: Manually tuned based on visual inspection on the validation dataset
+MEDIAN_FILTER_SIZE = 4  # applied after segmentation to regularize shape
+SIGMA_NOISE_REDUCTION = 1  # applied on normalized data to reduce digitization noise
+SIGMA_BACKGROUND = 20  # used to generate a model of background illumination
+INTENSITY_CAP = 3500  # used to cap intensity for background estimation
+NORMALIZED_INTENSITY_THRESHOLD = 1.60  # threshold on normalized intensity to generate segmentation
+SMALL_HOLE_AREA_THRESHOLD = 6000  # fill holes in segmented data that are smaller than this threshold (pixels^2)
+MIN_AGGREGATE_AREA = 9  # ignore segmented objects smaller than this threshold
 
 
 class FilterBasedSegmenter(BaseSegmenter):
@@ -28,10 +28,11 @@ class FilterBasedSegmenter(BaseSegmenter):
     Filter-based aggregate segmentation.
 
     This classical method uses:
-    1. Background normalization (capped intensity / Gaussian blur)
-    2. Intensity thresholding on normalized image
-    3. Median filtering for noise reduction
-    4. Morphological cleanup (hole filling, small object removal)
+    1. Background normalization (original image / background estimation with capped foreground intensity)
+    2. Noise reduction of normalized image
+    3. Intensity thresholding of normalized image
+    4. Median filtering for noise reduction
+    5. Morphological cleanup (hole filling, small object removal)
 
     Suitable for well-defined, high-contrast aggregates.
     """
@@ -72,9 +73,11 @@ class FilterBasedSegmenter(BaseSegmenter):
         self.small_hole_area = small_hole_area
         self.min_aggregate_area = min_aggregate_area
 
+
     @property
     def name(self) -> str:
         return "FilterBasedSegmenter"
+
 
     def segment(self, image: np.ndarray) -> np.ndarray:
         """
@@ -105,20 +108,24 @@ class FilterBasedSegmenter(BaseSegmenter):
 
         # Step 5: Remove small holes
         no_holes = remove_small_holes(
-            segmented, area_threshold=self.small_hole_area, connectivity=2
+            labels, area_threshold=self.small_hole_area, connectivity=2
         )
-        labels = skimage.morphology.label(no_holes, connectivity=2)
-        self._debug(f"After removing small holes: {labels.max()}")
 
         # Step 6: Remove small objects
         no_small = remove_small_objects(
-            labels, min_size=self.min_aggregate_area, connectivity=2
+            no_holes, max_size=self.min_aggregate_area, connectivity=2
         )
-        labels = skimage.morphology.label(no_small, connectivity=2)
+
+        # Make labeling consecutive using a LUT (fast O(N), no re-labeling)
+        unique = np.unique(no_small)  # sorted unique values including 0 (background)
+        lut = np.zeros(int(unique.max()) + 1, dtype=np.uint32)
+        lut[unique] = np.arange(len(unique), dtype=np.uint32)
+        labels = lut[no_small]
         self._debug(f"After removing small objects: {labels.max()}")
 
         self._log(f"Detected {labels.max()} aggregates")
         return labels.astype(np.uint32)
+
 
     def segment_probability(self, image: np.ndarray) -> np.ndarray:
         """
@@ -137,6 +144,7 @@ class FilterBasedSegmenter(BaseSegmenter):
         prob = np.clip(normalized / (self.normalized_threshold * 1.5), 0, 1)
 
         return prob.astype(np.float32)
+
 
     def _normalize_background(self, image: np.ndarray) -> np.ndarray:
         """
@@ -167,6 +175,7 @@ class FilterBasedSegmenter(BaseSegmenter):
         self._debug(f"Normalized range: [{normalized.min():.3f}, {normalized.max():.3f}]")
         return normalized
 
+
     def _threshold(self, normalized: np.ndarray) -> np.ndarray:
         """Apply threshold to normalized image."""
         segmented = np.zeros(normalized.shape, dtype=np.uint8)
@@ -174,3 +183,6 @@ class FilterBasedSegmenter(BaseSegmenter):
 
         self._debug(f"Threshold {self.normalized_threshold}: {segmented.sum()} pixels")
         return segmented
+
+
+
