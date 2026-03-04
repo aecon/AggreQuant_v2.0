@@ -167,7 +167,7 @@ class StarDistSegmenter(BaseSegmenter):
         edge_mask = edges > 0
 
         # Dilate edges
-        fat_edges = skimage.morphology.binary_dilation(edge_mask)
+        fat_edges = skimage.morphology.dilation(edge_mask)
 
         # Create output with borders set to 0
         objects = labels.copy()
