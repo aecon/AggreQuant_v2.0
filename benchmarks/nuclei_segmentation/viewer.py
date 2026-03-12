@@ -34,6 +34,14 @@ _DEFAULT_DATA_DIR = _SCRIPT_DIR / "data" / "images"
 _DEFAULT_MASKS_DIR = _SCRIPT_DIR / "results" / "masks"
 
 
+def _discover_results_dirs() -> list[Path]:
+    """Find all results* directories that contain a masks/ subfolder."""
+    return sorted(
+        p for p in _SCRIPT_DIR.iterdir()
+        if p.is_dir() and p.name.startswith("results") and (p / "masks").is_dir()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Model and category metadata
 # ---------------------------------------------------------------------------
@@ -302,16 +310,38 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    data_dir, masks_dir = _get_paths()
+    data_dir, masks_dir_cli = _get_paths()
 
     # ---- Sidebar ----
     with st.sidebar:
         st.title("🔬 Nuclei Benchmark")
 
-        # Validate paths
+        # Validate data path
         if not data_dir.exists():
             st.error(f"Data dir not found:\n`{data_dir}`")
             st.stop()
+
+        # Results folder picker — auto-discover results* dirs
+        results_dirs = _discover_results_dirs()
+        if results_dirs:
+            results_labels = [p.name for p in results_dirs]
+            # Default to the CLI-provided dir's parent if it matches, else first
+            default_idx = 0
+            cli_parent = masks_dir_cli.parent
+            for i, rd in enumerate(results_dirs):
+                if rd == cli_parent:
+                    default_idx = i
+                    break
+            sel_results_idx = st.selectbox(
+                "Results folder",
+                range(len(results_dirs)),
+                index=default_idx,
+                format_func=lambda i: results_labels[i],
+            )
+            masks_dir = results_dirs[sel_results_idx] / "masks"
+        else:
+            masks_dir = masks_dir_cli
+
         if not masks_dir.exists():
             st.error(f"Masks dir not found:\n`{masks_dir}`")
             st.stop()
@@ -383,7 +413,7 @@ def main() -> None:
 
         st.markdown("---")
         st.caption(f"Data: `{data_dir.name}`")
-        st.caption(f"Masks: `{masks_dir}`")
+        st.caption(f"Masks: `{masks_dir.parent.name}/masks`")
 
     # ---- Main area ----
     st.header(cat_label)
