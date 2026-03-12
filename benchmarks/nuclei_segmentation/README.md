@@ -67,7 +67,8 @@ pip install -r requirements_viewer.txt
 streamlit run viewer.py
 ```
 
-The viewer expects images at `data/images/` and masks at `results/masks/`. Override with CLI args:
+The viewer expects images at `data/images/` and masks inside any `results*/masks/` folder.
+Override default paths with CLI args:
 
 ```bash
 streamlit run viewer.py -- --data-dir /path/to/images --masks-dir /path/to/masks
@@ -75,12 +76,19 @@ streamlit run viewer.py -- --data-dir /path/to/images --masks-dir /path/to/masks
 
 ### Viewer features
 
+- **Results folder selector** (sidebar): auto-discovers all `results*` directories (e.g.
+  `results`, `results_normalized`) that contain a `masks/` subfolder. Switch between them
+  at any time without restarting.
 - **Filled — single model**: colorized instance labels blended over DAPI with white contour boundaries.
+  - Adjustable fill opacity slider.
   - "Raw image only" checkbox shows just the DAPI with no overlay.
 - **Consensus heatmap**: pixel-wise sum of binary foreground masks from all selected models,
   mapped through the jet colormap. Background (0 votes) shows the unmodified DAPI.
+  - Multi-select to choose which models to include.
   - Single image view uses a Plotly interactive chart — hover over any pixel to see which models
     contribute at that location and the total vote count.
+- **Downsample factor**: reduces image size before display for faster loading (1×–8×).
+- **Single image view**: enlarged view of a selected image with zoom slider.
 
 ---
 
