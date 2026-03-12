@@ -71,16 +71,16 @@ class ASPPPooling(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.pool = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=True),
             nn.ReLU(inplace=True),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         size = x.shape[2:]
         x = self.pool(x)
+        x = self.conv(x)
         return nn.functional.interpolate(
             x, size=size, mode="bilinear", align_corners=False
         )

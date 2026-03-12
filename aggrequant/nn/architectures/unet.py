@@ -5,7 +5,7 @@ testing of different architectural improvements. Start with baseline UNet
 (Ronneberger 2015) and incrementally add modules to test their effect.
 
 Example:
-    >>> from aggrequant.nn.architectures import UNet
+    >>> from aggrequant.nn.architectures.unet import UNet
     >>>
     >>> # Baseline UNet
     >>> model = UNet()
@@ -16,8 +16,8 @@ Example:
     >>> # Add attention gates
     >>> model = UNet(use_attention_gates=True)
     >>>
-    >>> # Combine modules
-    >>> model = UNet(encoder_block="residual", use_attention_gates=True)
+    >>> # ConvNeXt encoder with ECA attention
+    >>> model = UNet(encoder_block="convnext", use_eca=True)
 """
 
 import torch
@@ -25,32 +25,81 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Optional, Union
 
-from aggrequant.nn.architectures.blocks import (
-    DoubleConv,
-    ResidualBlock,
-    AttentionGate,
-    SEBlock,
-    CBAM,
-    ASPPBridge,
-)
+from aggrequant.nn.architectures.blocks.conv import DoubleConv
+from aggrequant.nn.architectures.blocks.residual import ResidualBlock
+from aggrequant.nn.architectures.blocks.attention import AttentionGate
+from aggrequant.nn.architectures.blocks.se import SEBlock
+from aggrequant.nn.architectures.blocks.cbam import CBAM
+from aggrequant.nn.architectures.blocks.eca import ECABlock
+from aggrequant.nn.architectures.blocks.convnext import ConvNeXtBlock
+from aggrequant.nn.architectures.blocks.aspp import ASPPBridge
 
 
-class EncoderBlock(nn.Module):
-    """Encoder block with optional SE/CBAM attention.
-
-    Combines a convolution block (DoubleConv or ResidualBlock) with
-    optional channel attention (SE or CBAM).
+def _make_conv_block(
+    in_channels: int,
+    out_channels: int,
+    block_type: str,
+) -> nn.Module:
+    """Create a convolution block by type name.
 
     Arguments:
         in_channels: Number of input channels
         out_channels: Number of output channels
-        block_type: Type of convolution block ("double_conv" or "residual")
-        use_se: Whether to add SE block after convolution
-        use_cbam: Whether to add CBAM block after convolution
-        se_reduction: Reduction ratio for SE/CBAM (default: 16)
+        block_type: "double_conv", "residual", or "convnext"
 
     Returns:
-        Tensor of shape (B, out_channels, H, W)
+        Convolution block module
+    """
+    if block_type == "residual":
+        return ResidualBlock(in_channels, out_channels)
+    elif block_type == "convnext":
+        return ConvNeXtBlock(in_channels, out_channels)
+    else:
+        return DoubleConv(in_channels, out_channels)
+
+
+def _make_channel_attention(
+    channels: int,
+    use_se: bool = False,
+    use_cbam: bool = False,
+    use_eca: bool = False,
+    se_reduction: int = 16,
+) -> Optional[nn.Module]:
+    """Create a channel attention module.
+
+    Arguments:
+        channels: Number of channels
+        use_se: Use Squeeze-and-Excitation
+        use_cbam: Use CBAM (channel + spatial)
+        use_eca: Use Efficient Channel Attention
+        se_reduction: Reduction ratio for SE/CBAM
+
+    Returns:
+        Attention module or None
+    """
+    if use_cbam:
+        return CBAM(channels, reduction=se_reduction)
+    elif use_se:
+        return SEBlock(channels, reduction=se_reduction)
+    elif use_eca:
+        return ECABlock(channels)
+    return None
+
+
+class EncoderBlock(nn.Module):
+    """Encoder block with optional channel attention.
+
+    Combines a convolution block (DoubleConv, ResidualBlock, or ConvNeXtBlock)
+    with optional channel attention (SE, CBAM, or ECA).
+
+    Arguments:
+        in_channels: Number of input channels
+        out_channels: Number of output channels
+        block_type: "double_conv", "residual", or "convnext"
+        use_se: Whether to add SE block after convolution
+        use_cbam: Whether to add CBAM block after convolution
+        use_eca: Whether to add ECA block after convolution
+        se_reduction: Reduction ratio for SE/CBAM (default: 16)
     """
 
     def __init__(
@@ -60,22 +109,15 @@ class EncoderBlock(nn.Module):
         block_type: str = "double_conv",
         use_se: bool = False,
         use_cbam: bool = False,
+        use_eca: bool = False,
         se_reduction: int = 16,
     ) -> None:
         super().__init__()
-
-        # Select convolution block type
-        if block_type == "residual":
-            self.conv = ResidualBlock(in_channels, out_channels)
-        else:
-            self.conv = DoubleConv(in_channels, out_channels)
-
-        # Optional attention modules (mutually exclusive)
-        self.attention = None
-        if use_cbam:
-            self.attention = CBAM(out_channels, reduction=se_reduction)
-        elif use_se:
-            self.attention = SEBlock(out_channels, reduction=se_reduction)
+        self.conv = _make_conv_block(in_channels, out_channels, block_type)
+        self.attention = _make_channel_attention(
+            out_channels, use_se=use_se, use_cbam=use_cbam,
+            use_eca=use_eca, se_reduction=se_reduction,
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through encoder block."""
@@ -89,21 +131,19 @@ class DecoderBlock(nn.Module):
     """Decoder block with upsampling and skip connection.
 
     Combines upsampling, skip connection concatenation, and convolution
-    with optional attention gate and SE/CBAM.
+    with optional attention gate and channel attention (SE/CBAM/ECA).
 
     Arguments:
         in_channels: Number of input channels from previous decoder level
         skip_channels: Number of channels from skip connection
         out_channels: Number of output channels
-        block_type: Type of convolution block ("double_conv" or "residual")
+        block_type: "double_conv", "residual", or "convnext"
         use_attention_gate: Whether to apply attention gate to skip connection
         use_se: Whether to add SE block after convolution
         use_cbam: Whether to add CBAM block after convolution
+        use_eca: Whether to add ECA block after convolution
         se_reduction: Reduction ratio for SE/CBAM (default: 16)
         upsample_mode: Upsampling mode ("transpose" or "bilinear")
-
-    Returns:
-        Tensor of shape (B, out_channels, H*2, W*2)
     """
 
     def __init__(
@@ -115,6 +155,7 @@ class DecoderBlock(nn.Module):
         use_attention_gate: bool = False,
         use_se: bool = False,
         use_cbam: bool = False,
+        use_eca: bool = False,
         se_reduction: int = 16,
         upsample_mode: str = "transpose",
     ) -> None:
@@ -142,17 +183,15 @@ class DecoderBlock(nn.Module):
             )
 
         # Convolution block after concatenation
-        if block_type == "residual":
-            self.conv = ResidualBlock(up_channels + skip_channels, out_channels)
-        else:
-            self.conv = DoubleConv(up_channels + skip_channels, out_channels)
+        self.conv = _make_conv_block(
+            up_channels + skip_channels, out_channels, block_type,
+        )
 
-        # Optional attention modules
-        self.attention = None
-        if use_cbam:
-            self.attention = CBAM(out_channels, reduction=se_reduction)
-        elif use_se:
-            self.attention = SEBlock(out_channels, reduction=se_reduction)
+        # Optional channel attention
+        self.attention = _make_channel_attention(
+            out_channels, use_se=use_se, use_cbam=use_cbam,
+            use_eca=use_eca, se_reduction=se_reduction,
+        )
 
     def forward(
         self, x: torch.Tensor, skip: torch.Tensor
@@ -194,49 +233,17 @@ class ModularUNet(nn.Module):
     Start with baseline UNet (Ronneberger 2015) and incrementally add modules
     to test their effect on segmentation performance.
 
-    Cookbook - Common Configurations:
-    ---------------------------------
-    >>> from aggrequant.nn.architectures import UNet
-    >>>
-    >>> # 1. Baseline UNet (Ronneberger 2015) - standard double conv blocks
-    >>> model = UNet()
-    >>>
-    >>> # 2. ResUNet - residual connections for better gradient flow
-    >>> model = UNet(encoder_block="residual", decoder_block="residual")
-    >>>
-    >>> # 3. Attention UNet - attention gates on skip connections
-    >>> model = UNet(use_attention_gates=True)
-    >>>
-    >>> # 4. SE-UNet - squeeze-and-excitation channel attention
-    >>> model = UNet(use_se=True)
-    >>>
-    >>> # 5. CBAM-UNet - channel + spatial attention
-    >>> model = UNet(use_cbam=True)
-    >>>
-    >>> # 6. ASPP bridge - dilated convolutions for multi-scale context
-    >>> model = UNet(bridge_type="aspp")
-    >>>
-    >>> # 7. Deep supervision - auxiliary outputs for training
-    >>> model = UNet(use_deep_supervision=True)
-    >>>
-    >>> # Combine any modules for A/B testing:
-    >>> model = UNet(
-    ...     encoder_block="residual",
-    ...     decoder_block="residual",
-    ...     use_attention_gates=True,
-    ...     use_se=True,
-    ... )
-
     Arguments:
         in_channels: Input channels (default: 1 for grayscale microscopy)
         out_channels: Output channels (default: 1 for binary segmentation)
         features: Channel sizes per encoder level (default: [64, 128, 256, 512])
-        encoder_block: "double_conv" (default) or "residual"
-        decoder_block: "double_conv" (default) or "residual"
+        encoder_block: "double_conv" (default), "residual", or "convnext"
+        decoder_block: "double_conv" (default), "residual", or "convnext"
         bridge_type: "double_conv" (default), "residual", or "aspp"
         use_attention_gates: Add attention gates on skip connections
         use_se: Add Squeeze-and-Excitation channel attention
-        use_cbam: Add CBAM attention (mutually exclusive with use_se)
+        use_cbam: Add CBAM attention (mutually exclusive with use_se/use_eca)
+        use_eca: Add Efficient Channel Attention (mutually exclusive with use_se/use_cbam)
         use_deep_supervision: Return multi-scale outputs for training
         se_reduction: Reduction ratio for SE/CBAM (default: 16)
         upsample_mode: "transpose" (default) or "bilinear"
@@ -251,7 +258,9 @@ class ModularUNet(nn.Module):
         - Oktay et al., "Attention U-Net" (2018) - attention gates
         - Hu et al., "Squeeze-and-Excitation Networks" (2018) - SE blocks
         - Woo et al., "CBAM" (2018) - channel + spatial attention
+        - Wang et al., "ECA-Net" (2020) - efficient channel attention
         - Chen et al., "DeepLab" (2017) - ASPP dilated convolutions
+        - Liu et al., "A ConvNet for the 2020s" (2022) - ConvNeXt blocks
     """
 
     def __init__(
@@ -265,10 +274,11 @@ class ModularUNet(nn.Module):
         use_attention_gates: bool = False,
         use_se: bool = False,
         use_cbam: bool = False,
+        use_eca: bool = False,
         use_deep_supervision: bool = False,
         se_reduction: int = 16,
         upsample_mode: str = "transpose",
-        **kwargs,  # Accept additional kwargs for compatibility
+        **kwargs,
     ) -> None:
         super().__init__()
 
@@ -280,9 +290,12 @@ class ModularUNet(nn.Module):
         self.use_deep_supervision = use_deep_supervision
         self.use_attention_gates = use_attention_gates
 
-        # Validate configuration
-        if use_se and use_cbam:
-            raise ValueError("use_se and use_cbam are mutually exclusive")
+        # Validate configuration: at most one channel attention type
+        attn_count = sum([use_se, use_cbam, use_eca])
+        if attn_count > 1:
+            raise ValueError(
+                "use_se, use_cbam, and use_eca are mutually exclusive"
+            )
 
         # Build encoder path
         self.encoders = nn.ModuleList()
@@ -297,6 +310,7 @@ class ModularUNet(nn.Module):
                     block_type=encoder_block,
                     use_se=use_se,
                     use_cbam=use_cbam,
+                    use_eca=use_eca,
                     se_reduction=se_reduction,
                 )
             )
@@ -330,6 +344,7 @@ class ModularUNet(nn.Module):
                     use_attention_gate=use_attention_gates,
                     use_se=use_se,
                     use_cbam=use_cbam,
+                    use_eca=use_eca,
                     se_reduction=se_reduction,
                     upsample_mode=upsample_mode,
                 )
