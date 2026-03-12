@@ -1,0 +1,17 @@
+name: mini_cellpose_AE
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch
+  - torchvision
+  - pytorch-cuda=12.4
+  - numpy
+  - scipy
+  - tifffile
+  - tqdm
+  - matplotlib
+  - pip
