@@ -286,6 +286,8 @@ class ModularUNet(nn.Module):
         if features is None:
             features = [64, 128, 256, 512]
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.features = features
         self.use_deep_supervision = use_deep_supervision
         self.use_attention_gates = use_attention_gates
@@ -424,9 +426,8 @@ class ModularUNet(nn.Module):
     def get_config(self) -> dict:
         """Return model configuration as dictionary."""
         return {
-            "in_channels": self.encoders[0].conv.double_conv[0].conv.in_channels
-            if hasattr(self.encoders[0].conv, "double_conv")
-            else self.encoders[0].conv.conv1[0].in_channels,
+            "in_channels": self.in_channels,
+            "out_channels": self.out_channels,
             "features": self.features,
             "use_deep_supervision": self.use_deep_supervision,
             "use_attention_gates": self.use_attention_gates,
