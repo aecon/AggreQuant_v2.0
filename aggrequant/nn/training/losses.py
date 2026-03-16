@@ -388,17 +388,23 @@ class DeepSupervisionLoss(nn.Module):
         return total_loss
 
 
-class BoundaryLoss(nn.Module):
-    """Boundary-aware loss for better edge segmentation.
+class EdgeWeightedLoss(nn.Module):
+    """Edge-weighted loss for better boundary segmentation.
 
-    Adds extra weight to boundary pixels using distance transform.
+    Detects boundary pixels via Laplacian edge detection on the target mask
+    and applies extra weight to those pixels in a BCE term, combined with
+    a base loss (e.g. DiceLoss).
+
+    Note: This is NOT Kervadec et al.'s (2019) BoundaryLoss, which uses
+    signed Euclidean distance maps. This is a simpler heuristic that
+    upweights boundary pixels via binary edge detection.
 
     Arguments:
         base_loss: Base loss function
         boundary_weight: Weight for boundary pixels (default: 5.0)
 
     Example:
-        >>> criterion = BoundaryLoss(DiceLoss(), boundary_weight=5.0)
+        >>> criterion = EdgeWeightedLoss(DiceLoss(), boundary_weight=5.0)
     """
 
     def __init__(

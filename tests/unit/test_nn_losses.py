@@ -10,7 +10,7 @@ from aggrequant.nn.training.losses import (
     TverskyLoss,
     FocalTverskyLoss,
     DeepSupervisionLoss,
-    BoundaryLoss,
+    EdgeWeightedLoss,
     get_loss_function,
 )
 
@@ -100,10 +100,10 @@ def test_focal_tversky_loss_returns_scalar(pred, target):
     assert loss.shape == ()
 
 
-# --- BoundaryLoss ---
+# --- EdgeWeightedLoss ---
 
 def test_boundary_loss_returns_scalar(pred, target):
-    loss = BoundaryLoss(DiceLoss())(pred, target)
+    loss = EdgeWeightedLoss(DiceLoss())(pred, target)
     assert loss.shape == ()
 
 

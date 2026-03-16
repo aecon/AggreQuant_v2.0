@@ -10,6 +10,7 @@ avoiding the dimensionality reduction that loses information.
 """
 
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -49,7 +50,7 @@ class ECABlock(nn.Module):
         channels: int,
         gamma: int = 2,
         b: int = 1,
-        kernel_size: int = None,
+        kernel_size: Optional[int] = None,
     ) -> None:
         super().__init__()
 
