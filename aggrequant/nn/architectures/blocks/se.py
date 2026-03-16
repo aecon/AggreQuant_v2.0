@@ -104,13 +104,13 @@ class SEConvBlock(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
@@ -155,13 +155,13 @@ class SEResidualBlock(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
         )
 
         self.se = SEBlock(out_channels, reduction)
@@ -170,7 +170,7 @@ class SEResidualBlock(nn.Module):
         if in_channels != out_channels:
             self.skip = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(out_channels),
+                nn.BatchNorm2d(out_channels, affine=True),
             )
         else:
             self.skip = nn.Identity()

@@ -43,7 +43,7 @@ class ASPPConv(nn.Module):
                 dilation=dilation,
                 bias=False,
             ),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
@@ -139,7 +139,7 @@ class ASPP(nn.Module):
         modules.append(
             nn.Sequential(
                 nn.Conv2d(in_channels, branch_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(branch_channels),
+                nn.BatchNorm2d(branch_channels, affine=True),
                 nn.ReLU(inplace=True),
             )
         )
@@ -159,7 +159,7 @@ class ASPP(nn.Module):
         # Project concatenated features to output channels
         self.project = nn.Sequential(
             nn.Conv2d(total_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
         )
@@ -211,7 +211,7 @@ class ASPPBridge(nn.Module):
         # Additional refinement convolution
         self.refine = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
@@ -271,7 +271,7 @@ class LightASPP(nn.Module):
         modules.append(
             nn.Sequential(
                 nn.Conv2d(in_channels, branch_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(branch_channels),
+                nn.BatchNorm2d(branch_channels, affine=True),
                 nn.ReLU(inplace=True),
             )
         )
@@ -290,11 +290,11 @@ class LightASPP(nn.Module):
                         groups=in_channels,
                         bias=False,
                     ),
-                    nn.BatchNorm2d(in_channels),
+                    nn.BatchNorm2d(in_channels, affine=True),
                     nn.ReLU(inplace=True),
                     # Pointwise
                     nn.Conv2d(in_channels, branch_channels, kernel_size=1, bias=False),
-                    nn.BatchNorm2d(branch_channels),
+                    nn.BatchNorm2d(branch_channels, affine=True),
                     nn.ReLU(inplace=True),
                 )
             )
@@ -305,7 +305,7 @@ class LightASPP(nn.Module):
 
         self.project = nn.Sequential(
             nn.Conv2d(total_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 

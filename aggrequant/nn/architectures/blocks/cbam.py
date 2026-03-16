@@ -110,6 +110,7 @@ class SpatialAttention(nn.Module):
         assert kernel_size in (3, 7), "kernel_size must be 3 or 7"
         padding = (kernel_size - 1) // 2
 
+        # bias=False per official CBAM impl — output goes directly to sigmoid for a multiplicative mask
         self.conv = nn.Conv2d(
             2,  # avg + max channels
             1,
@@ -220,13 +221,13 @@ class CBAMConvBlock(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
@@ -271,13 +272,13 @@ class CBAMResidualBlock(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
         )
 
         self.cbam = CBAM(out_channels, reduction)
@@ -286,7 +287,7 @@ class CBAMResidualBlock(nn.Module):
         if in_channels != out_channels:
             self.skip = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(out_channels),
+                nn.BatchNorm2d(out_channels, affine=True),
             )
         else:
             self.skip = nn.Identity()

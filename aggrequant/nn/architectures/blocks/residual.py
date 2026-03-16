@@ -50,20 +50,20 @@ class ResidualBlock(nn.Module):
         # Main convolution path
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(mid_channels),
+            nn.BatchNorm2d(mid_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
         )
 
         # Skip connection: 1x1 conv if channels change, otherwise identity
         if in_channels != out_channels:
             self.skip = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(out_channels),
+                nn.BatchNorm2d(out_channels, affine=True),
             )
         else:
             self.skip = nn.Identity()
@@ -113,7 +113,7 @@ class BottleneckResidualBlock(nn.Module):
         # 1x1 reduce
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, bottleneck_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(bottleneck_channels),
+            nn.BatchNorm2d(bottleneck_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
@@ -126,21 +126,21 @@ class BottleneckResidualBlock(nn.Module):
                 padding=1,
                 bias=False,
             ),
-            nn.BatchNorm2d(bottleneck_channels),
+            nn.BatchNorm2d(bottleneck_channels, affine=True),
             nn.ReLU(inplace=True),
         )
 
         # 1x1 expand
         self.conv3 = nn.Sequential(
             nn.Conv2d(bottleneck_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, affine=True),
         )
 
         # Skip connection
         if in_channels != out_channels:
             self.skip = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-                nn.BatchNorm2d(out_channels),
+                nn.BatchNorm2d(out_channels, affine=True),
             )
         else:
             self.skip = nn.Identity()

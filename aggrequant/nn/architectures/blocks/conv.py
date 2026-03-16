@@ -20,7 +20,6 @@ class SingleConv(nn.Module):
         out_channels: Number of output channels
         kernel_size: Convolution kernel size (default: 3)
         padding: Padding for convolution (default: 1 for same padding)
-        bias: Whether to include bias in convolution (default: False when using BatchNorm)
 
     Returns:
         Tensor of shape (B, out_channels, H, W)
@@ -41,7 +40,6 @@ class SingleConv(nn.Module):
         out_channels: int,
         kernel_size: int = 3,
         padding: int = 1, # adds a 1-pixel border of zeros so output H×W stays same as input
-        bias: bool = False,
     ) -> None:
         super().__init__()
 
@@ -51,9 +49,9 @@ class SingleConv(nn.Module):
                 out_channels,
                 kernel_size=kernel_size,
                 padding=padding,
-                bias=bias,
+                bias=False, # redundant before BatchNorm (which has its own learnable bias via affine=True)
             ),
-            nn.BatchNorm2d(out_channels), # for each channel, shifts values to have mean≈0 and std≈1 across batch
+            nn.BatchNorm2d(out_channels, affine=True), # mean≈0, std≈1 across batch; affine adds learnable scale+bias
             nn.ReLU(inplace=True), # modifies the tensor in-place to save memory
         )
 
