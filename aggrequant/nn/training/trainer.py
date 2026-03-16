@@ -97,7 +97,7 @@ class Trainer:
         debug: Print detailed debug information
 
     Example:
-        >>> model = ModularUNet(in_channels=1, out_channels=1)
+        >>> model = UNet(in_channels=1, out_channels=1)
         >>> criterion = DiceBCELoss()
         >>> optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
         >>> trainer = Trainer(
@@ -432,7 +432,7 @@ def train_model(
         Tuple of (trained_model, history)
 
     Example:
-        >>> model = ModularUNet()
+        >>> model = UNet()
         >>> model, history = train_model(model, train_loader, val_loader)
     """
     from aggrequant.nn.training.losses import DiceBCELoss
