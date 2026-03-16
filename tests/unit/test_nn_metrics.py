@@ -5,12 +5,12 @@ import pytest
 
 from aggrequant.nn.evaluation.metrics import (
     dice_score,
+    soft_dice_score,
     iou_score,
-    precision,
-    recall,
-    f1_score,
-    specificity,
-    accuracy,
+    precision_score,
+    recall_score,
+    specificity_score,
+    accuracy_score,
     confusion_matrix,
     SegmentationMetrics,
     find_optimal_threshold,
@@ -49,8 +49,30 @@ def test_dice_no_overlap():
 
 def test_dice_known_value(known_pair):
     p, t = known_pair
-    # TP=2, FP=1, FN=1 → Dice = 2*2 / (3+3) = 4/6 ≈ 0.6667
+    # TP=2, FP=1, FN=1 → Dice = 2*2 / (2*2+1+1) = 4/6 ≈ 0.6667
     assert dice_score(p, t, smooth=0).item() == pytest.approx(4.0 / 6.0, abs=1e-5)
+
+
+# --- soft_dice_score ---
+
+def test_soft_dice_perfect(perfect_pair):
+    p, t = perfect_pair
+    assert soft_dice_score(p, t).item() == pytest.approx(1.0, abs=1e-5)
+
+def test_soft_dice_no_overlap():
+    t = torch.ones(1, 1, 4, 4)
+    p = torch.zeros(1, 1, 4, 4)
+    assert soft_dice_score(p, t).item() < 0.01
+
+def test_soft_dice_uses_probabilities():
+    """Soft dice should differ from hard dice when predictions are not binary."""
+    t = torch.tensor([[[[1, 1, 0], [0, 0, 0], [0, 0, 0]]]]).float()
+    p = torch.tensor([[[[0.8, 0.6, 0.3], [0.2, 0.1, 0.0], [0.0, 0.0, 0.0]]]]).float()
+    hard = dice_score(p, t, smooth=0).item()
+    soft = soft_dice_score(p, t, smooth=0).item()
+    # Hard dice thresholds at 0.5, so p becomes [1,1,0,...] → same as target → dice=1
+    # Soft dice uses continuous values → different result
+    assert hard != pytest.approx(soft, abs=0.01)
 
 
 # --- iou_score ---
@@ -70,28 +92,20 @@ def test_iou_known_value(known_pair):
 def test_precision_known_value(known_pair):
     p, t = known_pair
     # TP=2, FP=1 → precision = 2/3
-    assert precision(p, t, smooth=0).item() == pytest.approx(2.0 / 3.0, abs=1e-5)
+    assert precision_score(p, t, smooth=0).item() == pytest.approx(2.0 / 3.0, abs=1e-5)
 
 def test_recall_known_value(known_pair):
     p, t = known_pair
     # TP=2, FN=1 → recall = 2/3
-    assert recall(p, t, smooth=0).item() == pytest.approx(2.0 / 3.0, abs=1e-5)
+    assert recall_score(p, t, smooth=0).item() == pytest.approx(2.0 / 3.0, abs=1e-5)
 
 def test_precision_perfect(perfect_pair):
     p, t = perfect_pair
-    assert precision(p, t).item() == pytest.approx(1.0, abs=1e-5)
+    assert precision_score(p, t).item() == pytest.approx(1.0, abs=1e-5)
 
 def test_recall_perfect(perfect_pair):
     p, t = perfect_pair
-    assert recall(p, t).item() == pytest.approx(1.0, abs=1e-5)
-
-
-# --- f1_score ---
-
-def test_f1_known_value(known_pair):
-    p, t = known_pair
-    # precision=2/3, recall=2/3 → F1 = 2*(2/3)*(2/3) / (2/3+2/3) = 2/3
-    assert f1_score(p, t, smooth=0).item() == pytest.approx(2.0 / 3.0, abs=1e-4)
+    assert recall_score(p, t).item() == pytest.approx(1.0, abs=1e-5)
 
 
 # --- specificity ---
@@ -99,19 +113,19 @@ def test_f1_known_value(known_pair):
 def test_specificity_known_value(known_pair):
     p, t = known_pair
     # TN=5, FP=1 → specificity = 5/6
-    assert specificity(p, t, smooth=0).item() == pytest.approx(5.0 / 6.0, abs=1e-5)
+    assert specificity_score(p, t, smooth=0).item() == pytest.approx(5.0 / 6.0, abs=1e-5)
 
 
 # --- accuracy ---
 
 def test_accuracy_perfect(perfect_pair):
     p, t = perfect_pair
-    assert accuracy(p, t).item() == pytest.approx(1.0, abs=1e-5)
+    assert accuracy_score(p, t).item() == pytest.approx(1.0, abs=1e-5)
 
 def test_accuracy_known_value(known_pair):
     p, t = known_pair
     # 7 correct out of 9
-    assert accuracy(p, t).item() == pytest.approx(7.0 / 9.0, abs=1e-5)
+    assert accuracy_score(p, t).item() == pytest.approx(7.0 / 9.0, abs=1e-5)
 
 
 # --- confusion_matrix ---
@@ -132,12 +146,22 @@ def test_confusion_matrix_sums_to_total(known_pair):
 
 # --- SegmentationMetrics ---
 
-def test_segmentation_metrics_keys(known_pair):
+def test_segmentation_metrics_default_keys(known_pair):
     p, t = known_pair
     m = SegmentationMetrics()
     result = m(p, t)
-    expected_keys = {"dice", "iou", "precision", "recall", "f1", "specificity", "accuracy"}
+    expected_keys = {"dice", "iou", "precision", "recall", "specificity", "accuracy"}
     assert set(result.keys()) == expected_keys
+
+def test_segmentation_metrics_custom_keys(known_pair):
+    p, t = known_pair
+    m = SegmentationMetrics(metrics=["dice", "iou"])
+    result = m(p, t)
+    assert set(result.keys()) == {"dice", "iou"}
+
+def test_segmentation_metrics_unknown_metric():
+    with pytest.raises(ValueError, match="Unknown metric"):
+        SegmentationMetrics(metrics=["nonexistent"])
 
 def test_segmentation_metrics_values_are_floats(known_pair):
     p, t = known_pair
