@@ -11,8 +11,8 @@ This approach ensures every image contributes patches to both train and val,
 while no single patch appears in both — preventing data leakage.
 
 Example:
-    >>> from aggrequant.nn.data.dataset import extract_patches, create_dataloaders
-    >>> from aggrequant.nn.data.augmentation import get_training_augmentation
+    >>> from aggrequant.nn.datatools.dataset import extract_patches, create_dataloaders
+    >>> from aggrequant.nn.datatools.augmentation import get_training_augmentation
     >>>
     >>> extract_patches("raw/images", "raw/masks", "patches", patch_size=128)
     >>> train_loader, val_loader = create_dataloaders(
@@ -33,7 +33,7 @@ from aggrequant.common.image_utils import (
     normalize_image as _normalize_image_common,
 )
 from aggrequant.common.logging import get_logger
-from aggrequant.nn.data.augmentation import apply_transform
+from aggrequant.nn.datatools.augmentation import apply_transform
 
 logger = get_logger(__name__)
 

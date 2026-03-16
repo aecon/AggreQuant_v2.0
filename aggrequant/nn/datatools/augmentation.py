@@ -13,7 +13,7 @@ Note: Elastic deformation, shear, and random erasing are intentionally excluded
 because they distort small aggregate structures unnaturally.
 
 Example:
-    >>> from aggrequant.nn.data.augmentation import get_training_augmentation
+    >>> from aggrequant.nn.datatools.augmentation import get_training_augmentation
     >>> transform = get_training_augmentation()
     >>> image, mask = apply_transform(transform, image, mask)
 """
