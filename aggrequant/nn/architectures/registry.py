@@ -1,6 +1,6 @@
 """Named model presets for the architecture benchmark.
 
-Each entry maps a variant name to its constructor class and kwargs,
+Each entry maps a variant name to its UNet constructor kwargs,
 enabling instantiation by name for benchmarking scripts and configs.
 
 Example:
@@ -13,19 +13,20 @@ Example:
     ...     print(name)
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 import torch.nn as nn
 
+from aggrequant.nn.architectures.unet import UNet
+
 
 # ---------------------------------------------------------------------------
-# Registry: ablation variants 1-5 (incremental) + 6-7 (structural alternatives)
+# Registry: ablation variants 1-5 (incremental) + 6-7 (alternatives)
 # ---------------------------------------------------------------------------
 
 MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
     # --- Incremental ablation (each adds one module) ---
     "baseline": {
-        "class": "UNet",
         "description": "Baseline UNet (Ronneberger 2015)",
         "kwargs": {
             "encoder_block": "double_conv",
@@ -33,7 +34,6 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         },
     },
     "resunet": {
-        "class": "UNet",
         "description": "ResUNet — +residual blocks (He 2016)",
         "kwargs": {
             "encoder_block": "residual",
@@ -41,7 +41,6 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         },
     },
     "attention_resunet": {
-        "class": "UNet",
         "description": "Attention ResUNet — +attention gates (Oktay 2018)",
         "kwargs": {
             "encoder_block": "residual",
@@ -50,7 +49,6 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         },
     },
     "se_attention_resunet": {
-        "class": "UNet",
         "description": "SE Attention ResUNet — +SE channel attention (Hu 2018)",
         "kwargs": {
             "encoder_block": "residual",
@@ -60,7 +58,6 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         },
     },
     "aspp_se_attention_resunet": {
-        "class": "UNet",
         "description": "ASPP SE Attention ResUNet — +multi-scale bridge (Chen 2017)",
         "kwargs": {
             "encoder_block": "residual",
@@ -71,18 +68,15 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         },
     },
     # --- Structural alternatives ---
-    # UNet++ is deferred (not yet implemented)
     "convnext_unet": {
-        "class": "UNet",
         "description": "ConvNeXt UNet — modern encoder blocks (Liu 2022)",
         "kwargs": {
             "encoder_block": "convnext",
             "use_attention_gates": True,
         },
     },
-    # --- Side comparisons (not main ablation, but available) ---
+    # --- Side comparisons ---
     "eca_attention_resunet": {
-        "class": "UNet",
         "description": "ECA Attention ResUNet — ECA replaces SE (Wang 2020)",
         "kwargs": {
             "encoder_block": "residual",
@@ -109,7 +103,7 @@ def create_model(
         **override_kwargs: Override any default kwargs from the registry
 
     Returns:
-        Instantiated model
+        Instantiated UNet model
 
     Raises:
         ValueError: If name is not in the registry
@@ -125,39 +119,20 @@ def create_model(
         )
 
     entry = MODEL_REGISTRY[name]
-    class_name = entry["class"]
-
-    # Merge registry defaults with overrides
     kwargs = {
         "in_channels": in_channels,
         "out_channels": out_channels,
         **entry["kwargs"],
         **override_kwargs,
     }
-
-    # Import the appropriate class
-    if class_name == "UNet":
-        from aggrequant.nn.architectures.unet import UNet
-        return UNet(**kwargs)
-    else:
-        raise ValueError(f"Unknown model class: '{class_name}'")
+    return UNet(**kwargs)
 
 
 def list_models() -> List[str]:
-    """Return list of available model names.
-
-    Example:
-        >>> for name in list_models():
-        ...     print(name)
-    """
+    """Return list of available model names."""
     return list(MODEL_REGISTRY.keys())
 
 
 def describe_models() -> Dict[str, str]:
-    """Return dict mapping model names to descriptions.
-
-    Example:
-        >>> for name, desc in describe_models().items():
-        ...     print(f"{name}: {desc}")
-    """
+    """Return dict mapping model names to descriptions."""
     return {name: entry["description"] for name, entry in MODEL_REGISTRY.items()}

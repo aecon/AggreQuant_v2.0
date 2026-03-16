@@ -128,7 +128,7 @@ def test_unet_get_config():
 def test_unet_repr():
     model = UNet(features=SMALL_FEATURES)
     r = repr(model)
-    assert "ModularUNet" in r
+    assert "UNet" in r
     assert "params=" in r
 
 

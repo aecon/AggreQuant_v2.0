@@ -227,7 +227,7 @@ class DecoderBlock(nn.Module):
         return x
 
 
-class ModularUNet(nn.Module):
+class UNet(nn.Module):
     """UNet with optional architectural improvements for benchmarking.
 
     Start with baseline UNet (Ronneberger 2015) and incrementally add modules
@@ -278,7 +278,6 @@ class ModularUNet(nn.Module):
         use_deep_supervision: bool = False,
         se_reduction: int = 16,
         upsample_mode: str = "transpose",
-        **kwargs,
     ) -> None:
         super().__init__()
 
@@ -447,7 +446,3 @@ class ModularUNet(nn.Module):
             f"deep_supervision={self.use_deep_supervision}, "
             f"attention_gates={self.use_attention_gates})"
         )
-
-
-# Alias for backward compatibility
-UNet = ModularUNet
