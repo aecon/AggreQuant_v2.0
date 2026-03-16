@@ -288,8 +288,16 @@ class UNet(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.features = features
-        self.use_deep_supervision = use_deep_supervision
+        self.encoder_block = encoder_block
+        self.decoder_block = decoder_block
+        self.bridge_type = bridge_type
         self.use_attention_gates = use_attention_gates
+        self.use_se = use_se
+        self.use_cbam = use_cbam
+        self.use_eca = use_eca
+        self.use_deep_supervision = use_deep_supervision
+        self.se_reduction = se_reduction
+        self.upsample_mode = upsample_mode
 
         # Validate configuration: at most one channel attention type
         attn_count = sum([use_se, use_cbam, use_eca])
@@ -423,13 +431,25 @@ class UNet(nn.Module):
         return output
 
     def get_config(self) -> dict:
-        """Return model configuration as dictionary."""
+        """Return model configuration as dictionary.
+
+        The returned dict can be passed directly to UNet(**config) to
+        reconstruct the same architecture (before loading weights).
+        """
         return {
             "in_channels": self.in_channels,
             "out_channels": self.out_channels,
             "features": self.features,
-            "use_deep_supervision": self.use_deep_supervision,
+            "encoder_block": self.encoder_block,
+            "decoder_block": self.decoder_block,
+            "bridge_type": self.bridge_type,
             "use_attention_gates": self.use_attention_gates,
+            "use_se": self.use_se,
+            "use_cbam": self.use_cbam,
+            "use_eca": self.use_eca,
+            "use_deep_supervision": self.use_deep_supervision,
+            "se_reduction": self.se_reduction,
+            "upsample_mode": self.upsample_mode,
         }
 
     def count_parameters(self) -> int:

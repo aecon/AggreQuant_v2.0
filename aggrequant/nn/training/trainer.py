@@ -375,6 +375,10 @@ class Trainer:
             'best_val_loss': self.history.best_val_loss,
         }
 
+        # Save model architecture config so checkpoints are self-contained
+        if hasattr(self.model, 'get_config'):
+            checkpoint['model_config'] = self.model.get_config()
+
         if self.scheduler is not None:
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
 

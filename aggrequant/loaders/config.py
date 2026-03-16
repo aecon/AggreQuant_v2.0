@@ -34,7 +34,7 @@ class SegmentationConfig:
     cell_model: str = "cyto3"
 
     # Aggregate segmentation
-    aggregate_method: str = "unet"  # "unet", "filter", "hybrid"
+    aggregate_method: str = "filter"  # "filter" or "unet"
     aggregate_model_path: Optional[Path] = None
     aggregate_min_size: int = 10  # pixels
     aggregate_intensity_threshold: float = 0.5

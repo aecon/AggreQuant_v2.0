@@ -17,6 +17,7 @@ from aggrequant.colocalization import quantify_field
 from aggrequant.segmentation.stardist import StarDistSegmenter
 from aggrequant.segmentation.cellpose import CellposeSegmenter
 from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
+from aggrequant.segmentation.aggregates.neural_network import NeuralNetworkSegmenter
 from aggrequant.segmentation.postprocessing import (
     remove_border_objects,
     filter_aggregates_by_cells,
@@ -70,11 +71,24 @@ class SegmentationPipeline:
             gpu=self.config.use_gpu,
             verbose=verbose,
         )
-        self._aggregate_segmenter = FilterBasedSegmenter(
-            normalized_threshold=seg.aggregate_intensity_threshold,
-            min_aggregate_area=seg.aggregate_min_size,
-            verbose=verbose,
-        )
+        if seg.aggregate_method == "filter":
+            self._aggregate_segmenter = FilterBasedSegmenter(
+                normalized_threshold=seg.aggregate_intensity_threshold,
+                min_aggregate_area=seg.aggregate_min_size,
+                verbose=verbose,
+            )
+        elif seg.aggregate_method == "unet":
+            self._aggregate_segmenter = NeuralNetworkSegmenter(
+                weights_path=seg.aggregate_model_path,
+                remove_objects_below=seg.aggregate_min_size,
+                device="cuda" if self.config.use_gpu else "cpu",
+                verbose=verbose,
+            )
+        else:
+            raise ValueError(
+                f"Unknown aggregate_method '{seg.aggregate_method}'. "
+                f"Must be 'filter' or 'unet'."
+            )
 
         # Configure GPU before any model loading
         if self.config.use_gpu:
