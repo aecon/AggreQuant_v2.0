@@ -68,14 +68,6 @@ class ECABlock(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply efficient channel attention.
-
-        Arguments:
-            x: Input tensor of shape (B, C, H, W)
-
-        Returns:
-            Recalibrated tensor of shape (B, C, H, W)
-        """
         # Squeeze: (B, C, H, W) -> (B, C, 1, 1) -> (B, 1, C)
         weights = self.avg_pool(x).squeeze(-1).transpose(-1, -2)
 

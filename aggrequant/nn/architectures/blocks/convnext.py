@@ -111,14 +111,6 @@ class ConvNeXtBlock(nn.Module):
             self.skip = nn.Identity()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through ConvNeXt block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         identity = self.skip(x)
 
         out = self.dwconv(identity)

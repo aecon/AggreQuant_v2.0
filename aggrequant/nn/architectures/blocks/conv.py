@@ -24,7 +24,9 @@ class SingleConv(nn.Module):
 
     Returns:
         Tensor of shape (B, out_channels, H, W)
-
+            where B: batch size
+            H, W: height and width of image
+        
     Example:
         >>> conv = SingleConv(64, 128)
         >>> x = torch.randn(1, 64, 128, 128)
@@ -38,7 +40,7 @@ class SingleConv(nn.Module):
         in_channels: int,
         out_channels: int,
         kernel_size: int = 3,
-        padding: int = 1,
+        padding: int = 1, # adds a 1-pixel border of zeros so output H×W stays same as input
         bias: bool = False,
     ) -> None:
         super().__init__()
@@ -51,8 +53,8 @@ class SingleConv(nn.Module):
                 padding=padding,
                 bias=bias,
             ),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(out_channels), # for each channel, shifts values to have mean≈0 and std≈1 across batch
+            nn.ReLU(inplace=True), # modifies the tensor in-place to save memory
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -107,12 +109,4 @@ class DoubleConv(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through double convolution block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         return self.double_conv(x)

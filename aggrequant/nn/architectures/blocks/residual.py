@@ -71,23 +71,11 @@ class ResidualBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through residual block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         identity = self.skip(x)
-
         out = self.conv1(x)
         out = self.conv2(out)
-
         out = out + identity
-        out = self.relu(out)
-
-        return out
+        return self.relu(out)
 
 
 class BottleneckResidualBlock(nn.Module):
@@ -160,21 +148,9 @@ class BottleneckResidualBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through bottleneck residual block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         identity = self.skip(x)
-
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
-
         out = out + identity
-        out = self.relu(out)
-
-        return out
+        return self.relu(out)

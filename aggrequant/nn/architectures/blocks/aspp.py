@@ -165,14 +165,6 @@ class ASPP(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply ASPP to input features.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Multi-scale features of shape (B, out_channels, H, W)
-        """
         # Apply all branches
         branch_outputs = [conv(x) for conv in self.convs]
 
@@ -318,14 +310,6 @@ class LightASPP(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply lightweight ASPP.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Multi-scale features of shape (B, out_channels, H, W)
-        """
         branch_outputs = [conv(x) for conv in self.convs]
         concatenated = torch.cat(branch_outputs, dim=1)
         return self.project(concatenated)

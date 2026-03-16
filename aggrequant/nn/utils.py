@@ -28,6 +28,3 @@ def get_device(device: Optional[Union[str, torch.device]] = None) -> torch.devic
         return device
     else:
         return torch.device(device)
-
-
-__all__ = ["get_device"]

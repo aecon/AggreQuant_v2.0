@@ -177,14 +177,6 @@ class CBAM(nn.Module):
         self.spatial_attention = SpatialAttention(spatial_kernel_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply CBAM attention to input features.
-
-        Arguments:
-            x: Input tensor of shape (B, C, H, W)
-
-        Returns:
-            Attention-refined tensor of shape (B, C, H, W)
-        """
         # Apply channel attention
         ca_weights = self.channel_attention(x)
         x = x * ca_weights
@@ -241,14 +233,6 @@ class CBAMConvBlock(nn.Module):
         self.cbam = CBAM(out_channels, reduction)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through CBAM convolution block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.cbam(out)
@@ -310,14 +294,6 @@ class CBAMResidualBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through CBAM residual block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         identity = self.skip(x)
 
         out = self.conv1(x)

@@ -55,7 +55,7 @@ class AttentionGate(nn.Module):
 
         if inter_channels is None:
             inter_channels = skip_channels // 2
-            if inter_channels == 0:
+            if inter_channels == 0:  # handles the edge case where skip_channels = 1
                 inter_channels = 1
 
         # Transform gating signal to intermediate space

@@ -59,14 +59,6 @@ class SEBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply squeeze-and-excitation to input features.
-
-        Arguments:
-            x: Input tensor of shape (B, channels, H, W)
-
-        Returns:
-            Recalibrated tensor of shape (B, channels, H, W)
-        """
         batch_size, channels, _, _ = x.shape
 
         # Squeeze: (B, C, H, W) -> (B, C, 1, 1) -> (B, C)
@@ -125,14 +117,6 @@ class SEConvBlock(nn.Module):
         self.se = SEBlock(out_channels, reduction)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through SE convolution block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.se(out)
@@ -194,14 +178,6 @@ class SEResidualBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through SE residual block.
-
-        Arguments:
-            x: Input tensor of shape (B, in_channels, H, W)
-
-        Returns:
-            Output tensor of shape (B, out_channels, H, W)
-        """
         identity = self.skip(x)
 
         out = self.conv1(x)
