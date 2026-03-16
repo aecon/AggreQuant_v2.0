@@ -1,33 +1,9 @@
-# AggreQuant
+# AggreQuant v.2.0
 
-Automated aggregate quantification for High Content Screening (HCS) image analysis.
+A refactoring of the [AggreQuant](https://github.com/aecon/AggreQuant) codebase.
+**WORK IN PROGRESS - non functioning code.**
 
-## Overview
 
-AggreQuant is a Python package for automated analysis of High Content Screens, specifically designed for quantifying α-synuclein protein aggregates in live-cell fluorescence microscopy data.
-
-The input image data are assumed to be generated from HCS plates (96 or 384 wells), with multiple fields of view per well and 3 channels per field:
-- **Nuclei** (Blue, 390nm)
-- **Cells** (FarRed, 640nm)
-- **Aggregates** (Green, 473nm)
-
-For a 384-well plate with 9 fields per well, 10,368 images are processed to quantify aggregate-positive cells.
-
-<IMG SRC="graphics/pipeline.jpg" style="float: left; margin-right: 10px;" />
-
-## Features
-
-- **Nuclei Segmentation**: StarDist pre-trained deep neural network
-- **Cell Segmentation**: Cellpose or distance-intensity algorithm
-- **Aggregate Segmentation**:
-  - Filter-based method (calibrated image processing filters)
-  - Neural network method (PyTorch UNet with modular architecture)
-- **Focus Quality Assessment**: Blur detection to exclude out-of-focus regions
-- **Colocalization Analysis**: Characterize aggregate inclusions in cells
-- **Export**: Statistics in Parquet, CSV, or Excel format
-- **GUI**: User-friendly interface for biologists to configure and run analyses
-
-<IMG SRC="graphics/segmentation.jpg" style="float: left; margin-right: 10px;" />
 
 ## Installation
 
@@ -86,21 +62,11 @@ pip install customtkinter
 
 ## Usage
 
-### GUI (Recommended for Biologists)
-
-Launch the graphical interface:
+### GUI
 
 ```bash
 python scripts/run_gui.py
 ```
-
-The GUI allows you to:
-- Select input/output directories
-- Choose plate format (96 or 384-well)
-- Assign control wells (NT, negative) by clicking on the plate grid
-- Configure analysis parameters (blur threshold, segmentation method)
-- Monitor analysis progress in real-time
-- Save/load configuration files for reproducibility
 
 ### Command Line
 
@@ -142,107 +108,11 @@ print(f"Total cells: {result.total_n_cells}")
 print(f"SSMD: {result.ssmd:.3f}")
 ```
 
-### Configuration File Format
 
-Create a YAML configuration file for reproducible analyses:
-
-```yaml
-# config.yaml
-input_dir: /path/to/images
-output_dir: /path/to/output
-plate_format: "96"
-
-# Segmentation settings
-aggregate_method: unet  # or "filter"
-model_path: /path/to/unet_weights.pt  # for unet method
-
-# Quality control
-blur_threshold: 15.0
-blur_reject_pct: 50.0
-
-# Control wells
-control_wells:
-  negative:
-    - A01
-    - A02
-  NT:
-    - A11
-    - A12
-
-# Output options
-save_masks: true
-save_overlays: true
-export_format: parquet  # or "csv", "excel"
-```
-
-## Project Structure
-
-```
-AggreQuant/
-├── aggrequant/              # Main package
-│   ├── common/              # Shared utilities (image_utils, logging)
-│   ├── loaders/             # Data loading (config, images, plate)
-│   ├── quality/             # Image quality (focus/blur detection)
-│   ├── segmentation/        # Segmentation backends
-│   │   ├── nuclei/          # StarDist wrapper
-│   │   ├── cells/           # Cellpose, distance-intensity
-│   │   └── aggregates/      # Filter-based, neural network
-│   ├── quantification/      # QoI calculations
-│   ├── statistics/          # Well stats, export
-│   ├── pipeline.py          # Main pipeline orchestrator
-│   └── nn/                  # Neural network development
-│       ├── architectures/   # Modular UNet with pluggable blocks
-│       ├── data/            # Dataset, augmentation
-│       ├── training/        # Losses, trainer
-│       └── evaluation/      # Metrics, benchmarking
-├── gui/                     # GUI application
-│   ├── app.py               # Main application window
-│   └── widgets/             # Custom UI components
-├── scripts/                 # Entry point scripts
-│   ├── run_pipeline.py      # CLI for running analysis
-│   └── run_gui.py           # Launch GUI application
-├── tests/                   # Unit and integration tests
-├── PROJECT.md               # Detailed project documentation
-└── pyproject.toml           # Package configuration
-```
-
-## Quantities of Interest (QoI)
-
-AggreQuant computes various metrics including:
-- Percentage of aggregate-positive cells
-- Number of aggregates per cell
-- Total aggregate area over cell area
-- Focus quality metrics (variance of Laplacian, etc.)
-
-<IMG SRC="graphics/raw_and_segmentation.jpg" style="float: left; margin-right: 10px;" />
-
-## Development
-
-See [PROJECT.md](PROJECT.md) for detailed development documentation including:
-- Architecture design decisions
-- Implementation phases and task lists
-- Code style guidelines
-- Literature review of UNet architectures
-
-### Running Tests
+### Unit Tests
 
 ```bash
 conda activate AggreQuant
 pytest tests/
 ```
 
-## Author
-
-**Athena Economides, PhD**  
-Prof. Adriano Aguzzi Lab  
-Institute of Neuropathology  
-University of Zurich & University Hospital Zurich  
-Schmelzbergstrasse 12  
-CH-8091 Zurich  
-Switzerland  
-
-Contact: [athena.economides@uzh.ch](mailto:athena.economides@uzh.ch)
-
-## License
-
-This project is under development. Please contact the author for usage permissions.
