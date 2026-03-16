@@ -10,14 +10,12 @@ Example:
     >>> history = trainer.fit(epochs=100)
 """
 
-import os
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Callable, Any, Tuple, Union
 from dataclasses import dataclass, field
 import json
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -262,7 +260,8 @@ class Trainer:
 
         Arguments:
             epochs: Number of epochs to train
-            early_stopping_patience: Stop if no improvement for N epochs (None to disable)
+            early_stopping_patience: Stop if no improvement for N epochs (None to disable).
+                Requires val_loader — ignored if no validation data is provided.
             save_best_only: Only save checkpoint when validation loss improves
 
         Returns:
@@ -301,7 +300,7 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            # Check for improvement
+            # Check for improvement (only meaningful with validation)
             is_best = val_loss < self.history.best_val_loss
             if is_best:
                 self.history.best_val_loss = val_loss
@@ -331,8 +330,12 @@ class Trainer:
                 elif not save_best_only:
                     self.save_checkpoint(f"epoch_{self.current_epoch:03d}.pt")
 
-            # Early stopping
-            if early_stopping_patience is not None and patience_counter >= early_stopping_patience:
+            # Early stopping (only with validation data)
+            if (
+                early_stopping_patience is not None
+                and self.val_loader is not None
+                and patience_counter >= early_stopping_patience
+            ):
                 if self.verbose:
                     logger.info(
                         f"Early stopping at epoch {self.current_epoch} "
@@ -386,7 +389,7 @@ class Trainer:
         Arguments:
             path: Path to checkpoint file
         """
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=True)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -398,76 +401,3 @@ class Trainer:
 
         if self.verbose:
             logger.info(f"Loaded checkpoint from epoch {self.current_epoch}")
-
-
-def train_model(
-    model: nn.Module,
-    train_loader: DataLoader,
-    val_loader: Optional[DataLoader] = None,
-    criterion: Optional[nn.Module] = None,
-    optimizer: Optional[Optimizer] = None,
-    epochs: int = 100,
-    lr: float = 1e-4,
-    checkpoint_dir: Optional[Union[str, Path]] = None,
-    early_stopping_patience: Optional[int] = 10,
-    device: Optional[torch.device] = None,
-    verbose: bool = True,
-) -> Tuple[nn.Module, TrainingHistory]:
-    """Convenience function for training a model.
-
-    Arguments:
-        model: Model to train
-        train_loader: Training data loader
-        val_loader: Validation data loader
-        criterion: Loss function (default: DiceBCELoss)
-        optimizer: Optimizer (default: Adam with given lr)
-        epochs: Number of training epochs
-        lr: Learning rate (if optimizer not provided)
-        checkpoint_dir: Directory for checkpoints
-        early_stopping_patience: Early stopping patience
-        device: Training device
-        verbose: Print progress
-
-    Returns:
-        Tuple of (trained_model, history)
-
-    Example:
-        >>> model = UNet()
-        >>> model, history = train_model(model, train_loader, val_loader)
-    """
-    from aggrequant.nn.training.losses import DiceBCELoss
-
-    # Default criterion
-    if criterion is None:
-        criterion = DiceBCELoss()
-
-    # Default optimizer
-    if optimizer is None:
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-    # Create trainer
-    trainer = Trainer(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        criterion=criterion,
-        optimizer=optimizer,
-        checkpoint_dir=checkpoint_dir,
-        device=device,
-        verbose=verbose,
-    )
-
-    # Train
-    history = trainer.fit(
-        epochs=epochs,
-        early_stopping_patience=early_stopping_patience,
-    )
-
-    return model, history
-
-
-__all__ = [
-    "Trainer",
-    "TrainingHistory",
-    "train_model",
-]
