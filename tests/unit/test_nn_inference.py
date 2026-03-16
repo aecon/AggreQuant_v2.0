@@ -161,10 +161,10 @@ def test_postprocess_labels_consecutive():
     )
 
 def test_postprocess_min_size_filter():
-    """A single 2x2 block (area=4) should be removed with min_area=9."""
+    """A single 2x2 block (area=4) should be removed with remove_objects_below=9."""
     prob = np.zeros((64, 64), dtype=np.float32)
     prob[10:12, 10:12] = 1.0  # 4-pixel object
-    labels = postprocess_predictions(prob, threshold=0.5, min_area=9)
+    labels = postprocess_predictions(prob, threshold=0.5, remove_objects_below=9)
     assert labels.max() == 0
 
 

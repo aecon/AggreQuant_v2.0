@@ -11,7 +11,9 @@ Example:
     >>> from aggrequant.nn.architectures.registry import create_model
     >>>
     >>> model = create_model("resunet")
-    >>> model.load_state_dict(torch.load("weights.pt")["model_state_dict"])
+    >>> model.load_state_dict(
+    ...     torch.load("weights.pt", weights_only=True)["model_state_dict"]
+    ... )
     >>>
     >>> # Auto-detect best mode
     >>> prob_map = predict(model, image)
@@ -272,16 +274,16 @@ def predict(
 def postprocess_predictions(
     probability_map: np.ndarray,
     threshold: float = 0.5,
-    min_area: int = 9,
-    max_hole_area: int = 6000,
+    remove_objects_below: int = 9,
+    fill_holes_below: int = 6000,
 ) -> np.ndarray:
     """Convert probability map to instance segmentation labels.
 
     Arguments:
         probability_map: Float32 array (H, W) with values in [0, 1]
         threshold: Probability threshold for binarization (default: 0.5)
-        min_area: Remove objects smaller than this (pixels, default: 9)
-        max_hole_area: Fill holes smaller than this (pixels, default: 6000)
+        remove_objects_below: Remove objects smaller than this many pixels (default: 9)
+        fill_holes_below: Fill holes smaller than this many pixels (default: 6000)
 
     Returns:
         Instance label array (uint32), 0 = background, 1+ = individual objects
@@ -297,13 +299,13 @@ def postprocess_predictions(
     binary = (probability_map > threshold).astype(np.uint8)
 
     # Fill small holes
-    no_holes = remove_small_holes(binary, max_size=max_hole_area, connectivity=2)
+    no_holes = remove_small_holes(binary, max_size=fill_holes_below, connectivity=2)
 
     # Connected components
     labels = skimage.morphology.label(no_holes, connectivity=2)
 
     # Remove small objects
-    no_small = remove_small_objects(labels, max_size=min_area, connectivity=2)
+    no_small = remove_small_objects(labels, max_size=remove_objects_below, connectivity=2)
 
     # Relabel consecutively
     unique = np.unique(no_small)
