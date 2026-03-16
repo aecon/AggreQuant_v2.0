@@ -292,13 +292,16 @@ class Trainer:
                     self.history.val_metrics[name] = []
                 self.history.val_metrics[name].append(value)
 
-            # Learning rate
+            # Step scheduler (ReduceLROnPlateau needs the monitored metric)
+            if self.scheduler is not None:
+                if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    self.scheduler.step(val_loss)
+                else:
+                    self.scheduler.step()
+
+            # Record LR after scheduler step
             current_lr = self.optimizer.param_groups[0]['lr']
             self.history.learning_rates.append(current_lr)
-
-            # Step scheduler
-            if self.scheduler is not None:
-                self.scheduler.step()
 
             # Check for improvement (only meaningful with validation)
             is_best = val_loss < self.history.best_val_loss
@@ -323,8 +326,9 @@ class Trainer:
                     f"lr: {current_lr:.2e}"
                 )
 
-            # Save checkpoint
+            # Save checkpoint and history
             if self.checkpoint_dir is not None:
+                self.history.save(self.checkpoint_dir / "history.json")
                 if save_best_only and is_best:
                     self.save_checkpoint("best.pt")
                 elif not save_best_only:

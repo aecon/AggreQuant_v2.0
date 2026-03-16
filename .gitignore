@@ -43,6 +43,7 @@ htmlcov/
 
 # Data and outputs (large files)
 data/
+training_output/
 /experiments/
 weights/*.keras
 weights/*.pt

@@ -309,7 +309,19 @@ table and rationale).
 
 ---
 
-## Training Data Pipeline (`data/`)
+## Training Data
+
+Source data for the aggregate segmentation model:
+
+- **Raw images**: `../AggreQuant_training_data/data/2024-10-25_Annotations_19images_AE_DV_EDC_LJ/raw/`
+- **Annotation masks**: `../AggreQuant_training_data/data/2024-10-25_Annotations_19images_AE_DV_EDC_LJ/annotated/`
+
+19 annotated images from 4 annotators (AE, DV, EDC, LJ). TIFF format, naming
+convention: `image_raw####.tif` / `image_ann####.tif`.
+
+---
+
+## Training Data Pipeline (`datatools/`)
 
 ### Patch Extraction (`extract_patches`)
 
@@ -362,7 +374,7 @@ distort small aggregate structures unnaturally.
 | **FocalLoss** | Down-weights easy examples via (1-p)^gamma. | Severe class imbalance |
 | **TverskyLoss** | Generalizes Dice with separate FP/FN weights. alpha > beta = better recall. | When FP/FN trade-off matters |
 | **FocalTverskyLoss** | Focal mechanism on top of Tversky. | Hard examples + class imbalance |
-| **BoundaryLoss** | Adds boundary-weighted BCE on top of a base loss. | See note below |
+| **EdgeWeightedLoss** | Adds Laplacian edge-weighted BCE on top of a base loss. | See note below |
 | **DeepSupervisionLoss** | Wraps any loss for multi-scale deep supervision outputs. | When UNet has `use_deep_supervision=True` |
 
 ### Factory function
@@ -370,10 +382,10 @@ distort small aggregate structures unnaturally.
 `get_loss_function(name)` maps string names to classes:
 `"dice"`, `"bce"`, `"dice_bce"`, `"focal"`, `"tversky"`, `"focal_tversky"`.
 
-### Note on BoundaryLoss — needs inspection
+### Note on EdgeWeightedLoss — needs inspection
 
-The current `BoundaryLoss` implementation has known issues that should be
-addressed before using it in training:
+The current `EdgeWeightedLoss` implementation (formerly `BoundaryLoss`) has
+known issues that should be addressed before using it in training:
 
 1. **Uses Laplacian edge detection** instead of distance transforms. The
    literature (Kervadec et al. 2019, "Boundary loss for highly unbalanced

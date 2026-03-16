@@ -122,6 +122,10 @@ class DiceBCELoss(nn.Module):
         Returns:
             Combined loss value
         """
+        # Move pos_weight to same device as predictions
+        if self.bce.pos_weight is not None:
+            self.bce.pos_weight = self.bce.pos_weight.to(predictions.device)
+
         # BCE expects logits
         bce_loss = self.bce(predictions, targets)
 
