@@ -60,20 +60,20 @@ class AttentionGate(nn.Module):
 
         # Transform gating signal to intermediate space
         self.W_g = nn.Sequential(
-            nn.Conv2d(gate_channels, inter_channels, kernel_size=1, bias=True),
-            nn.BatchNorm2d(inter_channels),
+            nn.Conv2d(gate_channels, inter_channels, kernel_size=1, bias=False),
+            nn.BatchNorm2d(inter_channels, affine=True),
         )
 
         # Transform skip connection to intermediate space
         self.W_x = nn.Sequential(
-            nn.Conv2d(skip_channels, inter_channels, kernel_size=1, bias=True),
-            nn.BatchNorm2d(inter_channels),
+            nn.Conv2d(skip_channels, inter_channels, kernel_size=1, bias=False),
+            nn.BatchNorm2d(inter_channels, affine=True),
         )
 
         # Attention coefficient computation
         self.psi = nn.Sequential(
-            nn.Conv2d(inter_channels, 1, kernel_size=1, bias=True),
-            nn.BatchNorm2d(1),
+            nn.Conv2d(inter_channels, 1, kernel_size=1, bias=False),
+            nn.BatchNorm2d(1, affine=True),
             nn.Sigmoid(),
         )
 
