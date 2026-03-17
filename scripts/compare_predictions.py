@@ -1,0 +1,578 @@
+"""Quantitative comparison of predictions across trained models.
+
+Loads all available checkpoints from training_output/, runs inference on
+an image, and computes quantitative metrics comparing each model's
+predictions against the ground truth.
+
+Metrics computed:
+- Standard pixel-level: Dice, IoU, precision, recall
+- Eroded-core Dice: agreement on aggregate centers only (edge-independent)
+- Object-level precision/recall: centroid matching (edge-independent)
+- FP/FN confidence analysis: probability distributions of errors
+- Core vs edge error classification: fraction of errors at boundaries vs cores
+- Local intensity analysis: whether errors correlate with dim image regions
+
+Usage:
+    # Compare all loss runs on first image:
+    python scripts/compare_predictions.py
+
+    # Specific image:
+    python scripts/compare_predictions.py --image 3
+
+    # Specific runs:
+    python scripts/compare_predictions.py --runs baseline bce_pw3 dice03_bce07_pw3
+
+    # Custom threshold, save results:
+    python scripts/compare_predictions.py --threshold 0.4 -o results/
+"""
+
+import argparse
+import csv
+from pathlib import Path
+
+import numpy as np
+from scipy import ndimage
+
+from aggrequant.common.image_utils import load_image
+from aggrequant.common.logging import get_logger
+from aggrequant.nn.inference import load_model, predict
+
+logger = get_logger(__name__)
+
+TRAINING_ROOT = Path(__file__).resolve().parent.parent / "training_output"
+SYMLINK_DIR = TRAINING_ROOT / "symlinks"
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Quantitative comparison of model predictions"
+    )
+    parser.add_argument("--image", type=str, default=None,
+                        help="Image path, filename, or index (default: first)")
+    parser.add_argument("--mask", type=str, default=None,
+                        help="GT mask path (default: auto-resolve)")
+    parser.add_argument("--runs", nargs="+", default=None,
+                        help="Run names to compare (default: all with best.pt)")
+    parser.add_argument("--threshold", type=float, default=0.5,
+                        help="Probability threshold (default: 0.5)")
+    parser.add_argument("--edge-width", type=int, default=3,
+                        help="Edge band width in pixels for core/edge "
+                             "classification (default: 3)")
+    parser.add_argument("--match-radius", type=float, default=10.0,
+                        help="Max centroid distance for object matching "
+                             "(default: 10 pixels)")
+    parser.add_argument("-o", "--output-dir", type=str, default=None,
+                        help="Directory to save CSV and plots (default: print only)")
+    return parser.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Path resolution (same logic as predict_and_plot.py)
+# ---------------------------------------------------------------------------
+
+
+def resolve_image(image_arg):
+    image_dir = SYMLINK_DIR / "images"
+    if image_arg is None:
+        files = sorted(image_dir.glob("*.tif"))
+        if not files:
+            raise FileNotFoundError(f"No .tif files in {image_dir}")
+        return files[0]
+    p = Path(image_arg)
+    if p.exists():
+        return p
+    try:
+        idx = int(image_arg)
+        files = sorted(image_dir.glob("*.tif"))
+        if idx < 0 or idx >= len(files):
+            raise IndexError(f"Index {idx} out of range (0-{len(files)-1})")
+        return files[idx]
+    except ValueError:
+        pass
+    resolved = image_dir / image_arg
+    if resolved.exists():
+        return resolved
+    raise FileNotFoundError(f"Cannot resolve image '{image_arg}'")
+
+
+def resolve_mask(mask_arg, image_path):
+    if mask_arg is not None:
+        p = Path(mask_arg)
+        if p.exists():
+            return p
+        raise FileNotFoundError(f"Mask not found: {mask_arg}")
+    auto_mask = SYMLINK_DIR / "masks" / image_path.name
+    if auto_mask.exists():
+        return auto_mask
+    return None
+
+
+def discover_runs(run_names=None):
+    """Find all runs with a best.pt checkpoint."""
+    if run_names:
+        runs = {}
+        for name in run_names:
+            cp = TRAINING_ROOT / name / "checkpoints" / "best.pt"
+            if not cp.exists():
+                raise FileNotFoundError(f"No checkpoint for run '{name}': {cp}")
+            runs[name] = cp
+        return runs
+
+    runs = {}
+    for cp in sorted(TRAINING_ROOT.glob("*/checkpoints/best.pt")):
+        name = cp.parent.parent.name
+        runs[name] = cp
+    if not runs:
+        raise FileNotFoundError(f"No checkpoints found in {TRAINING_ROOT}")
+    return runs
+
+
+# ---------------------------------------------------------------------------
+# Pixel-level metrics
+# ---------------------------------------------------------------------------
+
+
+def pixel_metrics(pred, gt):
+    """Compute Dice, IoU, precision, recall from binary masks."""
+    pred_b = pred.astype(bool)
+    gt_b = gt.astype(bool)
+
+    tp = (pred_b & gt_b).sum()
+    fp = (pred_b & ~gt_b).sum()
+    fn = (~pred_b & gt_b).sum()
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    dice = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else 0.0
+    iou = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
+
+    return {
+        "dice": dice,
+        "iou": iou,
+        "precision": precision,
+        "recall": recall,
+    }
+
+
+def eroded_core_dice(pred, gt, edge_width=3):
+    """Dice computed only on eroded GT cores (excluding edges)."""
+    eroded_gt = ndimage.binary_erosion(
+        gt.astype(bool), iterations=edge_width,
+    ).astype(bool)
+
+    if eroded_gt.sum() == 0:
+        return 0.0
+
+    pred_b = pred.astype(bool)
+    tp = (pred_b & eroded_gt).sum()
+    fp_core = (pred_b & ~gt.astype(bool)).sum()  # FPs still counted normally
+    fn_core = (~pred_b & eroded_gt).sum()
+
+    denom = 2 * tp + fp_core + fn_core
+    return 2 * tp / denom if denom > 0 else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Object-level centroid matching
+# ---------------------------------------------------------------------------
+
+
+def object_metrics(pred, gt, match_radius=10.0):
+    """Object-level precision/recall via centroid matching.
+
+    Each predicted blob is matched to the nearest GT blob within
+    match_radius pixels. Unmatched predictions are FP objects,
+    unmatched GT blobs are FN objects.
+    """
+    pred_labels, n_pred = ndimage.label(pred.astype(bool))
+    gt_labels, n_gt = ndimage.label(gt.astype(bool))
+
+    if n_pred == 0 and n_gt == 0:
+        return {"obj_precision": 1.0, "obj_recall": 1.0,
+                "n_pred_objects": 0, "n_gt_objects": 0}
+    if n_pred == 0:
+        return {"obj_precision": 0.0, "obj_recall": 0.0,
+                "n_pred_objects": 0, "n_gt_objects": n_gt}
+    if n_gt == 0:
+        return {"obj_precision": 0.0, "obj_recall": 0.0,
+                "n_pred_objects": n_pred, "n_gt_objects": 0}
+
+    pred_centroids = np.array(ndimage.center_of_mass(
+        pred, pred_labels, range(1, n_pred + 1)))
+    gt_centroids = np.array(ndimage.center_of_mass(
+        gt, gt_labels, range(1, n_gt + 1)))
+
+    # For each predicted centroid, find nearest GT centroid
+    gt_matched = set()
+    pred_tp = 0
+    for pc in pred_centroids:
+        dists = np.sqrt(((gt_centroids - pc) ** 2).sum(axis=1))
+        nearest_idx = dists.argmin()
+        if dists[nearest_idx] <= match_radius and nearest_idx not in gt_matched:
+            pred_tp += 1
+            gt_matched.add(nearest_idx)
+
+    obj_precision = pred_tp / n_pred if n_pred > 0 else 0.0
+    obj_recall = len(gt_matched) / n_gt if n_gt > 0 else 0.0
+
+    return {
+        "obj_precision": obj_precision,
+        "obj_recall": obj_recall,
+        "n_pred_objects": n_pred,
+        "n_gt_objects": n_gt,
+    }
+
+
+# ---------------------------------------------------------------------------
+# FP/FN confidence analysis
+# ---------------------------------------------------------------------------
+
+
+def confidence_analysis(prob_map, pred, gt):
+    """Analyze probability values at FP and FN pixels."""
+    pred_b = pred.astype(bool)
+    gt_b = gt.astype(bool)
+
+    fp_mask = pred_b & ~gt_b
+    fn_mask = ~pred_b & gt_b
+
+    fp_probs = prob_map[fp_mask] if fp_mask.any() else np.array([])
+    fn_probs = prob_map[fn_mask] if fn_mask.any() else np.array([])
+
+    return {
+        "mean_fp_prob": float(fp_probs.mean()) if len(fp_probs) > 0 else 0.0,
+        "median_fp_prob": float(np.median(fp_probs)) if len(fp_probs) > 0 else 0.0,
+        "mean_fn_prob": float(fn_probs.mean()) if len(fn_probs) > 0 else 0.0,
+        "median_fn_prob": float(np.median(fn_probs)) if len(fn_probs) > 0 else 0.0,
+        "fp_high_conf_frac": float((fp_probs > 0.8).mean()) if len(fp_probs) > 0 else 0.0,
+        "fn_low_conf_frac": float((fn_probs < 0.2).mean()) if len(fn_probs) > 0 else 0.0,
+        "fp_probs": fp_probs,
+        "fn_probs": fn_probs,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Core vs edge error classification
+# ---------------------------------------------------------------------------
+
+
+def core_edge_errors(pred, gt, edge_width=3):
+    """Classify FP/FN pixels as core or edge errors.
+
+    Edge pixels: within edge_width of the GT boundary.
+    Core pixels: everything else.
+
+    For FPs:
+    - "edge FP": within edge_width of GT foreground (boundary overshoot)
+    - "core FP": far from any GT foreground (hallucinated aggregate)
+
+    For FNs:
+    - "edge FN": within edge_width of GT boundary (boundary disagreement)
+    - "core FN": deep inside GT foreground (missed aggregate core)
+    """
+    pred_b = pred.astype(bool)
+    gt_b = gt.astype(bool)
+
+    fp_mask = pred_b & ~gt_b
+    fn_mask = ~pred_b & gt_b
+
+    # Distance from each pixel to nearest GT foreground pixel
+    dist_to_gt = ndimage.distance_transform_edt(~gt_b)
+
+    # Distance from each GT foreground pixel to nearest boundary
+    # (= nearest background pixel)
+    dist_to_boundary = ndimage.distance_transform_edt(gt_b)
+
+    # FP classification: distance to nearest GT foreground
+    fp_near_gt = fp_mask & (dist_to_gt <= edge_width)
+    fp_far_from_gt = fp_mask & (dist_to_gt > edge_width)
+
+    # FN classification: distance to GT boundary
+    fn_at_edge = fn_mask & (dist_to_boundary < edge_width)
+    fn_at_core = fn_mask & (dist_to_boundary >= edge_width)
+
+    n_fp = fp_mask.sum()
+    n_fn = fn_mask.sum()
+
+    return {
+        "fp_edge_frac": float(fp_near_gt.sum() / n_fp) if n_fp > 0 else 0.0,
+        "fp_core_frac": float(fp_far_from_gt.sum() / n_fp) if n_fp > 0 else 0.0,
+        "fn_edge_frac": float(fn_at_edge.sum() / n_fn) if n_fn > 0 else 0.0,
+        "fn_core_frac": float(fn_at_core.sum() / n_fn) if n_fn > 0 else 0.0,
+        "n_fp_pixels": int(n_fp),
+        "n_fn_pixels": int(n_fn),
+        "n_fp_edge": int(fp_near_gt.sum()),
+        "n_fp_core": int(fp_far_from_gt.sum()),
+        "n_fn_edge": int(fn_at_edge.sum()),
+        "n_fn_core": int(fn_at_core.sum()),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Local intensity analysis at error components
+# ---------------------------------------------------------------------------
+
+
+def intensity_analysis(image, pred, gt, window=32):
+    """Check whether FP/FN objects occur in dim image regions.
+
+    For each FP and FN connected component, measures the local mean
+    intensity around its centroid and compares against the intensity
+    distribution of GT aggregate regions.
+    """
+    pred_b = pred.astype(bool)
+    gt_b = gt.astype(bool)
+    image_f = image.astype(np.float32)
+
+    # Reference: intensity at GT aggregate pixels
+    gt_intensities = image_f[gt_b]
+    if len(gt_intensities) == 0:
+        gt_p10 = 0.0
+    else:
+        gt_p10 = np.percentile(gt_intensities, 10)
+
+    h, w = image.shape
+    half = window // 2
+
+    def local_mean_intensity(centroids):
+        """Mean intensity in a window around each centroid."""
+        intensities = []
+        for cy, cx in centroids:
+            y0 = max(0, int(cy) - half)
+            y1 = min(h, int(cy) + half)
+            x0 = max(0, int(cx) - half)
+            x1 = min(w, int(cx) + half)
+            intensities.append(image_f[y0:y1, x0:x1].mean())
+        return np.array(intensities)
+
+    # FP components
+    fp_mask = pred_b & ~gt_b
+    fp_labels, n_fp = ndimage.label(fp_mask)
+    fp_in_dim = 0
+    if n_fp > 0:
+        fp_centroids = ndimage.center_of_mass(fp_mask, fp_labels, range(1, n_fp + 1))
+        fp_intensities = local_mean_intensity(fp_centroids)
+        fp_in_dim = int((fp_intensities < gt_p10).sum())
+
+    # FN components
+    fn_mask = ~pred_b & gt_b
+    fn_labels, n_fn = ndimage.label(fn_mask)
+    fn_in_dim = 0
+    if n_fn > 0:
+        fn_centroids = ndimage.center_of_mass(fn_mask, fn_labels, range(1, n_fn + 1))
+        fn_intensities = local_mean_intensity(fn_centroids)
+        fn_in_dim = int((fn_intensities < gt_p10).sum())
+
+    return {
+        "n_fp_components": n_fp,
+        "n_fn_components": n_fn,
+        "fp_in_dim_region": fp_in_dim,
+        "fn_in_dim_region": fn_in_dim,
+        "fp_dim_frac": fp_in_dim / n_fp if n_fp > 0 else 0.0,
+        "fn_dim_frac": fn_in_dim / n_fn if n_fn > 0 else 0.0,
+        "gt_intensity_p10": float(gt_p10),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Aggregate all metrics for one model
+# ---------------------------------------------------------------------------
+
+
+def evaluate_model(prob_map, image, gt, threshold=0.5, edge_width=3,
+                   match_radius=10.0):
+    """Compute all metrics for a single model's prediction."""
+    pred_binary = (prob_map > threshold).astype(np.uint8)
+    gt_binary = (gt > 0).astype(np.uint8)
+
+    results = {}
+    results.update(pixel_metrics(pred_binary, gt_binary))
+    results["eroded_core_dice"] = eroded_core_dice(
+        pred_binary, gt_binary, edge_width)
+    results.update(object_metrics(pred_binary, gt_binary, match_radius))
+
+    conf = confidence_analysis(prob_map, pred_binary, gt_binary)
+    # Store arrays separately (not for CSV)
+    fp_probs = conf.pop("fp_probs")
+    fn_probs = conf.pop("fn_probs")
+    results.update(conf)
+
+    results.update(core_edge_errors(pred_binary, gt_binary, edge_width))
+    results.update(intensity_analysis(image, pred_binary, gt_binary))
+
+    return results, fp_probs, fn_probs
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+
+def print_summary_table(all_results):
+    """Print a formatted comparison table."""
+    # Header
+    metrics_order = [
+        ("dice", "Dice"),
+        ("iou", "IoU"),
+        ("precision", "Prec"),
+        ("recall", "Recall"),
+        ("eroded_core_dice", "Core Dice"),
+        ("obj_precision", "Obj Prec"),
+        ("obj_recall", "Obj Rec"),
+        ("mean_fp_prob", "FP prob"),
+        ("mean_fn_prob", "FN prob"),
+        ("fp_high_conf_frac", "FP hi-cf"),
+        ("fp_core_frac", "FP core%"),
+        ("fn_core_frac", "FN core%"),
+        ("fp_dim_frac", "FP dim%"),
+        ("fn_dim_frac", "FN dim%"),
+    ]
+
+    name_width = max(len(name) for name in all_results) + 2
+    col_width = 9
+
+    header = f"{'Model':<{name_width}}"
+    for _, label in metrics_order:
+        header += f"{label:>{col_width}}"
+    logger.info("\n" + "=" * len(header))
+    logger.info("PREDICTION COMPARISON")
+    logger.info("=" * len(header))
+    logger.info(header)
+    logger.info("-" * len(header))
+
+    for name, results in all_results.items():
+        line = f"{name:<{name_width}}"
+        for key, _ in metrics_order:
+            val = results.get(key, 0)
+            line += f"{val:>{col_width}.4f}"
+        logger.info(line)
+
+    logger.info("=" * len(header))
+
+
+def save_csv(all_results, output_path):
+    """Save results to CSV."""
+    if not all_results:
+        return
+
+    first = next(iter(all_results.values()))
+    # Exclude non-numeric fields
+    fieldnames = ["model"] + [k for k in first if isinstance(first[k], (int, float))]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for name, results in all_results.items():
+            row = {"model": name}
+            row.update({k: results[k] for k in fieldnames if k != "model"})
+            writer.writerow(row)
+
+    logger.info(f"Results saved to {output_path}")
+
+
+def save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir):
+    """Save FP and FN probability histograms per model."""
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    bins = np.linspace(0, 1, 30)
+
+    # FP histogram
+    for name, probs in all_fp_probs.items():
+        if len(probs) > 0:
+            axes[0].hist(probs, bins=bins, alpha=0.5, label=name, density=True)
+    axes[0].set_xlabel("Predicted probability")
+    axes[0].set_ylabel("Density")
+    axes[0].set_title("False positive confidence")
+    axes[0].legend(fontsize=8)
+    axes[0].grid(True, alpha=0.3)
+
+    # FN histogram
+    for name, probs in all_fn_probs.items():
+        if len(probs) > 0:
+            axes[1].hist(probs, bins=bins, alpha=0.5, label=name, density=True)
+    axes[1].set_xlabel("Predicted probability")
+    axes[1].set_ylabel("Density")
+    axes[1].set_title("False negative confidence")
+    axes[1].legend(fontsize=8)
+    axes[1].grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    path = output_dir / "confidence_histograms.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Confidence histograms saved to {path}")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main():
+    args = parse_args()
+
+    # Resolve paths
+    image_path = resolve_image(args.image)
+    mask_path = resolve_mask(args.mask, image_path)
+    runs = discover_runs(args.runs)
+
+    if mask_path is None:
+        raise FileNotFoundError(
+            "Ground truth mask is required for comparison. "
+            "Provide --mask or ensure symlinks/masks/ has a matching file."
+        )
+
+    logger.info(f"Image:      {image_path}")
+    logger.info(f"Mask:       {mask_path}")
+    logger.info(f"Runs:       {list(runs.keys())}")
+    logger.info(f"Threshold:  {args.threshold}")
+    logger.info(f"Edge width: {args.edge_width}")
+
+    # Load image and GT
+    image = load_image(image_path)
+    if image.ndim == 3:
+        image = image[:, :, 0]
+
+    gt = load_image(mask_path)
+    if gt.ndim == 3:
+        gt = gt[:, :, 0]
+
+    # Evaluate each model
+    all_results = {}
+    all_fp_probs = {}
+    all_fn_probs = {}
+
+    for name, checkpoint_path in runs.items():
+        logger.info(f"Evaluating {name}...")
+        model = load_model(checkpoint_path)
+        prob_map = predict(model, image)
+
+        results, fp_probs, fn_probs = evaluate_model(
+            prob_map, image, gt,
+            threshold=args.threshold,
+            edge_width=args.edge_width,
+            match_radius=args.match_radius,
+        )
+        all_results[name] = results
+        all_fp_probs[name] = fp_probs
+        all_fn_probs[name] = fn_probs
+
+    # Print summary
+    print_summary_table(all_results)
+
+    # Save if output dir specified
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        save_csv(all_results, output_dir / "comparison_results.csv")
+        save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir)
+
+
+if __name__ == "__main__":
+    main()

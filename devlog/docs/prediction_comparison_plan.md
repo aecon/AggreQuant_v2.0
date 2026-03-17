@@ -178,3 +178,62 @@ errors (core misses) vs benign errors (edge disagreements).
 3. **Object-level centroid matching** (2.2) — edge-independent detection metric
 4. **Zoomed side-by-side panels** (1.3) — visual sanity check
 5. **Image quality correlation** (3.3) — explains remaining errors
+
+---
+
+## Running the comparison (`scripts/compare_predictions.py`)
+
+Auto-discovers all checkpoints in `training_output/*/checkpoints/best.pt`,
+runs inference, and computes all metrics from sections 2-4 above.
+
+```bash
+# All available runs, first image, print summary table:
+conda run -n AggreQuant python scripts/compare_predictions.py
+
+# Save CSV + confidence histograms to a directory:
+conda run -n AggreQuant python scripts/compare_predictions.py -o training_output/comparison/
+
+# Specific runs only:
+conda run -n AggreQuant python scripts/compare_predictions.py --runs baseline dice03_bce07_pw3
+
+# Specific image (by index or filename):
+conda run -n AggreQuant python scripts/compare_predictions.py --image 5
+conda run -n AggreQuant python scripts/compare_predictions.py --image image_0005.tif
+
+# Custom threshold and edge width:
+conda run -n AggreQuant python scripts/compare_predictions.py --threshold 0.4 --edge-width 5
+```
+
+### Metrics computed
+
+| Category | Metric | Description |
+|---|---|---|
+| **Pixel-level** | Dice, IoU, precision, recall | Standard overlap metrics |
+| **Pixel-level** | Eroded-core Dice | Dice on GT eroded by `edge_width` — measures agreement on aggregate centers only |
+| **Object-level** | Object precision | Fraction of predicted blobs with a GT centroid within `match_radius` |
+| **Object-level** | Object recall | Fraction of GT blobs with a matched prediction |
+| **Confidence** | Mean/median FP probability | Average predicted probability at false positive pixels |
+| **Confidence** | Mean/median FN probability | Average predicted probability at false negative pixels |
+| **Confidence** | FP high-confidence fraction | % of FP pixels with p > 0.8 (model is certain but wrong) |
+| **Confidence** | FN low-confidence fraction | % of FN pixels with p < 0.2 (model saw nothing) |
+| **Core vs edge** | FP edge/core fraction | % of FP pixels near GT boundary (overshoot) vs far from GT (hallucinated) |
+| **Core vs edge** | FN edge/core fraction | % of FN pixels at GT boundary (edge disagreement) vs deep inside GT (missed core) |
+| **Intensity** | FP/FN in dim regions | % of FP/FN components whose local intensity is below the 10th percentile of GT aggregate intensity |
+
+### Options
+
+| Argument | Default | Description |
+|---|---|---|
+| `--image` | First image in `symlinks/images/` | Image path, filename, or index |
+| `--mask` | Auto-resolved from `symlinks/masks/` | Ground truth mask path |
+| `--runs` | All runs with `best.pt` | Run names to compare |
+| `--threshold` | `0.5` | Probability threshold |
+| `--edge-width` | `3` | Edge band width (pixels) for core/edge classification |
+| `--match-radius` | `10.0` | Max centroid distance (pixels) for object matching |
+| `-o` / `--output-dir` | Print only | Directory to save CSV and plots |
+
+### Output
+
+- **Summary table** (always printed): all metrics per model
+- **`comparison_results.csv`** (with `-o`): full metrics table
+- **`confidence_histograms.png`** (with `-o`): FP and FN probability distributions per model
