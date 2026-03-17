@@ -627,17 +627,17 @@
     <div class="overview-item">
       <div class="num">I</div>
       <h3>Software Evolution</h3>
-      <p>From AggreQuant to AggreQuant 2.0 &mdash; architecture, modularity, and design improvements</p>
+      <p>From AggreQuant to AggreQuant 2.0 &mdash; the challenge, codebase comparison, and refactoring</p>
     </div>
     <div class="overview-item">
       <div class="num">II</div>
       <h3>Usability &amp; Interfaces</h3>
-      <p>CLI, web GUI, Python API &mdash; validated YAML configuration, focus quality assessment</p>
+      <p>YAML configuration, Pydantic validation, web GUI, CLI, and Python API</p>
     </div>
     <div class="overview-item">
       <div class="num">III</div>
-      <h3>Segmentation Algorithms</h3>
-      <p>StarDist nuclei, Cellpose cells, filter-based &amp; UNet aggregate segmentation</p>
+      <h3>Segmentation &amp; Benchmarks</h3>
+      <p>Nuclei (4 models, 13 configs), cell (5 models, 10 configs), and aggregate segmentation with model benchmarks</p>
     </div>
     <div class="overview-item">
       <div class="num">IV</div>
@@ -646,13 +646,13 @@
     </div>
     <div class="overview-item">
       <div class="num">V</div>
-      <h3>Benchmarks &amp; Ablations</h3>
-      <p>Loss functions, DL vs filter comparison, architecture ablation, nuclei &amp; cell benchmarks</p>
+      <h3>Ablations &amp; Comparisons</h3>
+      <p>Loss functions, DL vs filter-based, architecture ablation, annotation quality analysis</p>
     </div>
     <div class="overview-item">
       <div class="num">VI</div>
-      <h3>Paper Figures &amp; Validation</h3>
-      <p>Quantitative DL vs filter analysis, biological validation on CRISPR screen controls</p>
+      <h3>Paper &amp; Validation</h3>
+      <p>Biological validation on CRISPR screen controls, data quality, manuscript figure plan</p>
     </div>
   </div>
 </div>
@@ -1669,53 +1669,112 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 11: UNET AGGREGATES ===================== -->
+<!-- ===================== SLIDE: CELLPOSE PREPROCESSING BENCHMARK ===================== -->
 <div class="slide" id="slide-21">
-  <h2>Aggregate Segmentation &mdash; UNet Deep Learning</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>Algorithm <span class="tag tag-dl">deep learning</span></h3>
-        <p>A UNet encoder-decoder architecture trained on manually annotated aggregate masks. The model learns to predict per-pixel aggregate probability, which is then thresholded and post-processed into instance labels.</p>
+  <h2>Cell Segmentation &mdash; Nuclear Channel Preprocessing</h2>
+  <div style="flex:1; display:grid; grid-template-columns:3fr 2fr; gap:0.8em; min-height:0;">
+
+    <!-- Left: scatter + counts -->
+    <div style="display:flex; flex-direction:column; gap:0.6em; min-height:0;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_E_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="StarDist seeds vs raw DAPI cell counts">
       </div>
-      <div class="card" style="margin-bottom: 16px;">
-        <h3>Inference Modes</h3>
+      <div style="display:flex; gap:0.5em;">
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_A_counts.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Cell counts by variant">
+        </div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_B_pairwise_diff.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Pairwise differences">
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: conclusions -->
+    <div style="display:flex; flex-direction:column; gap:0.6em; justify-content:center;">
+      <div class="card card-accent" style="padding:0.8em 1em;">
+        <h3>Three Variants Tested</h3>
+        <ul style="margin-top:0.4em;">
+          <li><strong>Cell only</strong> &mdash; FarRed, no nuclear input</li>
+          <li><strong>Raw DAPI</strong> &mdash; FarRed + raw DAPI image</li>
+          <li><strong>StarDist seeds</strong> &mdash; FarRed + binary mask from StarDist</li>
+        </ul>
+      </div>
+      <div class="card card-green" style="padding:0.8em 1em;">
+        <h3>Key Findings</h3>
+        <ul class="green" style="margin-top:0.4em;">
+          <li><strong>StarDist seeds dominate</strong> &mdash; points above diagonal show seeds consistently detect more cells than raw DAPI</li>
+          <li><strong>High confluency &amp; clustered</strong>: cell-only and raw DAPI detect near-zero cells; seeds recover &gt;1,400</li>
+          <li><strong>Solidity</strong>: seeds yield consistent shape quality (0.91&ndash;0.93) across all categories; other variants collapse on dense images</li>
+          <li><strong>+760 cells/image</strong> on average vs cell-only</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:0.6em 1em; border-left:3px solid var(--accent);">
+        <p><strong style="color:var(--accent);">Conclusion:</strong> Pre-segmented StarDist nuclei masks as seeds are essential for reliable Cellpose cell segmentation &mdash; adopted as default in AggreQuant 2.0.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="slide" id="slide-22">
+  <h2>Aggregate Segmentation &mdash; Two Methods</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8em; align-self:center;">
+
+    <!-- Filter-Based -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent3); border-radius:0.8em; padding:1.2em 1.4em;">
+      <h3 style="font-size:1.4em; color:var(--accent3); margin-bottom:0.3em;">Filter-Based</h3>
+      <p style="color:var(--text-dim); margin-bottom:0.5em;">Classical image processing &mdash; no training data needed</p>
+      <div style="display:flex; flex-direction:column; gap:0.5em;">
+        <p><strong>Pipeline:</strong></p>
+        <div style="display:flex; align-items:center; gap:0.3em; flex-wrap:wrap;">
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">Intensity cap</span>
+          <span style="color:var(--text-dim);">&rarr;</span>
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">BG normalize</span>
+          <span style="color:var(--text-dim);">&rarr;</span>
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">Threshold</span>
+          <span style="color:var(--text-dim);">&rarr;</span>
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">Median filter</span>
+          <span style="color:var(--text-dim);">&rarr;</span>
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">Components</span>
+          <span style="color:var(--text-dim);">&rarr;</span>
+          <span style="background:var(--bg-code); border:1px solid var(--border); border-radius:0.3em; padding:0.25em 0.6em;">Size filter</span>
+        </div>
+        <ul style="margin-top:0.4em;">
+          <li>Fast (&lt; 0.1 s/image), fully interpretable</li>
+          <li>Configurable threshold via YAML</li>
+          <li>Good for high-contrast, well-separated aggregates</li>
+        </ul>
+        <p style="margin-top:0.3em; color:var(--accent2);"><strong>v2.0:</strong> OOP <code>FilterBasedSegmenter</code>, configurable params via YAML (was hardcoded)</p>
+      </div>
+      <div style="margin-top:0.5em; padding:0.4em 0.6em; background:rgba(255,183,77,0.1); border-radius:0.4em; color:var(--accent3); font-weight:500; text-align:center;">Over-segments boundaries (~4&times; area inflation) &mdash; unreliable for morphology</div>
+    </div>
+
+    <!-- UNet Deep Learning -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:0.8em; padding:1.2em 1.4em; position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:var(--accent); color:var(--bg-primary); font-size:0.75em; font-weight:700; padding:0.3em 0.8em; border-radius:0 0.6em 0 0.8em;">DEFAULT</div>
+      <h3 style="font-size:1.4em; color:var(--accent); margin-bottom:0.3em;">UNet Deep Learning</h3>
+      <p style="color:var(--text-dim); margin-bottom:0.5em;">PyTorch &mdash; trained on 19 annotated fluorescence images</p>
+      <div style="display:flex; flex-direction:column; gap:0.5em;">
+        <p><strong>Supports:</strong></p>
         <ul>
-          <li><strong>Full-resolution</strong> &mdash; pad image to multiple of 16, single forward pass. Fastest when GPU memory allows.</li>
-          <li><strong>Tiled</strong> &mdash; overlapping 192&times;192 tiles with Gaussian weight blending at borders. Avoids seam artifacts.</li>
-          <li><strong>Auto-fallback</strong> &mdash; tries full-resolution first; on CUDA OOM, automatically switches to tiled mode.</li>
+          <li><strong>7 architecture variants</strong> (baseline, ResUNet, Attention, SE, ASPP, ConvNeXt)</li>
+          <li><strong>7 loss functions</strong> (BCE, Dice, DiceBCE, Focal, Tversky, &hellip;)</li>
+          <li><strong>Full-resolution</strong> or <strong>tiled inference</strong> (192&times;192, Gaussian blending)</li>
+          <li><strong>Auto OOM fallback</strong> &mdash; full-res &rarr; tiled on CUDA out-of-memory</li>
+          <li>Augmentation pipeline: flip, rotate, affine, gamma, noise</li>
+          <li>DiceBCE (&alpha;=0.3, &beta;=0.7, pw=3.0) &mdash; best validated loss</li>
         </ul>
+        <p style="margin-top:0.3em; color:var(--accent2);"><strong>v2.0:</strong> TensorFlow &rarr; PyTorch, 128&times;128 &rarr; 192&times;192 tiles, 1 &rarr; 7 architectures, auto OOM recovery, Gaussian blending</p>
       </div>
+      <div style="margin-top:0.5em; padding:0.4em 0.6em; background:rgba(79,195,247,0.1); border-radius:0.4em; color:var(--accent); font-weight:500; text-align:center;">Dice 0.83 &mdash; preserves morphology (median area 32 px vs GT 30 px)</div>
     </div>
-    <div class="v-center">
-      <div class="card card-green" style="margin-bottom: 16px;">
-        <h3>Improvements over v1 <span class="tag tag-improved">improved</span></h3>
-        <ul class="green">
-          <li><strong>TensorFlow &rarr; PyTorch</strong> &mdash; better ecosystem, easier debugging</li>
-          <li>128&times;128 tiles &rarr; <strong>192&times;192 patches</strong> with Gaussian blending</li>
-          <li><strong>7 architecture variants</strong> vs. single fixed architecture</li>
-          <li><strong>OOM auto-recovery</strong> &mdash; no manual tile size tuning</li>
-          <li>Lazy model loading from checkpoints</li>
-          <li><strong>DiceBCE loss</strong> (trained, validated) vs. BCE-only</li>
-        </ul>
-      </div>
-      <div class="card card-orange">
-        <h3>Training Setup</h3>
-        <ul class="orange">
-          <li>19 annotated fluorescence images</li>
-          <li>192&times;192 random patches, batch size 16</li>
-          <li>Augmentation: flip, rotate90, affine, gamma, noise</li>
-          <li>DiceBCE loss (&alpha;=0.3, &beta;=0.7, pw=3.0)</li>
-          <li>Adam lr=1e-3, ReduceLROnPlateau</li>
-          <li>Early stopping (patience=20, max 200 epochs)</li>
-        </ul>
-      </div>
-    </div>
+
   </div>
 </div>
 
 
 <!-- ===================== SECTION IV DIVIDER ===================== -->
-<div class="slide" id="slide-22">
+<div class="slide" id="slide-23">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">IV</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Deep Learning Platform</h1>
@@ -1723,8 +1782,88 @@ process(dataset, verbose, debug)
   </div>
 </div>
 
-<!-- ===================== SLIDE 12: UNET BUILDING BLOCKS ===================== -->
-<div class="slide" id="slide-23">
+<!-- ===================== SLIDE: HOW NN TRAINING WORKS ===================== -->
+<div class="slide" id="slide-24">
+  <h2>How Do We Train a Neural Network?</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:0.8em; justify-content:center;">
+
+    <!-- The training loop as a visual story -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:0.4em; flex-wrap:wrap;">
+
+      <div style="background:var(--bg-card); border:2px solid var(--accent3); border-radius:1em; padding:1em 1.2em; text-align:center; min-width:8em;">
+        <div style="font-size:1.8em;">&#x1F4F7;</div>
+        <div style="font-weight:600; color:var(--accent3); margin-top:0.2em;">Images</div>
+        <div style="color:var(--text-dim); font-size:0.9em;">microscopy patches</div>
+      </div>
+
+      <div style="font-size:1.8em; color:var(--text-dim);">&rarr;</div>
+
+      <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:1em; padding:1em 1.2em; text-align:center; min-width:8em;">
+        <div style="font-size:1.8em;">&#x1F9E0;</div>
+        <div style="font-weight:600; color:var(--accent); margin-top:0.2em;">Network</div>
+        <div style="color:var(--text-dim); font-size:0.9em;">makes a prediction</div>
+      </div>
+
+      <div style="font-size:1.8em; color:var(--text-dim);">&rarr;</div>
+
+      <div style="background:var(--bg-card); border:2px solid var(--accent4); border-radius:1em; padding:1em 1.2em; text-align:center; min-width:8em;">
+        <div style="font-size:1.8em;">&#x2696;&#xFE0F;</div>
+        <div style="font-weight:600; color:var(--accent4); margin-top:0.2em;">Loss Function</div>
+        <div style="color:var(--text-dim); font-size:0.9em;">how wrong was it?</div>
+      </div>
+
+      <div style="font-size:1.8em; color:var(--text-dim);">&rarr;</div>
+
+      <div style="background:var(--bg-card); border:2px solid var(--accent2); border-radius:1em; padding:1em 1.2em; text-align:center; min-width:8em;">
+        <div style="font-size:1.8em;">&#x1F504;</div>
+        <div style="font-weight:600; color:var(--accent2); margin-top:0.2em;">Update Weights</div>
+        <div style="color:var(--text-dim); font-size:0.9em;">learn from mistakes</div>
+      </div>
+
+      <div style="font-size:1.8em; color:var(--text-dim);">&#x21BA;</div>
+
+      <div style="color:var(--text-dim); font-style:italic;">repeat thousands of times</div>
+    </div>
+
+    <!-- Key ingredients grid -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.6em;">
+
+      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent3);">
+        <h3 style="color:var(--accent3);">Training Data</h3>
+        <p>Pairs of images + hand-drawn masks. The network learns by comparing its output to the &ldquo;correct answer.&rdquo;</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">We have <strong>19 annotated images</strong></p>
+      </div>
+
+      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent);">
+        <h3 style="color:var(--accent);">Architecture</h3>
+        <p>The network&rsquo;s structure &mdash; how many layers, what operations. Like choosing the <em>shape</em> of the brain.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">We tested <strong>7 variants</strong></p>
+      </div>
+
+      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent4);">
+        <h3 style="color:var(--accent4);">Loss Function</h3>
+        <p>The &ldquo;scoring rubric&rdquo; &mdash; tells the network <em>what</em> to care about. Boundary accuracy? Small objects?</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">We tested <strong>7 loss functions</strong></p>
+      </div>
+
+      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent2);">
+        <h3 style="color:var(--accent2);">Augmentation</h3>
+        <p>Artificially expand training data by flipping, rotating, adjusting brightness &mdash; so the network doesn&rsquo;t memorize.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Flip, rotate, affine, gamma, noise</p>
+      </div>
+
+    </div>
+
+    <!-- Punchline -->
+    <div style="text-align:center; color:var(--text-dim); font-size:1.05em; padding:0.4em;">
+      The goal: a network that can segment aggregates it has <strong style="color:var(--text);">never seen before</strong> &mdash; not just memorize the training examples.
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: UNET BUILDING BLOCKS ===================== -->
+<div class="slide" id="slide-25">
   <h2>UNet Architecture &amp; Building Blocks</h2>
   <div class="columns col-3" style="flex:1;">
     <div>
@@ -1782,7 +1921,7 @@ process(dataset, verbose, debug)
 
 
 <!-- ===================== SECTION V DIVIDER ===================== -->
-<div class="slide" id="slide-24">
+<div class="slide" id="slide-26">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">V</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Benchmarks &amp; Ablations</h1>
@@ -1791,7 +1930,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 13: LOSS FUNCTION BENCHMARK ===================== -->
-<div class="slide" id="slide-25">
+<div class="slide" id="slide-27">
   <h2>Benchmark: Loss Function Comparison</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -1825,7 +1964,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 14: DL VS FILTER ===================== -->
-<div class="slide" id="slide-26">
+<div class="slide" id="slide-28">
   <h2>Benchmark: Deep Learning vs Filter-Based Segmentation</h2>
   <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
     <div class="columns col-2" style="gap: 16px;">
@@ -1862,7 +2001,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 15: DL VS FILTER VISUAL ===================== -->
-<div class="slide" id="slide-27">
+<div class="slide" id="slide-29">
   <h2>Visual Comparison: DL vs Filter Segmentation</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1885,7 +2024,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 16: ARCHITECTURE ABLATION ===================== -->
-<div class="slide" id="slide-28">
+<div class="slide" id="slide-30">
   <h2>Benchmark: Architecture Ablation (7 Variants)</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -1922,7 +2061,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 17: ABLATION TRAINING CURVES ===================== -->
-<div class="slide" id="slide-29">
+<div class="slide" id="slide-31">
   <h2>Training Curves: Architecture Ablation</h2>
   <div class="columns col-3" style="flex:1; gap: 14px;">
     <div>
@@ -1968,7 +2107,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 18: NUCLEI BENCHMARK ===================== -->
-<div class="slide" id="slide-30">
+<div class="slide" id="slide-32">
   <h2>Benchmark: Nuclei Segmentation Robustness</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1996,7 +2135,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 19: NUCLEI NORMALIZATION ===================== -->
-<div class="slide" id="slide-31">
+<div class="slide" id="slide-33">
   <h2>Benchmark: Illumination Normalization Effect</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2028,7 +2167,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 20: CELL BENCHMARK ===================== -->
-<div class="slide" id="slide-32">
+<div class="slide" id="slide-34">
   <h2>Benchmark: Cell Segmentation &amp; Preprocessing</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2061,7 +2200,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 21: CELLPOSE PREPROCESSING DETAIL ===================== -->
-<div class="slide" id="slide-33">
+<div class="slide" id="slide-35">
   <h2>Cellpose Preprocessing: Detailed Results</h2>
   <div class="columns col-3" style="flex:1; gap: 14px;">
     <div>
@@ -2095,7 +2234,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 22: ANNOTATION QUALITY ===================== -->
-<div class="slide" id="slide-34">
+<div class="slide" id="slide-36">
   <h2>Annotation Quality Analysis</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2130,7 +2269,7 @@ process(dataset, verbose, debug)
 
 
 <!-- ===================== SECTION VI DIVIDER ===================== -->
-<div class="slide" id="slide-35">
+<div class="slide" id="slide-37">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">VI</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Paper Figures &amp; Validation</h1>
@@ -2139,7 +2278,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 23: BIOLOGICAL VALIDATION ===================== -->
-<div class="slide" id="slide-36">
+<div class="slide" id="slide-38">
   <h2>Biological Validation: CRISPR Screen Controls</h2>
   <div class="columns col-2" style="flex:1;">
     <div class="v-center">
@@ -2181,7 +2320,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 24: DATA QUALITY ===================== -->
-<div class="slide" id="slide-37">
+<div class="slide" id="slide-39">
   <h2>Data Quality: Imaging Reproducibility</h2>
   <div class="columns col-3" style="flex:1; gap: 16px;">
     <div>
@@ -2209,7 +2348,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 25: CONFIDENCE ANALYSIS ===================== -->
-<div class="slide" id="slide-38">
+<div class="slide" id="slide-40">
   <h2>Model Confidence &amp; Error Characterization</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2236,7 +2375,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 26: VISUAL OVERLAYS ===================== -->
-<div class="slide" id="slide-39">
+<div class="slide" id="slide-41">
   <h2>Visual Comparison: Architecture Variants</h2>
   <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
     <div class="img-container" style="flex:1;">
@@ -2247,7 +2386,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 27: LOSS FUNCTION VISUALS ===================== -->
-<div class="slide" id="slide-40">
+<div class="slide" id="slide-42">
   <h2>Visual Comparison: Loss Function Variants</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2270,7 +2409,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 28: MANUSCRIPT ===================== -->
-<div class="slide" id="slide-41">
+<div class="slide" id="slide-43">
   <h2>Manuscript in Preparation</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2310,7 +2449,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 29: MANUSCRIPT FIGURES ===================== -->
-<div class="slide" id="slide-42">
+<div class="slide" id="slide-44">
   <h2>Manuscript Figure Plan</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2358,7 +2497,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 30: SUMMARY ===================== -->
-<div class="slide" id="slide-43">
+<div class="slide" id="slide-45">
   <h2>Summary &amp; Looking Ahead</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2409,7 +2548,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 31: THANK YOU ===================== -->
-<div class="slide title-slide" id="slide-44">
+<div class="slide title-slide" id="slide-46">
   <div class="title-decoration d1"></div>
   <div class="title-decoration d2"></div>
   <div>
