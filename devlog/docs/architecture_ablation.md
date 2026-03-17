@@ -76,17 +76,18 @@ Existing checkpoints are skipped by default (`--no-skip-existing` to retrain).
 
 ## Results
 
-5 of 7 variants completed training. `convnext_unet` and `eca_attention_resunet`
-have not been trained yet. Metrics reported at the epoch with the lowest
-validation loss.
+All 7 variants completed training. Metrics reported at the epoch with the
+lowest validation loss.
 
-| Model | Val Dice | Val IoU | Val Precision | Val Recall | Best epoch | Total epochs |
+| Model | Params | Val Dice | Val IoU | Val Precision | Val Recall | Best epoch |
 |---|---|---|---|---|---|---|
-| **resunet** | **0.829** | **0.711** | **0.807** | 0.863 | 146 | 166 |
-| attention_resunet | 0.828 | 0.710 | 0.799 | 0.869 | 138 | 158 |
-| baseline | 0.828 | 0.709 | 0.796 | 0.872 | 118 | 138 |
-| se_attention_resunet | 0.824 | 0.703 | 0.784 | 0.876 | 84 | 104 |
-| aspp_se_attention_resunet | 0.816 | 0.692 | 0.775 | 0.871 | 69 | 77 |
+| **resunet** | 31.9M | **0.829** | **0.711** | **0.807** | 0.863 | 146 |
+| attention_resunet | 32.3M | 0.828 | 0.710 | 0.799 | 0.869 | 138 |
+| baseline | 31.0M | 0.828 | 0.709 | 0.796 | 0.872 | 118 |
+| eca_attention_resunet | 32.3M | 0.826 | 0.707 | 0.787 | 0.877 | 113 |
+| convnext_unet | 29.7M | 0.824 | 0.704 | 0.798 | 0.863 | 164 |
+| se_attention_resunet | 32.3M | 0.824 | 0.703 | 0.784 | 0.876 | 84 |
+| aspp_se_attention_resunet | 31.7M | 0.818 | 0.695 | 0.773 | 0.877 | 94 |
 
 ---
 
@@ -94,18 +95,21 @@ validation loss.
 
 ### No meaningful improvement from architecture changes
 
-The top 3 models (resunet, attention_resunet, baseline) are within **0.1% Dice**
-of each other. The training curves confirm this — all plateau at the same
-validation loss floor (~0.077).
+All 7 models span only **1.1% Dice** (0.818–0.829). The top 3 (resunet,
+attention_resunet, baseline) are within **0.1% Dice** of each other. The
+training curves confirm this — all plateau at the same validation loss floor
+(~0.077).
 
 ### More complexity actually hurts
 
+- **convnext_unet** (0.824 Dice) and **eca_attention_resunet** (0.826 Dice)
+  land in the middle of the pack, confirming the trend.
 - **se_attention_resunet** is slightly worse and converges earlier (stopped at
   epoch 84). The SE channel attention adds parameters without improving
   generalization on this small dataset.
-- **aspp_se_attention_resunet** is the worst performer and stopped earliest
-  (epoch 69 of only 77 total). The increased parameter count from ASPP +
-  SE + attention gates causes faster overfitting on 19 training images.
+- **aspp_se_attention_resunet** is the worst performer (0.818 Dice). The
+  increased parameter count from ASPP + SE + attention gates causes faster
+  overfitting on 19 training images.
 
 ### Training curve observations
 
@@ -134,6 +138,6 @@ architecture complexity. The simple baseline UNet with
 `DiceBCELoss(alpha=0.3, beta=0.7, pos_weight=3.0)` remains the best practical
 choice.
 
-The remaining two variants (`convnext_unet`, `eca_attention_resunet`) are
-unlikely to change this conclusion given the clear trend that added complexity
-provides no benefit on this dataset size.
+The now-complete 7-variant ablation confirms this: `convnext_unet` and
+`eca_attention_resunet` landed squarely in the middle of the pack, adding
+no meaningful improvement over the baseline.
