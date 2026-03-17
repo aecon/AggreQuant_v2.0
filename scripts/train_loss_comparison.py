@@ -1,9 +1,11 @@
-"""Train baseline UNet on annotated aggregate data.
+"""Train baseline UNet with different loss configurations for comparison.
 
 Usage:
-    python scripts/train_baseline.py --name baseline
-    python scripts/train_baseline.py --name dice_bce_pw3 --alpha 0.3 --beta 0.7 --pos-weight 3.0
-    python scripts/train_baseline.py --name bce_pw3 --alpha 0.0 --beta 1.0 --pos-weight 3.0
+    python scripts/train_loss_comparison.py --name baseline
+    python scripts/train_loss_comparison.py --name dice_bce_pw3 --alpha 0.3 --beta 0.7 --pos-weight 3.0
+    python scripts/train_loss_comparison.py --name bce_pw3 --alpha 0.0 --beta 1.0 --pos-weight 3.0
+
+Output goes to training_output/loss_function/<name>/
 
 Prerequisite: symlinks must exist in training_output/symlinks/
     (images/ and masks/ with matching filenames).
@@ -49,7 +51,7 @@ NUM_WORKERS = 4
 def parse_args():
     parser = argparse.ArgumentParser(description="Train baseline UNet")
     parser.add_argument("--name", type=str, required=True,
-                        help="Experiment name (output goes to training_output/<name>/)")
+                        help="Experiment name (output goes to training_output/loss_function/<name>/)")
     parser.add_argument("--alpha", type=float, default=0.5,
                         help="Dice loss weight (default: 0.5)")
     parser.add_argument("--beta", type=float, default=0.5,
@@ -61,7 +63,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    checkpoint_dir = TRAINING_ROOT / args.name / "checkpoints"
+    checkpoint_dir = TRAINING_ROOT / "loss_function" / args.name / "checkpoints"
 
     logger.info("=" * 60)
     logger.info(f"Training baseline UNet — experiment: {args.name}")

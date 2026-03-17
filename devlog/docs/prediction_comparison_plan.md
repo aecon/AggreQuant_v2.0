@@ -183,8 +183,9 @@ errors (core misses) vs benign errors (edge disagreements).
 
 ## Running the comparison (`scripts/compare_predictions.py`)
 
-Auto-discovers all checkpoints in `training_output/*/checkpoints/best.pt`,
-runs inference, and computes all metrics from sections 2-4 above.
+Auto-discovers all checkpoints in `training_output/loss_function/*/checkpoints/best.pt`,
+runs inference, and computes all metrics from sections 2-4 above. Use `--group` to
+select a different subfolder (e.g., `--group ablation`).
 
 ```bash
 # All available runs, first image, print summary table:

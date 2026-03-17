@@ -1,7 +1,7 @@
 """Plot training curves from history.json.
 
 Usage:
-    python scripts/plot_training.py training_output/baseline/checkpoints/history.json
+    python scripts/plot_training.py training_output/loss_function/baseline/checkpoints/history.json
 """
 
 import json

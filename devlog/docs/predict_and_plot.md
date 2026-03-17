@@ -37,19 +37,19 @@ The figure always opens an interactive matplotlib window (after saving, if appli
 ```bash
 # Minimal — just the checkpoint (uses first image, auto-finds mask, saves + shows interactive):
 conda run -n AggreQuant python scripts/predict_and_plot.py \
-    training_output/dice03_bce07_pw3/checkpoints/best.pt
+    training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt
 
 # Pick image by index (0-based):
 conda run -n AggreQuant python scripts/predict_and_plot.py \
-    training_output/dice03_bce07_pw3/checkpoints/best.pt --image 3
+    training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --image 3
 
 # Pick image by filename:
 conda run -n AggreQuant python scripts/predict_and_plot.py \
-    training_output/dice03_bce07_pw3/checkpoints/best.pt --image image_0003.tif
+    training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --image image_0003.tif
 
 # Custom threshold:
 conda run -n AggreQuant python scripts/predict_and_plot.py \
-    training_output/dice03_bce07_pw3/checkpoints/best.pt --threshold 0.4
+    training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --threshold 0.4
 
 # Override all auto-resolved paths:
 conda run -n AggreQuant python scripts/predict_and_plot.py \
@@ -57,7 +57,7 @@ conda run -n AggreQuant python scripts/predict_and_plot.py \
 
 # Interactive only (skip saving):
 conda run -n AggreQuant python scripts/predict_and_plot.py \
-    training_output/dice03_bce07_pw3/checkpoints/best.pt --no-save
+    training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --no-save
 ```
 
 ---

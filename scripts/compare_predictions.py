@@ -13,14 +13,17 @@ Metrics computed:
 - Local intensity analysis: whether errors correlate with dim image regions
 
 Usage:
-    # Compare all loss runs on first image:
+    # Compare all loss_function runs on first image:
     python scripts/compare_predictions.py
 
     # Specific image:
     python scripts/compare_predictions.py --image 3
 
-    # Specific runs:
+    # Specific runs within the group:
     python scripts/compare_predictions.py --runs baseline bce_pw3 dice03_bce07_pw3
+
+    # Compare ablation runs instead:
+    python scripts/compare_predictions.py --group ablation
 
     # Custom threshold, save results:
     python scripts/compare_predictions.py --threshold 0.4 -o results/
@@ -58,6 +61,8 @@ def parse_args():
                         help="GT mask path (default: auto-resolve)")
     parser.add_argument("--runs", nargs="+", default=None,
                         help="Run names to compare (default: all with best.pt)")
+    parser.add_argument("--group", type=str, default="loss_function",
+                        help="Subfolder under training_output/ (default: loss_function)")
     parser.add_argument("--threshold", type=float, default=0.5,
                         help="Probability threshold (default: 0.5)")
     parser.add_argument("--edge-width", type=int, default=3,
@@ -112,23 +117,25 @@ def resolve_mask(mask_arg, image_path):
     return None
 
 
-def discover_runs(run_names=None):
-    """Find all runs with a best.pt checkpoint."""
+def discover_runs(group, run_names=None):
+    """Find all runs with a best.pt checkpoint under a group subfolder."""
+    group_dir = TRAINING_ROOT / group
+
     if run_names:
         runs = {}
         for name in run_names:
-            cp = TRAINING_ROOT / name / "checkpoints" / "best.pt"
+            cp = group_dir / name / "checkpoints" / "best.pt"
             if not cp.exists():
                 raise FileNotFoundError(f"No checkpoint for run '{name}': {cp}")
             runs[name] = cp
         return runs
 
     runs = {}
-    for cp in sorted(TRAINING_ROOT.glob("*/checkpoints/best.pt")):
+    for cp in sorted(group_dir.glob("*/checkpoints/best.pt")):
         name = cp.parent.parent.name
         runs[name] = cp
     if not runs:
-        raise FileNotFoundError(f"No checkpoints found in {TRAINING_ROOT}")
+        raise FileNotFoundError(f"No checkpoints found in {group_dir}")
     return runs
 
 
@@ -521,7 +528,7 @@ def main():
     # Resolve paths
     image_path = resolve_image(args.image)
     mask_path = resolve_mask(args.mask, image_path)
-    runs = discover_runs(args.runs)
+    runs = discover_runs(args.group, args.runs)
 
     if mask_path is None:
         raise FileNotFoundError(

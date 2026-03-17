@@ -19,11 +19,11 @@ Paths are auto-resolved from the checkpoint location:
 
 Usage:
     # Minimal — just checkpoint (uses first image, auto-finds mask, auto-saves):
-    python scripts/predict_and_plot.py training_output/dice03_bce07_pw3/checkpoints/best.pt
+    python scripts/predict_and_plot.py training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt
 
     # Pick a specific image by index or name:
-    python scripts/predict_and_plot.py training_output/dice03_bce07_pw3/checkpoints/best.pt --image 3
-    python scripts/predict_and_plot.py training_output/dice03_bce07_pw3/checkpoints/best.pt --image image_0003.tif
+    python scripts/predict_and_plot.py training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --image 3
+    python scripts/predict_and_plot.py training_output/loss_function/dice03_bce07_pw3/checkpoints/best.pt --image image_0003.tif
 
     # Override any auto-resolved path:
     python scripts/predict_and_plot.py checkpoint.pt --image /path/to/image.tif --mask /path/to/mask.tif -o out.png

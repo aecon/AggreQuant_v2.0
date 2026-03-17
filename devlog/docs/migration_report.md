@@ -201,11 +201,13 @@ AggreQuant/
 ├── scripts/                            # ══ CLI entry points and utilities ══
 │   ├── run_pipeline.py                 # Main CLI: run pipeline from YAML config with --verbose, --max-fields flags
 │   ├── run_gui.py                      # Launch the CustomTkinter GUI application
-│   ├── train_baseline.py              # Train a UNet model on extracted patches (WIP)
-│   ├── plot_training.py               # Plot training history (loss curves, metric curves) from JSON (WIP)
+│   ├── train_loss_comparison.py        # Train baseline UNet with different loss configurations
+│   ├── train_ablation.py              # Train 7 UNet architecture variants (ablation study)
+│   ├── compare_predictions.py         # Quantitative prediction comparison across models
+│   ├── predict_and_plot.py            # Visual prediction overlay (TP/FP/FN) with interactive crosshair
+│   ├── plot_training.py               # Plot training history (loss curves, metric curves) from JSON
 │   ├── benchmark_focus.py              # Benchmark and visualize focus/blur metrics on test images
-│   ├── benchmark_nuclei.py             # Compare StarDist vs Cellpose for nuclei segmentation
-│   └── test_cellpose_only.py           # Minimal Cellpose test without TensorFlow/StarDist dependency
+│   └── benchmark_nuclei.py             # Compare StarDist vs Cellpose for nuclei segmentation
 │
 ├── configs/                            # ══ Example YAML configurations ══
 │   ├── README.md                       # Configuration documentation
