@@ -167,18 +167,30 @@ def pixel_metrics(pred, gt):
 
 
 def eroded_core_dice(pred, gt, edge_width=3):
-    """Dice computed only on eroded GT cores (excluding edges)."""
-    eroded_gt = ndimage.binary_erosion(
-        gt.astype(bool), iterations=edge_width,
-    ).astype(bool)
+    """Dice computed only on GT cores (excluding edges).
 
-    if eroded_gt.sum() == 0:
+    Each GT object is eroded individually. Objects too small to survive
+    erosion are included whole (they are entirely "core").
+    """
+    gt_b = gt.astype(bool)
+    gt_labels, n_objects = ndimage.label(gt_b)
+
+    core_mask = np.zeros_like(gt_b)
+    for label_id in range(1, n_objects + 1):
+        obj_mask = gt_labels == label_id
+        eroded = ndimage.binary_erosion(obj_mask, iterations=edge_width)
+        if eroded.any():
+            core_mask |= eroded
+        else:
+            core_mask |= obj_mask
+
+    if core_mask.sum() == 0:
         return 0.0
 
     pred_b = pred.astype(bool)
-    tp = (pred_b & eroded_gt).sum()
-    fp_core = (pred_b & ~gt.astype(bool)).sum()  # FPs still counted normally
-    fn_core = (~pred_b & eroded_gt).sum()
+    tp = (pred_b & core_mask).sum()
+    fp_core = (pred_b & ~gt_b).sum()  # FPs still counted normally
+    fn_core = (~pred_b & core_mask).sum()
 
     denom = 2 * tp + fp_core + fn_core
     return 2 * tp / denom if denom > 0 else 0.0
@@ -422,7 +434,6 @@ def evaluate_model(prob_map, image, gt, threshold=0.5, edge_width=3,
 
 def print_summary_table(all_results):
     """Print a formatted comparison table."""
-    # Header
     metrics_order = [
         ("dice", "Dice"),
         ("iou", "IoU"),
@@ -462,6 +473,45 @@ def print_summary_table(all_results):
     logger.info("=" * len(header))
 
 
+def print_detailed_counts(all_results):
+    """Print per-model FP/FN pixel and object counts."""
+    counts_order = [
+        ("n_gt_objects", "GT obj"),
+        ("n_pred_objects", "Pred obj"),
+        ("n_fp_pixels", "FP px"),
+        ("n_fn_pixels", "FN px"),
+        ("n_fp_edge", "FP edge"),
+        ("n_fp_core", "FP core"),
+        ("n_fn_edge", "FN edge"),
+        ("n_fn_core", "FN core"),
+        ("n_fp_components", "FP comp"),
+        ("n_fn_components", "FN comp"),
+        ("fp_in_dim_region", "FP dim"),
+        ("fn_in_dim_region", "FN dim"),
+    ]
+
+    name_width = max(len(name) for name in all_results) + 2
+    col_width = 9
+
+    header = f"{'Model':<{name_width}}"
+    for _, label in counts_order:
+        header += f"{label:>{col_width}}"
+    logger.info("\n" + "-" * len(header))
+    logger.info("DETAILED COUNTS")
+    logger.info("-" * len(header))
+    logger.info(header)
+    logger.info("-" * len(header))
+
+    for name, results in all_results.items():
+        line = f"{name:<{name_width}}"
+        for key, _ in counts_order:
+            val = results.get(key, 0)
+            line += f"{val:>{col_width}d}"
+        logger.info(line)
+
+    logger.info("-" * len(header))
+
+
 def save_csv(all_results, output_path):
     """Save results to CSV."""
     if not all_results:
@@ -489,11 +539,15 @@ def save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir):
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     bins = np.linspace(0, 1, 30)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
 
     # FP histogram
     for name, probs in all_fp_probs.items():
         if len(probs) > 0:
-            axes[0].hist(probs, bins=bins, alpha=0.5, label=name, density=True)
+            counts, _ = np.histogram(probs, bins=bins, density=True)
+            axes[0].bar(bin_centers, counts, width=bins[1] - bins[0],
+                        alpha=0.2)
+            axes[0].plot(bin_centers, counts, linewidth=1.5, label=name)
     axes[0].set_xlabel("Predicted probability")
     axes[0].set_ylabel("Density")
     axes[0].set_title("False positive confidence")
@@ -503,7 +557,10 @@ def save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir):
     # FN histogram
     for name, probs in all_fn_probs.items():
         if len(probs) > 0:
-            axes[1].hist(probs, bins=bins, alpha=0.5, label=name, density=True)
+            counts, _ = np.histogram(probs, bins=bins, density=True)
+            axes[1].bar(bin_centers, counts, width=bins[1] - bins[0],
+                        alpha=0.2)
+            axes[1].plot(bin_centers, counts, linewidth=1.5, label=name)
     axes[1].set_xlabel("Predicted probability")
     axes[1].set_ylabel("Density")
     axes[1].set_title("False negative confidence")
@@ -515,6 +572,252 @@ def save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir):
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     logger.info(f"Confidence histograms saved to {path}")
+
+
+def save_intensity_distributions(image, gt_binary, all_predictions, output_dir):
+    """Plot intensity distributions at TP, FP, FN, TN pixels per model.
+
+    Shows where errors fall on the image intensity spectrum relative to
+    correct predictions. Each model gets a 4-class density plot.
+    """
+    import matplotlib.pyplot as plt
+
+    names = list(all_predictions.keys())
+    image_f = image.astype(np.float32)
+    gt_b = gt_binary.astype(bool)
+    n_models = len(names)
+
+    fig, axes = plt.subplots(1, n_models, figsize=(6 * n_models, 5),
+                             sharey=True)
+    if n_models == 1:
+        axes = [axes]
+
+    # Use image intensity range for bins
+    bins = np.linspace(image_f.min(), image_f.max(), 50)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
+    bar_width = bins[1] - bins[0]
+
+    for ax, name in zip(axes, names):
+        pred_b = all_predictions[name].astype(bool)
+
+        tp_mask = pred_b & gt_b
+        fp_mask = pred_b & ~gt_b
+        fn_mask = ~pred_b & gt_b
+        tn_mask = ~pred_b & ~gt_b
+
+        categories = [
+            ("TP", tp_mask, "#2ca02c"),   # green
+            ("FP", fp_mask, "#d62728"),   # red
+            ("FN", fn_mask, "#1f77b4"),   # blue
+            ("TN", tn_mask, "#999999"),   # gray
+        ]
+
+        for label, mask, color in categories:
+            pixels = image_f[mask]
+            if len(pixels) == 0:
+                continue
+            counts, _ = np.histogram(pixels, bins=bins, density=True)
+            ax.bar(bin_centers, counts, width=bar_width, alpha=0.15,
+                   color=color)
+            ax.plot(bin_centers, counts, linewidth=1.5, label=label,
+                    color=color)
+
+        ax.set_xlabel("Pixel intensity")
+        ax.set_title(name, fontsize=10)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    axes[0].set_ylabel("Density")
+    fig.suptitle("Intensity distributions at TP / FP / FN / TN pixels",
+                 fontsize=12, y=1.02)
+    fig.tight_layout()
+    path = output_dir / "intensity_distributions.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Intensity distributions saved to {path}")
+
+
+def _make_overlay(pred_binary, gt_binary):
+    """RGB overlay: yellow=TP, magenta=FP, cyan=FN."""
+    h, w = pred_binary.shape
+    rgb = np.zeros((h, w, 3), dtype=np.float32)
+    pred = pred_binary.astype(bool)
+    gt = gt_binary.astype(bool)
+    rgb[pred & gt] = [1.0, 1.0, 0.0]       # yellow = TP
+    rgb[pred & ~gt] = [1.0, 0.0, 1.0]      # magenta = FP
+    rgb[~pred & gt] = [0.0, 1.0, 1.0]      # cyan = FN
+    return rgb
+
+
+def plot_metrics_bars(all_results, output_dir):
+    """Bar chart comparing key metrics across models."""
+    import matplotlib.pyplot as plt
+
+    metrics = [
+        ("dice", "Dice"),
+        ("iou", "IoU"),
+        ("precision", "Precision"),
+        ("recall", "Recall"),
+        ("eroded_core_dice", "Core Dice"),
+        ("obj_precision", "Obj Prec"),
+        ("obj_recall", "Obj Recall"),
+    ]
+    names = list(all_results.keys())
+    n_models = len(names)
+    n_metrics = len(metrics)
+
+    fig, ax = plt.subplots(figsize=(max(12, n_models * 3), 6))
+    x = np.arange(n_metrics)
+    bar_width = 0.8 / n_models
+
+    for i, name in enumerate(names):
+        values = [all_results[name].get(key, 0) for key, _ in metrics]
+        offset = (i - n_models / 2 + 0.5) * bar_width
+        bars = ax.bar(x + offset, values, bar_width, label=name, alpha=0.85)
+        for bar, val in zip(bars, values):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                    f"{val:.2f}", ha="center", va="bottom", fontsize=6)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([label for _, label in metrics])
+    ax.set_ylim(0, 1.2)
+    ax.set_ylabel("Score")
+    ax.set_title("Model Comparison — Key Metrics")
+    ax.legend(fontsize=8)
+    ax.grid(axis="y", alpha=0.3)
+
+    fig.tight_layout()
+    path = output_dir / "metrics_comparison.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Metrics bar chart saved to {path}")
+
+
+def plot_overlay_grid(image, gt_binary, all_predictions, output_dir):
+    """Grid of TP/FP/FN overlay maps, one column per model."""
+    import matplotlib.pyplot as plt
+
+    names = list(all_predictions.keys())
+    n_cols = len(names) + 1  # first column = input image
+
+    fig, axes = plt.subplots(1, n_cols, figsize=(5 * n_cols, 5),
+                             sharex=True, sharey=True)
+    if n_cols == 1:
+        axes = [axes]
+
+    # Contrast-enhanced input image
+    p1, p99 = np.percentile(image, (1, 99))
+    enhanced = np.clip((image.astype(np.float32) - p1) / (p99 - p1), 0, 1)
+    axes[0].imshow(enhanced, cmap="gray")
+    axes[0].set_title("Input", fontsize=10)
+    axes[0].axis("off")
+
+    # Overlay per model
+    for i, name in enumerate(names):
+        pred = all_predictions[name]
+        overlay = _make_overlay(pred, gt_binary)
+        axes[i + 1].imshow(overlay)
+        axes[i + 1].set_title(name, fontsize=10)
+        axes[i + 1].axis("off")
+
+    fig.text(0.5, 0.02, "Yellow = TP    Magenta = FP    Cyan = FN",
+             ha="center", fontsize=9, style="italic")
+    fig.tight_layout(rect=[0, 0.05, 1, 1])
+    path = output_dir / "overlay_grid.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Overlay grid saved to {path}")
+
+
+def plot_core_edge_errors(all_results, output_dir):
+    """Stacked bar chart: core vs edge breakdown of FP and FN errors."""
+    import matplotlib.pyplot as plt
+
+    names = list(all_results.keys())
+    n_models = len(names)
+    x = np.arange(n_models)
+    bar_width = 0.6
+
+    fp_edge = [all_results[n]["n_fp_edge"] for n in names]
+    fp_core = [all_results[n]["n_fp_core"] for n in names]
+    fn_edge = [all_results[n]["n_fn_edge"] for n in names]
+    fn_core = [all_results[n]["n_fn_core"] for n in names]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(max(8, n_models * 2), 5))
+
+    # FP breakdown
+    ax1.bar(x, fp_edge, bar_width, label="Edge", color="#f4a582")
+    ax1.bar(x, fp_core, bar_width, bottom=fp_edge, label="Core", color="#b2182b")
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(names, rotation=30, ha="right")
+    ax1.set_ylabel("Pixel count")
+    ax1.set_title("False Positives: core vs edge")
+    ax1.legend(fontsize=8)
+    ax1.grid(axis="y", alpha=0.3)
+
+    # FN breakdown
+    ax2.bar(x, fn_edge, bar_width, label="Edge", color="#92c5de")
+    ax2.bar(x, fn_core, bar_width, bottom=fn_edge, label="Core", color="#2166ac")
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(names, rotation=30, ha="right")
+    ax2.set_ylabel("Pixel count")
+    ax2.set_title("False Negatives: core vs edge")
+    ax2.legend(fontsize=8)
+    ax2.grid(axis="y", alpha=0.3)
+
+    fig.tight_layout()
+    path = output_dir / "core_edge_errors.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Core/edge error chart saved to {path}")
+
+
+def plot_intensity_correlation(all_results, output_dir):
+    """Bar chart: fraction of FP/FN errors in dim image regions."""
+    import matplotlib.pyplot as plt
+
+    names = list(all_results.keys())
+    n_models = len(names)
+    x = np.arange(n_models)
+    bar_width = 0.35
+
+    fp_dim = [all_results[n]["fp_dim_frac"] for n in names]
+    fn_dim = [all_results[n]["fn_dim_frac"] for n in names]
+
+    fig, ax = plt.subplots(figsize=(max(8, n_models * 2), 5))
+
+    bars_fp = ax.bar(x - bar_width / 2, fp_dim, bar_width,
+                     label="FP in dim", color="#e08080")
+    bars_fn = ax.bar(x + bar_width / 2, fn_dim, bar_width,
+                     label="FN in dim", color="#6090c0")
+
+    # Annotate with counts (e.g. "3/12")
+    for i, name in enumerate(names):
+        r = all_results[name]
+        fp_label = f"{r['fp_in_dim_region']}/{r['n_fp_components']}"
+        fn_label = f"{r['fn_in_dim_region']}/{r['n_fn_components']}"
+        ax.text(bars_fp[i].get_x() + bars_fp[i].get_width() / 2,
+                bars_fp[i].get_height() + 0.02,
+                fp_label, ha="center", va="bottom", fontsize=7)
+        ax.text(bars_fn[i].get_x() + bars_fn[i].get_width() / 2,
+                bars_fn[i].get_height() + 0.02,
+                fn_label, ha="center", va="bottom", fontsize=7)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, rotation=30, ha="right")
+    ax.set_ylim(0, 1.15)
+    ax.set_ylabel("Fraction in dim regions")
+
+    gt_p10 = all_results[names[0]]["gt_intensity_p10"]
+    ax.set_title(f"Errors in dim regions (threshold: GT intensity p10 = {gt_p10:.1f})")
+    ax.legend(fontsize=8)
+    ax.grid(axis="y", alpha=0.3)
+
+    fig.tight_layout()
+    path = output_dir / "intensity_correlation.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Intensity correlation chart saved to {path}")
 
 
 # ---------------------------------------------------------------------------
@@ -552,14 +855,17 @@ def main():
         gt = gt[:, :, 0]
 
     # Evaluate each model
+    gt_binary = (gt > 0).astype(np.uint8)
     all_results = {}
     all_fp_probs = {}
     all_fn_probs = {}
+    all_predictions = {}
 
     for name, checkpoint_path in runs.items():
         logger.info(f"Evaluating {name}...")
         model = load_model(checkpoint_path)
         prob_map = predict(model, image)
+        pred_binary = (prob_map > args.threshold).astype(np.uint8)
 
         results, fp_probs, fn_probs = evaluate_model(
             prob_map, image, gt,
@@ -570,15 +876,24 @@ def main():
         all_results[name] = results
         all_fp_probs[name] = fp_probs
         all_fn_probs[name] = fn_probs
+        all_predictions[name] = pred_binary
 
     # Print summary
     print_summary_table(all_results)
+    print_detailed_counts(all_results)
 
     # Save if output dir specified
     if args.output_dir:
         output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
         save_csv(all_results, output_dir / "comparison_results.csv")
         save_confidence_histograms(all_fp_probs, all_fn_probs, output_dir)
+        save_intensity_distributions(image, gt_binary, all_predictions,
+                                     output_dir)
+        plot_metrics_bars(all_results, output_dir)
+        plot_overlay_grid(image, gt_binary, all_predictions, output_dir)
+        plot_core_edge_errors(all_results, output_dir)
+        plot_intensity_correlation(all_results, output_dir)
 
 
 if __name__ == "__main__":

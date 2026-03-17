@@ -235,6 +235,59 @@ conda run -n AggreQuant python scripts/compare_predictions.py --threshold 0.4 --
 
 ### Output
 
-- **Summary table** (always printed): all metrics per model
-- **`comparison_results.csv`** (with `-o`): full metrics table
-- **`confidence_histograms.png`** (with `-o`): FP and FN probability distributions per model
+- **Summary table** + **detailed counts table** (always printed)
+- With `-o`, saves the following files:
+
+#### `comparison_results.csv`
+Full metrics table (all computed values per model).
+
+#### `metrics_comparison.png` — How good is each model?
+Grouped bar chart with 7 metrics, one bar per model per metric:
+- **Dice** — overlap between prediction and GT (harmonic mean of precision+recall). Higher = better overall segmentation.
+- **IoU** — same idea as Dice but stricter (intersection / union). Always lower than Dice.
+- **Precision** — of all pixels the model predicted as aggregate, what fraction actually is aggregate? Low precision = too many false positives (model is over-predicting).
+- **Recall** — of all GT aggregate pixels, what fraction did the model find? Low recall = missed aggregates.
+- **Core Dice** — same as Dice but ignoring edge pixels. Tests whether models agree on aggregate centers, removing boundary disagreement noise.
+- **Obj Prec** — of all predicted blobs, what fraction matched a real GT blob (by centroid distance)? Low = hallucinated objects.
+- **Obj Recall** — of all GT blobs, what fraction was detected? Low = missed objects entirely.
+
+#### `overlay_grid.png` — Where does each model get it right/wrong?
+Side-by-side spatial maps:
+- Column 1: contrast-enhanced input image
+- Columns 2–N: per-model overlay where each pixel is colored:
+  - Yellow = TP (both model and GT agree it's aggregate)
+  - Magenta = FP (model says aggregate, GT says no)
+  - Cyan = FN (GT says aggregate, model missed it)
+  - Black = TN (both agree it's background)
+
+Look for: magenta clusters (hallucinated aggregates), cyan clusters (missed aggregates), and how much yellow vs cyan/magenta there is.
+
+#### `core_edge_errors.png` — Are errors at boundaries or deep inside?
+Two stacked bar charts (one for FP, one for FN). Each bar is split into:
+- **Edge** (light color, bottom) — error pixels within 3px of a GT boundary. These are "boundary disagreement" — model and GT just drew the border differently.
+- **Core** (dark color, top) — error pixels far from any GT boundary. These are the real errors — hallucinated aggregates (FP core) or completely missed aggregate centers (FN core).
+
+What to look for: If most errors are edge errors, the model is actually good — it just disagrees on exact boundaries. If core errors dominate, the model is fundamentally wrong (missing or inventing objects).
+
+#### `intensity_correlation.png` — Do errors happen in dim image regions?
+Grouped bars per model showing what fraction of error components (connected blobs) fall in dim image regions:
+- **FP in dim** (red) — fraction of false positive blobs located where the image is dark. High = model is hallucinating aggregates in low-signal areas.
+- **FN in dim** (blue) — fraction of missed GT blobs in dark areas. High = model struggles with faint aggregates.
+
+The annotations (e.g. "2769/3450") show absolute counts: errors_in_dim / total_error_components. The "dim" threshold is the 10th percentile of intensity at GT aggregate pixels.
+
+#### `confidence_histograms.png` — How confident is the model when it's wrong?
+Two plots showing the probability distribution at error pixels (line + bar):
+- **Left (FP confidence)** — probability values where the model predicted aggregate but GT disagrees. If peaked near 1.0, the model is confidently wrong on its false positives (hard to fix with threshold tuning).
+- **Right (FN confidence)** — probability values where the model missed GT aggregate. If peaked near 0.0, the model was confidently ignoring those pixels. If peaked near 0.5, a lower threshold might recover them.
+
+Practical use: If FP confidence is mostly 0.5–0.7, raising the threshold would eliminate many FPs. If FN confidence clusters near 0.4–0.5, lowering the threshold would recover them.
+
+#### `intensity_distributions.png` — What intensities do errors occur at?
+One panel per model showing density curves for pixel intensity at TP, FP, FN, and TN locations:
+- **TP** (green) — intensity of correctly predicted aggregate pixels
+- **FP** (red) — intensity where model predicted aggregate but GT disagrees
+- **FN** (blue) — intensity where model missed GT aggregate
+- **TN** (gray) — background intensity
+
+Shows whether errors cluster at specific intensity ranges — e.g. FPs in dim regions or FNs where aggregates are faint.
