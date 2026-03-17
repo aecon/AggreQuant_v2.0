@@ -1443,6 +1443,16 @@ process(dataset, verbose, debug)
       </div>
     </div>
 
+    <!-- Preprocessing note -->
+    <div style="display:flex; gap:0.8em;">
+      <div class="card" style="flex:1; padding:0.8em 1em; border-left:3px solid var(--accent3);">
+        <p>Also tested: <strong>background normalization</strong> as preprocessing (Gaussian denoise + background division) &mdash; applied to all models to evaluate impact on detection counts and inter-model agreement.</p>
+      </div>
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent); white-space:nowrap;">
+        <p><span style="color:var(--accent); font-weight:600;">Interactive viewer:</span> &nbsp; <code>cd benchmarks/nuclei_segmentation && streamlit run viewer.py</code></p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1476,90 +1486,190 @@ process(dataset, verbose, debug)
   </div>
 </div>
 
-<!-- ===================== SLIDE: CELLPOSE CELLS ===================== -->
+<!-- ===================== SLIDE: NUCLEI BENCHMARK MASK GALLERY ===================== -->
 <div class="slide" id="slide-17">
-  <h2>Cell Segmentation &mdash; Cellpose 3</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>Algorithm</h3>
-        <p>Cellpose uses a generalist deep learning model trained on diverse cell morphologies. It predicts <strong>gradient flows</strong> that point toward cell centers, then traces these flows to produce instance segmentation.</p>
-        <p style="margin-top:8px;">Input: <strong>2-channel</strong> [cell image, nuclei mask] &mdash; nuclei serve as seeds to guide cell boundary detection.</p>
-        <p style="margin-top:8px;" class="small">Model: <code>cyto3</code> (latest generalist, upgraded from cyto2 in v1)</p>
-      </div>
-      <div class="card card-orange">
-        <h3>Key Upgrade: cyto2 &rarr; cyto3 <span class="tag tag-improved">improved</span></h3>
-        <p>Cellpose 3 introduced the <code>cyto3</code> model with improved training on larger and more diverse cell datasets, better handling of cells with variable morphology, and improved boundary detection near touching cells.</p>
+  <h2>Nuclei Benchmark &mdash; Mask Gallery</h2>
+  <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:0.6em; min-height:0;">
+
+    <!-- Without normalization -->
+    <div style="display:flex; flex-direction:column; gap:0.3em; min-height:0;">
+      <div style="text-align:center; font-weight:600; color:var(--accent); font-size:0.9em;">Without Background Normalization</div>
+      <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden;">
+        <img src="benchmarks/nuclei_segmentation/results/figures/no_cell/panel_F_masks_partA.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Masks without normalization">
       </div>
     </div>
-    <div class="v-center">
-      <div class="card card-green" style="margin-bottom: 16px;">
-        <h3>Greedy Cell-Nucleus Matching <span class="tag tag-new">new</span></h3>
-        <p>After Cellpose inference, cells and nuclei are matched through a greedy occupancy algorithm:</p>
-        <ol style="list-style: decimal; padding-left: 22px; margin-top: 10px;">
-          <li style="margin-bottom: 6px; padding-left: 4px;">Build all (cell, nucleus) overlap pairs</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;">Score by occupancy fraction</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;">Sort descending, greedily assign (each matched once)</li>
-          <li style="padding-left: 4px;">Drop unmatched cells and nuclei</li>
-        </ol>
-        <p style="margin-top: 10px;"><strong>Result:</strong> Guaranteed 1:1 cell-nucleus ID correspondence. Cell ID = Nucleus ID.</p>
+
+    <!-- With normalization -->
+    <div style="display:flex; flex-direction:column; gap:0.3em; min-height:0;">
+      <div style="text-align:center; font-weight:600; color:var(--accent3); font-size:0.9em;">With Background Normalization</div>
+      <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden;">
+        <img src="benchmarks/nuclei_segmentation/results_normalized/figures/panel_F_masks_partA.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Masks with normalization">
       </div>
-      <div class="card">
-        <h3>Why This Matters</h3>
-        <p>Downstream quantification relies on knowing which aggregates belong to which cell, and which cell contains which nucleus. The matching step ensures this correspondence is <em>exact</em>, not approximate.</p>
-      </div>
+    </div>
+
+  </div>
+  <!-- Description -->
+  <div style="display:flex; gap:0.8em; margin-top:0.5em;">
+    <div class="card card-accent" style="flex:1; padding:0.5em 0.8em;">
+      <p style="font-size:0.9em;">Rows: Raw DAPI + 7 models + consensus heatmap. Columns: 7 difficulty categories. Consensus = pixel-wise model agreement (warm = high).</p>
+    </div>
+    <div class="card" style="flex:1; padding:0.5em 0.8em; border-left:3px solid var(--accent3);">
+      <p style="font-size:0.9em;">Normalization <strong>hurts InstanSeg</strong> (38&ndash;71% count loss) but <strong>improves agreement on low-intensity images</strong> (CV: 0.16 &rarr; 0.05). Kept in final pipeline.</p>
     </div>
   </div>
 </div>
 
-<!-- ===================== SLIDE 10: FILTER-BASED AGGREGATES ===================== -->
+<!-- ===================== SLIDE: NORMALIZATION COMPARISON ===================== -->
 <div class="slide" id="slide-18">
-  <h2>Aggregate Segmentation &mdash; Classical Filter-Based</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>Algorithm</h3>
-        <p>A classical image processing pipeline that detects aggregates through intensity normalization and thresholding &mdash; fast, interpretable, and requires no training data.</p>
-      </div>
-      <div class="card">
-        <h3>Processing Steps</h3>
-        <ol style="list-style: decimal; padding-left: 22px;">
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Intensity capping</strong> &mdash; clip bright outliers for robust background estimation</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Background normalization</strong> &mdash; divide by large-&sigma; Gaussian to remove illumination gradient</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Thresholding</strong> &mdash; normalized intensity &gt; 1.60 (&asymp; 60% above local background)</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Median filter</strong> (4&times;4) &mdash; regularize boundaries</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Remove small holes</strong> (&lt; 6000 px) &mdash; fill internal gaps</li>
-          <li style="margin-bottom: 6px; padding-left: 4px;"><strong>Connected components</strong> (8-connectivity) &mdash; label individual aggregates</li>
-          <li style="padding-left: 4px;"><strong>Size filter</strong> (&lt; 9 px removed) &mdash; eliminate noise</li>
-        </ol>
+  <h2>Nuclei Benchmark &mdash; Normalization Effect</h2>
+  <div style="flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:0.5em; min-height:0;">
+
+    <!-- Row 1, col 1: delta count per category (boxes) -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/nuclei_segmentation/results_comparison/delta_count_boxes.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Count change distribution">
+    </div>
+
+    <!-- Row 1, col 2: delta count per model -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/nuclei_segmentation/results_comparison/delta_count_per_model.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Count change per model">
+    </div>
+
+    <!-- Row 1, col 3: CV scatter (raw vs normalized agreement) -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/nuclei_segmentation/results_comparison/cv_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Inter-model agreement raw vs normalized">
+    </div>
+
+    <!-- Row 2, col 1: heatmap % count -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/nuclei_segmentation/results_comparison/heatmap_pct_count.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Count % change heatmap">
+    </div>
+
+    <!-- Row 2, col 2: heatmap % area -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/nuclei_segmentation/results_comparison/heatmap_pct_area.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Area % change heatmap">
+    </div>
+
+    <!-- Row 2, col 3: summary -->
+    <div style="display:flex; align-items:center; min-height:0;">
+      <div class="card card-accent" style="padding:0.7em 1em;">
+        <h3 style="font-size:0.95em;">Summary</h3>
+        <ul style="margin-top:0.3em; font-size:0.88em;">
+          <li><strong>StarDist</strong>: neutral (&minus;2%)</li>
+          <li><strong>Cellpose cyto3</strong>: stable</li>
+          <li><strong>InstanSeg</strong>: 38&ndash;71% count loss</li>
+          <li><strong>Low-intensity CV</strong>: 0.16 &rarr; 0.05</li>
+          <li>Most points above diagonal &mdash; normalization <strong>increases disagreement</strong> overall</li>
+        </ul>
+        <p style="margin-top:0.4em; font-size:0.88em; color:var(--accent3); font-weight:500;">Kept in pipeline for illumination correction.</p>
       </div>
     </div>
-    <div class="v-center">
-      <div class="card card-green" style="margin-bottom: 16px;">
-        <h3>Strengths</h3>
-        <ul class="green">
-          <li>No training data required</li>
-          <li>Fast execution (&lt; 0.1s per image)</li>
-          <li>Fully interpretable &mdash; every step has a clear physical meaning</li>
-          <li>Good for high-contrast, well-separated aggregates</li>
-          <li>Stable baseline for comparison</li>
-        </ul>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: CELL BENCHMARK DESIGN ===================== -->
+<div class="slide" id="slide-19">
+  <h2>Cell Segmentation &mdash; Model Benchmark</h2>
+  <p style="color:var(--text-dim); margin-bottom:0.4em;">10 configurations &bull; 90 curated HCS images &bull; same 9 difficulty categories &bull; each model tested &plusmn; DAPI hint</p>
+  <div style="flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:0.6em; min-height:0;">
+
+    <!-- Cellpose -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:0.8em; padding:1em 1.2em; display:flex; flex-direction:column; position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:var(--accent); color:var(--bg-primary); font-size:0.75em; font-weight:700; padding:0.3em 0.8em; border-radius:0 0.6em 0 0.8em;">SELECTED</div>
+      <h3 style="font-size:1.3em; color:var(--accent); margin-bottom:0.2em;">Cellpose</h3>
+      <p style="color:var(--text-dim); font-size:0.85em;">Stringer et al., 2021</p>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:0.3em;">
+        <p><code style="color:var(--accent);">cyto2</code> &bull; <code style="color:var(--accent);">cyto3</code> &nbsp;<span style="color:var(--text-dim);">(4 configs)</span></p>
+        <p>Designed for <strong>single-channel cytoplasm</strong> fluorescence</p>
+        <p>Works without DAPI &mdash; nuclear hint optional</p>
       </div>
-      <div class="card card-red" style="margin-bottom: 16px;">
-        <h3>Limitations</h3>
-        <ul>
-          <li>Over-segments boundaries &mdash; inflates aggregate area <span class="highlight-red">&sim;4&times;</span></li>
-          <li>Merges adjacent aggregates</li>
-          <li>Hallucinated core false positives in noisy regions</li>
-          <li><strong>Unreliable for morphological profiling</strong> (area, shape, eccentricity)</li>
+      <div style="margin-top:0.4em; padding:0.35em 0.5em; background:rgba(79,195,247,0.1); border-radius:0.4em; color:var(--accent); font-weight:500; text-align:center; font-size:0.9em;">Excellent &mdash; validated for FarRed cytoplasm</div>
+    </div>
+
+    <!-- DeepCell Mesmer -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:0.8em; padding:1em 1.2em; display:flex; flex-direction:column;">
+      <h3 style="font-size:1.3em; color:var(--accent); margin-bottom:0.2em;">DeepCell Mesmer</h3>
+      <p style="color:var(--text-dim); font-size:0.85em;">Greenwald et al., 2022</p>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:0.3em;">
+        <p><code style="color:var(--accent);">mesmer</code> &nbsp;<span style="color:var(--text-dim);">(2 configs)</span></p>
+        <p>Trained on <strong>TissueNet</strong> &mdash; expects membrane + DAPI</p>
+        <p>Near-zero detections without nuclear channel</p>
+      </div>
+      <div style="margin-top:0.4em; padding:0.35em 0.5em; background:rgba(79,195,247,0.1); border-radius:0.4em; color:var(--accent); font-weight:500; text-align:center; font-size:0.9em;">Requires DAPI &mdash; out of domain without it</div>
+    </div>
+
+    <!-- InstanSeg -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:0.8em; padding:1em 1.2em; display:flex; flex-direction:column;">
+      <h3 style="font-size:1.3em; color:var(--accent); margin-bottom:0.2em;">InstanSeg</h3>
+      <p style="color:var(--text-dim); font-size:0.85em;">Goldsborough et al., 2024</p>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:0.3em;">
+        <p><code style="color:var(--accent);">fluorescence</code> &nbsp;<span style="color:var(--text-dim);">(2 configs)</span></p>
+        <p>Trained on <strong>multi-channel tissue</strong> (CPDMI, all with DAPI)</p>
+        <p>Sparse detections without nuclear signal</p>
+      </div>
+      <div style="margin-top:0.4em; padding:0.35em 0.5em; background:rgba(79,195,247,0.1); border-radius:0.4em; color:var(--accent); font-weight:500; text-align:center; font-size:0.9em;">Requires DAPI &mdash; competitive with +nuc</div>
+    </div>
+
+    <!-- CellSAM -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent); border-radius:0.8em; padding:1em 1.2em; display:flex; flex-direction:column;">
+      <h3 style="font-size:1.3em; color:var(--accent); margin-bottom:0.2em;">CellSAM</h3>
+      <p style="color:var(--text-dim); font-size:0.85em;">Israel, Marks et al., 2025</p>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:0.3em;">
+        <p><span style="color:var(--text-dim);">(2 configs)</span></p>
+        <p>CellFinder + SAM &mdash; handles grayscale natively</p>
+        <p>Undersegments single-channel; improves with +nuc</p>
+      </div>
+      <div style="margin-top:0.4em; padding:0.35em 0.5em; background:rgba(79,195,247,0.1); border-radius:0.4em; color:var(--accent); font-weight:500; text-align:center; font-size:0.9em;">Fair &mdash; benefits from two-channel input</div>
+    </div>
+
+    <!-- Preprocessing benchmark -->
+    <div style="background:var(--bg-card); border:2px solid var(--accent3); border-radius:0.8em; padding:1em 1.2em; display:flex; flex-direction:column; grid-column: 2 / 4;">
+      <h3 style="font-size:1.3em; color:var(--accent3); margin-bottom:0.2em;">Nuclear Channel Preprocessing</h3>
+      <p style="color:var(--text-dim); font-size:0.85em;">Separate benchmark &mdash; Cellpose cyto3 only</p>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+        <p>How does preprocessing the nuclear hint affect cell segmentation?</p>
+        <div style="display:flex; gap:1.5em; margin-top:0.4em;">
+          <div><span style="color:var(--accent); font-weight:600;">Cell only</span> &mdash; FarRed, no nuclear input</div>
+          <div><span style="color:var(--accent); font-weight:600;">Raw DAPI</span> &mdash; FarRed + raw DAPI image</div>
+          <div><span style="color:var(--accent); font-weight:600;">Nuclei seeds</span> &mdash; FarRed + binary mask from StarDist</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: CELL BENCHMARK RESULTS ===================== -->
+<div class="slide" id="slide-20">
+  <h2>Cell Benchmark &mdash; Results</h2>
+  <div style="flex:1; display:grid; grid-template-columns:2fr 3fr; gap:0.5em; min-height:0;">
+
+    <!-- Left: mask gallery (tall image) -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/cell_segmentation/results/figures/panel_F_masks_partA_with_nuc.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Cell segmentation mask gallery">
+    </div>
+
+    <!-- Right: per-category counts + conclusions -->
+    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="benchmarks/cell_segmentation/results/figures/panel_E_per_category.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Cell count per category">
+      </div>
+      <div class="card card-accent" style="padding:0.6em 0.8em;">
+        <h3 style="font-size:0.9em;">Key Findings</h3>
+        <ul style="margin-top:0.3em; font-size:0.85em;">
+          <li><strong>Cellpose cyto2/cyto3</strong> &mdash; only models validated for single-channel cytoplasm; work without DAPI</li>
+          <li><strong>Mesmer / InstanSeg</strong> &mdash; near-zero detections without nuclear channel; competitive with +nuc</li>
+          <li><strong>CellSAM</strong> &mdash; undersegments single-channel; improves with +nuc</li>
+          <li style="color:var(--accent);"><strong>Conclusion:</strong> Only Cellpose is validated for FarRed-only segmentation</li>
         </ul>
       </div>
     </div>
+
   </div>
 </div>
 
 <!-- ===================== SLIDE 11: UNET AGGREGATES ===================== -->
-<div class="slide" id="slide-19">
+<div class="slide" id="slide-21">
   <h2>Aggregate Segmentation &mdash; UNet Deep Learning</h2>
   <div class="columns col-2" style="flex:1;">
     <div class="v-center">
@@ -1605,7 +1715,7 @@ process(dataset, verbose, debug)
 
 
 <!-- ===================== SECTION IV DIVIDER ===================== -->
-<div class="slide" id="slide-20">
+<div class="slide" id="slide-22">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">IV</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Deep Learning Platform</h1>
@@ -1614,7 +1724,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 12: UNET BUILDING BLOCKS ===================== -->
-<div class="slide" id="slide-21">
+<div class="slide" id="slide-23">
   <h2>UNet Architecture &amp; Building Blocks</h2>
   <div class="columns col-3" style="flex:1;">
     <div>
@@ -1672,7 +1782,7 @@ process(dataset, verbose, debug)
 
 
 <!-- ===================== SECTION V DIVIDER ===================== -->
-<div class="slide" id="slide-22">
+<div class="slide" id="slide-24">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">V</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Benchmarks &amp; Ablations</h1>
@@ -1681,7 +1791,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 13: LOSS FUNCTION BENCHMARK ===================== -->
-<div class="slide" id="slide-23">
+<div class="slide" id="slide-25">
   <h2>Benchmark: Loss Function Comparison</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -1715,7 +1825,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 14: DL VS FILTER ===================== -->
-<div class="slide" id="slide-24">
+<div class="slide" id="slide-26">
   <h2>Benchmark: Deep Learning vs Filter-Based Segmentation</h2>
   <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
     <div class="columns col-2" style="gap: 16px;">
@@ -1752,7 +1862,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 15: DL VS FILTER VISUAL ===================== -->
-<div class="slide" id="slide-25">
+<div class="slide" id="slide-27">
   <h2>Visual Comparison: DL vs Filter Segmentation</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1775,7 +1885,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 16: ARCHITECTURE ABLATION ===================== -->
-<div class="slide" id="slide-26">
+<div class="slide" id="slide-28">
   <h2>Benchmark: Architecture Ablation (7 Variants)</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -1812,7 +1922,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 17: ABLATION TRAINING CURVES ===================== -->
-<div class="slide" id="slide-27">
+<div class="slide" id="slide-29">
   <h2>Training Curves: Architecture Ablation</h2>
   <div class="columns col-3" style="flex:1; gap: 14px;">
     <div>
@@ -1858,7 +1968,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 18: NUCLEI BENCHMARK ===================== -->
-<div class="slide" id="slide-28">
+<div class="slide" id="slide-30">
   <h2>Benchmark: Nuclei Segmentation Robustness</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1886,7 +1996,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 19: NUCLEI NORMALIZATION ===================== -->
-<div class="slide" id="slide-29">
+<div class="slide" id="slide-31">
   <h2>Benchmark: Illumination Normalization Effect</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1918,7 +2028,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 20: CELL BENCHMARK ===================== -->
-<div class="slide" id="slide-30">
+<div class="slide" id="slide-32">
   <h2>Benchmark: Cell Segmentation &amp; Preprocessing</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -1951,7 +2061,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 21: CELLPOSE PREPROCESSING DETAIL ===================== -->
-<div class="slide" id="slide-31">
+<div class="slide" id="slide-33">
   <h2>Cellpose Preprocessing: Detailed Results</h2>
   <div class="columns col-3" style="flex:1; gap: 14px;">
     <div>
@@ -1985,7 +2095,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 22: ANNOTATION QUALITY ===================== -->
-<div class="slide" id="slide-32">
+<div class="slide" id="slide-34">
   <h2>Annotation Quality Analysis</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2020,7 +2130,7 @@ process(dataset, verbose, debug)
 
 
 <!-- ===================== SECTION VI DIVIDER ===================== -->
-<div class="slide" id="slide-33">
+<div class="slide" id="slide-35">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">VI</div>
     <h1 style="font-size:2.8em; margin-bottom:0.5em;">Paper Figures &amp; Validation</h1>
@@ -2029,7 +2139,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 23: BIOLOGICAL VALIDATION ===================== -->
-<div class="slide" id="slide-34">
+<div class="slide" id="slide-36">
   <h2>Biological Validation: CRISPR Screen Controls</h2>
   <div class="columns col-2" style="flex:1;">
     <div class="v-center">
@@ -2071,7 +2181,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 24: DATA QUALITY ===================== -->
-<div class="slide" id="slide-35">
+<div class="slide" id="slide-37">
   <h2>Data Quality: Imaging Reproducibility</h2>
   <div class="columns col-3" style="flex:1; gap: 16px;">
     <div>
@@ -2099,7 +2209,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 25: CONFIDENCE ANALYSIS ===================== -->
-<div class="slide" id="slide-36">
+<div class="slide" id="slide-38">
   <h2>Model Confidence &amp; Error Characterization</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2126,7 +2236,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 26: VISUAL OVERLAYS ===================== -->
-<div class="slide" id="slide-37">
+<div class="slide" id="slide-39">
   <h2>Visual Comparison: Architecture Variants</h2>
   <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
     <div class="img-container" style="flex:1;">
@@ -2137,7 +2247,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 27: LOSS FUNCTION VISUALS ===================== -->
-<div class="slide" id="slide-38">
+<div class="slide" id="slide-40">
   <h2>Visual Comparison: Loss Function Variants</h2>
   <div class="columns col-2" style="flex:1; gap: 20px;">
     <div>
@@ -2160,7 +2270,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 28: MANUSCRIPT ===================== -->
-<div class="slide" id="slide-39">
+<div class="slide" id="slide-41">
   <h2>Manuscript in Preparation</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2200,7 +2310,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 29: MANUSCRIPT FIGURES ===================== -->
-<div class="slide" id="slide-40">
+<div class="slide" id="slide-42">
   <h2>Manuscript Figure Plan</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2248,7 +2358,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 30: SUMMARY ===================== -->
-<div class="slide" id="slide-41">
+<div class="slide" id="slide-43">
   <h2>Summary &amp; Looking Ahead</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2299,7 +2409,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 31: THANK YOU ===================== -->
-<div class="slide title-slide" id="slide-42">
+<div class="slide title-slide" id="slide-44">
   <div class="title-decoration d1"></div>
   <div class="title-decoration d2"></div>
   <div>
