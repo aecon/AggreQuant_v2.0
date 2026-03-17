@@ -62,52 +62,40 @@ pip install customtkinter
 
 ## Usage
 
-### GUI
-
-```bash
-python scripts/run_gui.py
-```
-
 ### Command Line
 
 Run analysis from a YAML configuration file:
 
 ```bash
-python scripts/run_pipeline.py config.yaml
+python scripts/run_pipeline.py configs/test_384well.yaml
 ```
 
-Or specify options directly:
+Available options:
 
 ```bash
-python scripts/run_pipeline.py --input /data/plate1 --output /results/plate1 \
-    --plate-format 384 --method unet --blur-threshold 15.0
+python scripts/run_pipeline.py configs/test_384well.yaml --verbose          # Enable detailed logging
+python scripts/run_pipeline.py configs/test_384well.yaml --max-fields 5     # Process only 5 fields (quick test)
+python scripts/run_pipeline.py configs/test_384well.yaml --segmentation-only  # Skip quantification and plots
 ```
+
+See `configs/test_384well.yaml` for a documented example of all configuration options.
+
+### Web GUI
+
+```bash
+python scripts/run_gui.py
+```
+
+Launches a Dash-based web interface for configuring and running the pipeline.
 
 ### As a Python Package
 
 ```python
-from aggrequant import run_pipeline_from_config, run_pipeline_from_dict
+from aggrequant.pipeline import SegmentationPipeline
 
-# Run from config file
-result = run_pipeline_from_config("config.yaml")
-
-# Or run from dict
-config = {
-    "input_dir": "/data/plate1",
-    "output_dir": "/results/plate1",
-    "plate_format": "96",
-    "aggregate_method": "unet",
-    "blur_threshold": 15.0,
-    "control_wells": {"A01": "negative", "A02": "NT"},
-}
-
-result = run_pipeline_from_dict(config)
-
-print(f"Processed {result.total_n_wells_processed} wells")
-print(f"Total cells: {result.total_n_cells}")
-print(f"SSMD: {result.ssmd:.3f}")
+pipeline = SegmentationPipeline(config_path="configs/test_384well.yaml", verbose=True)
+pipeline.run()
 ```
-
 
 ### Unit Tests
 
