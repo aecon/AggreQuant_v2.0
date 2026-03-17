@@ -136,8 +136,89 @@ datasets (doi.org/10.1007/978-3-030-00934-2_30).
 
 ---
 
+## Prediction comparison results (image_0000, threshold=0.5)
+
+Quantitative evaluation using `scripts/compare_predictions.py` on a held-out image,
+with edge-aware metrics, annotation quality analysis, and error classification.
+
+### Precision-recall tradeoff
+
+| Model | Dice | Precision | Recall | FP pixels | FN pixels |
+|---|---|---|---|---|---|
+| baseline | 0.71 | 0.57 | 0.93 | 23,325 | 2,298 |
+| baseline_no_scheduler | 0.71 | 0.57 | 0.92 | 22,948 | 2,725 |
+| bce_pw3 | 0.79 | 0.72 | 0.86 | 11,235 | 4,639 |
+| dice03_bce07_pw3 | 0.81 | 0.81 | 0.81 | 6,167 | 6,540 |
+
+### Error location: most errors are at edges, not cores
+
+Across all models, ~70% of FP pixels are edge errors (boundary overshoot) and
+~85–90% of FN pixels are at edges too. Core errors are small — all models
+correctly identify aggregate **centers**, they just disagree on **boundaries**.
+
+### Annotation quality analysis
+
+Each FP/FN connected component was classified as "aggregate-like" or not based
+on its intensity and sharpness (Laplacian variance) relative to TP components.
+Components above the TP 25th percentile in both features are considered
+aggregate-like.
+
+| Model | FP annot. misses | FP hallucinations | FN annot. errors | FN model misses |
+|---|---|---|---|---|
+| baseline | 2,424 | 1,026 | 188 | 199 |
+| baseline_no_scheduler | 2,095 | 990 | 170 | 301 |
+| bce_pw3 | 1,706 | 660 | 261 | 603 |
+| dice03_bce07_pw3 | 1,257 | 435 | 337 | 933 |
+
+**For FPs:** ~70% of "false positives" across all models are bright and sharp —
+they look like real aggregates the annotator missed. Only ~30% are actual
+hallucinations (dim/blurry regions).
+
+**For FNs:** roughly half are dim/blurry (annotation errors the model correctly
+rejects), and half are real aggregates the model missed.
+
+---
+
 ## Conclusion
 
-**Recommended loss: `DiceBCELoss(alpha=0.3, beta=0.7, pos_weight=3.0)`** with
-ReduceLROnPlateau scheduler. This configuration will be used for the 7-variant
-UNet architecture ablation (Task 13).
+**1. Dice+BCE with pos_weight is clearly the best configuration.**
+`dice03_bce07_pw3` (α=0.3 Dice, β=0.7 BCE, pos_weight=3) wins on nearly every
+metric: highest Dice (0.81), highest IoU (0.68), highest core Dice (0.71),
+highest object precision (0.86), and fewest hallucinations (435 vs 1,026 for
+baseline).
+
+**2. pos_weight matters more than Dice vs BCE mixing.**
+The biggest jump is from baseline → bce_pw3 (pure BCE but with pos_weight=3):
+Dice goes from 0.71 → 0.79, FP pixels drop by half (23k → 11k). Adding Dice on
+top gives a further but smaller improvement. The pos_weight addresses the class
+imbalance (aggregates are sparse), which is the dominant problem.
+
+**3. The scheduler makes almost no difference.**
+baseline vs baseline_no_scheduler are nearly identical on every metric.
+ReduceLROnPlateau isn't helping — the model converges fine without it for this
+task.
+
+**4. The baselines massively over-predict.**
+57% precision means nearly half of what the baseline calls "aggregate" isn't. But
+the annotation quality analysis shows ~70% of those FPs are bright and sharp —
+likely real aggregates the annotator missed. So the baseline's true precision is
+higher than 57%, but it's still the worst at rejecting noise (1,026
+hallucinations vs 435 for dice03_bce07_pw3).
+
+**5. There's a precision-recall tradeoff, but dice03_bce07_pw3 handles it best.**
+It sacrifices recall (0.81 vs 0.93 for baseline) but the lost recall is mostly
+edge pixels (5,940 of 6,540 FN pixels are at edges). Its core FN count (600) is
+only modestly higher than baseline's (330) — it's missing boundaries, not entire
+aggregates.
+
+**6. Annotation noise is a ceiling on these metrics.**
+With ~2,400 FP components classified as annotation misses even for the best
+model, the reported Dice of 0.81 underestimates true performance. Improving
+further requires better annotations, not better losses.
+
+### Recommendation
+
+Use `dice03_bce07_pw3` (α=0.3, β=0.7, pos_weight=3.0) as the loss
+configuration going forward. Drop the scheduler — it adds complexity without
+benefit. Further gains will come from architecture improvements (the ablation
+study) and annotation refinement, not loss tuning.

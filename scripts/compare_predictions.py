@@ -399,6 +399,48 @@ def intensity_analysis(image, pred, gt, window=32):
 
 
 # ---------------------------------------------------------------------------
+# Per-component feature extraction (intensity + sharpness)
+# ---------------------------------------------------------------------------
+
+
+def _component_features(mask, image, window=32):
+    """Compute mean intensity and local sharpness for each connected component.
+
+    Returns arrays of shape (n_components,) for intensity and sharpness.
+    Sharpness is measured as Laplacian variance in a window around each
+    component's centroid.
+    """
+    labels, n = ndimage.label(mask)
+    if n == 0:
+        return np.array([]), np.array([])
+
+    image_f = image.astype(np.float64)
+    h, w = image.shape
+    half = window // 2
+
+    intensities = np.zeros(n)
+    sharpnesses = np.zeros(n)
+
+    centroids = ndimage.center_of_mass(mask, labels, range(1, n + 1))
+
+    for i, (cy, cx) in enumerate(centroids):
+        # Mean intensity of the component itself
+        comp_mask = labels == (i + 1)
+        intensities[i] = image_f[comp_mask].mean()
+
+        # Laplacian variance in a window around centroid
+        y0 = max(0, int(cy) - half)
+        y1 = min(h, int(cy) + half)
+        x0 = max(0, int(cx) - half)
+        x1 = min(w, int(cx) + half)
+        patch = image_f[y0:y1, x0:x1]
+        lap = ndimage.laplace(patch)
+        sharpnesses[i] = lap.var()
+
+    return intensities, sharpnesses
+
+
+# ---------------------------------------------------------------------------
 # Aggregate all metrics for one model
 # ---------------------------------------------------------------------------
 
@@ -617,8 +659,6 @@ def save_intensity_distributions(image, gt_binary, all_predictions, output_dir):
             if len(pixels) == 0:
                 continue
             counts, _ = np.histogram(pixels, bins=bins, density=True)
-            ax.bar(bin_centers, counts, width=bar_width, alpha=0.15,
-                   color=color)
             ax.plot(bin_centers, counts, linewidth=1.5, label=label,
                     color=color)
 
@@ -635,6 +675,188 @@ def save_intensity_distributions(image, gt_binary, all_predictions, output_dir):
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     logger.info(f"Intensity distributions saved to {path}")
+
+
+def annotation_quality_analysis(image, gt_binary, all_predictions, output_dir):
+    """Assess whether FPs/FNs are model errors or annotation errors.
+
+    For each FP, FN, and TP component, computes (intensity, sharpness).
+    Components are classified as "aggregate-like" or not based on the TP
+    distribution. Produces:
+    - Scatter plot of all components in (intensity, sharpness) space
+    - Histograms of intensity and sharpness per error class
+    - Summary counts table
+    """
+    import matplotlib.pyplot as plt
+
+    gt_b = gt_binary.astype(bool)
+    names = list(all_predictions.keys())
+
+    # Collect per-component features for all models
+    all_features = {}
+    for name in names:
+        pred_b = all_predictions[name].astype(bool)
+        tp_mask = pred_b & gt_b
+        fp_mask = pred_b & ~gt_b
+        fn_mask = ~pred_b & gt_b
+
+        tp_int, tp_sharp = _component_features(tp_mask, image)
+        fp_int, fp_sharp = _component_features(fp_mask, image)
+        fn_int, fn_sharp = _component_features(fn_mask, image)
+
+        all_features[name] = {
+            "tp": (tp_int, tp_sharp),
+            "fp": (fp_int, fp_sharp),
+            "fn": (fn_int, fn_sharp),
+        }
+
+    # --- Scatter plot (one panel per model) ---
+    n_models = len(names)
+    fig, axes = plt.subplots(1, n_models, figsize=(6 * n_models, 5),
+                             sharex=True, sharey=True)
+    if n_models == 1:
+        axes = [axes]
+
+    for ax, name in zip(axes, names):
+        tp_int, tp_sharp = all_features[name]["tp"]
+        fp_int, fp_sharp = all_features[name]["fp"]
+        fn_int, fn_sharp = all_features[name]["fn"]
+
+        if len(tp_int) > 0:
+            ax.scatter(tp_int, tp_sharp, c="#2ca02c", alpha=0.3, s=10,
+                       label="TP", zorder=1)
+        if len(fp_int) > 0:
+            ax.scatter(fp_int, fp_sharp, c="#d62728", alpha=0.5, s=15,
+                       label="FP", zorder=2)
+        if len(fn_int) > 0:
+            ax.scatter(fn_int, fn_sharp, c="#1f77b4", alpha=0.5, s=15,
+                       label="FN", zorder=2)
+
+        # Draw TP 25th percentile thresholds
+        if len(tp_int) > 0:
+            int_thresh = np.percentile(tp_int, 25)
+            sharp_thresh = np.percentile(tp_sharp, 25)
+            ax.axvline(int_thresh, color="gray", linestyle="--", alpha=0.5,
+                       linewidth=0.8)
+            ax.axhline(sharp_thresh, color="gray", linestyle="--", alpha=0.5,
+                       linewidth=0.8)
+
+        ax.set_xlabel("Mean intensity")
+        ax.set_title(name, fontsize=10)
+        ax.legend(fontsize=7, loc="upper right")
+        ax.grid(True, alpha=0.2)
+
+    axes[0].set_ylabel("Sharpness (Laplacian var)")
+    fig.suptitle(
+        "Component features: intensity vs sharpness\n"
+        "Dashed lines = TP 25th percentile thresholds",
+        fontsize=11, y=1.04)
+    fig.tight_layout()
+    path = output_dir / "annotation_quality_scatter.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Annotation quality scatter saved to {path}")
+
+    # --- Classification + histograms ---
+    fig, axes = plt.subplots(n_models, 2, figsize=(12, 4 * n_models),
+                             squeeze=False)
+
+    for row, name in enumerate(names):
+        tp_int, tp_sharp = all_features[name]["tp"]
+        fp_int, fp_sharp = all_features[name]["fp"]
+        fn_int, fn_sharp = all_features[name]["fn"]
+
+        if len(tp_int) == 0:
+            continue
+
+        int_thresh = np.percentile(tp_int, 25)
+        sharp_thresh = np.percentile(tp_sharp, 25)
+
+        # Classify FPs
+        fp_agg_like = np.zeros(len(fp_int), dtype=bool)
+        if len(fp_int) > 0:
+            fp_agg_like = (fp_int >= int_thresh) & (fp_sharp >= sharp_thresh)
+
+        # Classify FNs
+        fn_agg_like = np.zeros(len(fn_int), dtype=bool)
+        if len(fn_int) > 0:
+            fn_agg_like = (fn_int >= int_thresh) & (fn_sharp >= sharp_thresh)
+
+        n_fp_annot_miss = fp_agg_like.sum()
+        n_fp_model_err = len(fp_int) - n_fp_annot_miss
+        n_fn_annot_err = len(fn_int) - fn_agg_like.sum()
+        n_fn_model_miss = fn_agg_like.sum()
+
+        logger.info(
+            f"{name}: FP → {n_fp_annot_miss} annotation misses, "
+            f"{n_fp_model_err} model hallucinations | "
+            f"FN → {n_fn_annot_err} annotation errors, "
+            f"{n_fn_model_miss} model misses"
+        )
+
+        # Intensity histogram
+        ax_int = axes[row, 0]
+        bins_int = 40
+        if len(tp_int) > 0:
+            ax_int.hist(tp_int, bins=bins_int, density=True, alpha=0.3,
+                        color="#2ca02c", label="TP")
+        if len(fp_int) > 0:
+            ax_int.hist(fp_int[fp_agg_like], bins=bins_int, density=True,
+                        alpha=0.5, color="#ff7f0e",
+                        label=f"FP annot. miss ({n_fp_annot_miss})")
+            ax_int.hist(fp_int[~fp_agg_like], bins=bins_int, density=True,
+                        alpha=0.5, color="#d62728",
+                        label=f"FP hallucination ({n_fp_model_err})")
+        if len(fn_int) > 0:
+            ax_int.hist(fn_int[~fn_agg_like], bins=bins_int, density=True,
+                        alpha=0.5, color="#9467bd",
+                        label=f"FN annot. error ({n_fn_annot_err})")
+            ax_int.hist(fn_int[fn_agg_like], bins=bins_int, density=True,
+                        alpha=0.5, color="#1f77b4",
+                        label=f"FN model miss ({n_fn_model_miss})")
+        ax_int.axvline(int_thresh, color="gray", linestyle="--", alpha=0.7)
+        ax_int.set_xlabel("Mean intensity")
+        ax_int.set_ylabel("Density")
+        ax_int.set_title(f"{name} — intensity", fontsize=10)
+        ax_int.legend(fontsize=7)
+        ax_int.grid(True, alpha=0.2)
+
+        # Sharpness histogram
+        ax_sh = axes[row, 1]
+        bins_sh = 40
+        if len(tp_sharp) > 0:
+            ax_sh.hist(tp_sharp, bins=bins_sh, density=True, alpha=0.3,
+                       color="#2ca02c", label="TP")
+        if len(fp_sharp) > 0:
+            ax_sh.hist(fp_sharp[fp_agg_like], bins=bins_sh, density=True,
+                       alpha=0.5, color="#ff7f0e",
+                       label=f"FP annot. miss ({n_fp_annot_miss})")
+            ax_sh.hist(fp_sharp[~fp_agg_like], bins=bins_sh, density=True,
+                       alpha=0.5, color="#d62728",
+                       label=f"FP hallucination ({n_fp_model_err})")
+        if len(fn_sharp) > 0:
+            ax_sh.hist(fn_sharp[~fn_agg_like], bins=bins_sh, density=True,
+                       alpha=0.5, color="#9467bd",
+                       label=f"FN annot. error ({n_fn_annot_err})")
+            ax_sh.hist(fn_sharp[fn_agg_like], bins=bins_sh, density=True,
+                       alpha=0.5, color="#1f77b4",
+                       label=f"FN model miss ({n_fn_model_miss})")
+        ax_sh.axvline(sharp_thresh, color="gray", linestyle="--", alpha=0.7)
+        ax_sh.set_xlabel("Sharpness (Laplacian var)")
+        ax_sh.set_ylabel("Density")
+        ax_sh.set_title(f"{name} — sharpness", fontsize=10)
+        ax_sh.legend(fontsize=7)
+        ax_sh.grid(True, alpha=0.2)
+
+    fig.suptitle(
+        "Error classification: annotation errors vs model errors\n"
+        "Threshold = TP 25th percentile (dashed line)",
+        fontsize=11, y=1.02)
+    fig.tight_layout()
+    path = output_dir / "annotation_quality_histograms.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Annotation quality histograms saved to {path}")
 
 
 def _make_overlay(pred_binary, gt_binary):
@@ -894,6 +1116,8 @@ def main():
         plot_overlay_grid(image, gt_binary, all_predictions, output_dir)
         plot_core_edge_errors(all_results, output_dir)
         plot_intensity_correlation(all_results, output_dir)
+        annotation_quality_analysis(image, gt_binary, all_predictions,
+                                    output_dir)
 
 
 if __name__ == "__main__":

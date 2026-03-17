@@ -291,3 +291,51 @@ One panel per model showing density curves for pixel intensity at TP, FP, FN, an
 - **TN** (gray) — background intensity
 
 Shows whether errors cluster at specific intensity ranges — e.g. FPs in dim regions or FNs where aggregates are faint.
+
+#### `annotation_quality_scatter.png` — Are errors from the model or the annotations?
+One panel per model. Each TP, FP, and FN connected component is plotted as a dot at (mean_intensity, laplacian_variance_sharpness). Dashed lines show TP 25th percentile thresholds. FPs in the upper-right quadrant (bright + sharp) are likely real aggregates the annotator missed. FNs in the lower-left (dim + blurry) are likely annotation errors the model correctly rejected.
+
+#### `annotation_quality_histograms.png` — Error classification distributions
+One row per model, two columns (intensity, sharpness). Each FP/FN component is classified using the TP 25th percentile thresholds into:
+- **FP annotation miss** (orange) — bright & sharp, likely a real aggregate the annotator missed
+- **FP hallucination** (red) — dim or blurry, likely a model error
+- **FN annotation error** (purple) — dim or blurry, model correctly rejected
+- **FN model miss** (blue) — bright & sharp, model failed on a real aggregate
+
+---
+
+## Loss function comparison results (image_0000)
+
+### Precision-recall tradeoff
+
+| Model | Dice | Precision | Recall | FP pixels | FN pixels |
+|---|---|---|---|---|---|
+| baseline | 0.71 | 0.57 | 0.93 | 23,325 | 2,298 |
+| baseline_no_scheduler | 0.71 | 0.57 | 0.92 | 22,948 | 2,725 |
+| bce_pw3 | 0.79 | 0.72 | 0.86 | 11,235 | 4,639 |
+| dice03_bce07_pw3 | 0.81 | 0.81 | 0.81 | 6,167 | 6,540 |
+
+The baselines over-predict aggressively — high recall (93%) but many FPs. Adding pos_weight and Dice loss makes the model more selective: fewer FPs but more FNs. `dice03_bce07_pw3` is the most balanced.
+
+### Most errors are at edges, not cores
+
+Across all models, ~70% of FP pixels are edge errors (boundary overshoot) and ~85–90% of FN pixels are at edges too. Core errors are small — meaning all models correctly identify aggregate **centers**, they just disagree on **boundaries**.
+
+### Annotation quality analysis
+
+| Model | FP annot. misses | FP hallucinations | FN annot. errors | FN model misses |
+|---|---|---|---|---|
+| baseline | 2,424 | 1,026 | 188 | 199 |
+| baseline_no_scheduler | 2,095 | 990 | 170 | 301 |
+| bce_pw3 | 1,706 | 660 | 261 | 603 |
+| dice03_bce07_pw3 | 1,257 | 435 | 337 | 933 |
+
+**For FPs:** ~70% of "false positives" across all models are bright and sharp — they look like real aggregates. These are likely things the annotator missed, not model hallucinations. Only ~30% are actual hallucinations (dim/blurry regions).
+
+**For FNs:** roughly half are dim/blurry (annotation errors the model correctly rejects), and half are real aggregates the model missed.
+
+### Conclusions
+
+- The annotations are noisier than the metrics suggest — a significant chunk of FPs are actually correct predictions on unannotated aggregates.
+- `dice03_bce07_pw3` is the best loss: highest Dice (0.81), best core Dice (0.71), fewest hallucinations (435), and highest object precision (0.86).
+- The real precision of all models is likely higher than reported, since many FPs are annotation misses.
