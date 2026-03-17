@@ -65,9 +65,10 @@ nn-training = [
     "tensorboard>=2.15",
 ]
 
-# For the GUI
+# For the web GUI
 gui = [
-    "customtkinter>=5.2",
+    "dash>=4.0",
+    "plotly>=5.0",
 ]
 
 # All dependencies
@@ -87,14 +88,14 @@ dev = [
 aggrequant = "aggrequant.cli:main"
 aggrequant-train = "aggrequant.nn.cli:train"
 aggrequant-benchmark = "aggrequant.nn.cli:benchmark"
-aggrequant-gui = "gui.app:main"
+aggrequant-gui = "aggrequant.gui_web.app:main"
 
 [project.urls]
 Homepage = "https://github.com/photonics-crete/AggreQuant"
 Repository = "https://github.com/photonics-crete/AggreQuant"
 
 [tool.setuptools.packages.find]
-include = ["aggrequant*", "gui*"]
+include = ["aggrequant*"]
 
 [tool.black]
 line-length = 100
