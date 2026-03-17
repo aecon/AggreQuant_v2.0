@@ -59,6 +59,7 @@ def plot_training(history, save_path=None):
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Score")
     ax.set_title("Dice & IoU")
+    ax.set_ylim(0, 1)
     ax.legend()
     ax.grid(True, alpha=0.3)
 
@@ -68,6 +69,7 @@ def plot_training(history, save_path=None):
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Score")
     ax.set_title("Precision & Recall")
+    ax.set_ylim(0, 1)
     ax.legend()
     ax.grid(True, alpha=0.3)
 

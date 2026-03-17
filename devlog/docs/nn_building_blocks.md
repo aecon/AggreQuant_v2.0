@@ -382,6 +382,59 @@ distort small aggregate structures unnaturally.
 `get_loss_function(name)` maps string names to classes:
 `"dice"`, `"bce"`, `"dice_bce"`, `"focal"`, `"tversky"`, `"focal_tversky"`.
 
+### Loss selection for aggregate segmentation
+
+Our data has two properties that constrain loss selection:
+
+1. **Severe class imbalance (~1% foreground)**. Pure unweighted BCE is dominated
+   by background pixels and under-trains on aggregates.
+
+2. **Noisy annotation boundaries**. Annotators are confident about aggregate
+   cores but uncertain about exact boundaries. This means ground truth edges are
+   unreliable — the model should not be heavily penalized for boundary
+   disagreements.
+
+These two properties pull in different directions. Dice loss handles imbalance
+well (it normalizes by prediction + target size) but is sensitive to boundary
+noise (boundary disagreements directly reduce the overlap ratio). Weighted BCE
+handles noisy boundaries better (each pixel is independent, so boundary errors
+only affect boundary pixels) but needs manual class weighting.
+
+**Losses considered and rejected:**
+
+- **Focal Loss**: Designed for easy-example dominance in classification (Lin et
+  al., 2017), not segmentation. Focuses training on hard/ambiguous pixels, which
+  in our case are noisy boundaries and background regions resembling aggregates
+  — this can increase false positives rather than reduce them. Multiple medical
+  imaging studies (Ma et al. 2021, Yeung et al. 2022) found Focal Loss
+  underperforms Dice-based losses for small object segmentation.
+
+- **Focal Tversky Loss**: Adds two extra hyperparameters (alpha/beta + gamma)
+  on top of Tversky. Abraham & Khan (2019) showed gains on small lesions, but
+  follow-up studies found results were inconsistent and sensitive to gamma. With
+  only 19 images, the hyperparameter search space is a concern.
+
+- **Pure Dice Loss**: Noisy gradients when foreground is very small (denominator
+  approaches zero). nnU-Net always combines Dice with CE for gradient stability.
+
+**Losses under evaluation (baseline UNet ablation):**
+
+| Config | Loss | Rationale |
+|---|---|---|
+| `alpha=0.0, beta=1.0, pw=7.5` | Pure weighted BCE | Previous approach. High recall (~0.93) but low precision (~0.64). The heavy pos_weight penalizes missed aggregates but not false positives. |
+| `alpha=0.0, beta=1.0, pw=3.0` | Pure weighted BCE, lower weight | Reduces recall bias to improve precision. Simplest change from baseline. |
+| `alpha=0.3, beta=0.7, pw=3.0` | BCE-heavy Dice+BCE mix | Dice adds overlap pressure (penalizes FPs structurally). BCE dominates so boundary noise hurts less. Moderate pos_weight keeps some recall pressure. |
+| `alpha=0.5, beta=0.5` | nnU-Net default (Dice+BCE) | Zero hyperparameters, most battle-tested. Risk: recall may drop with noisy boundaries. |
+
+The smoothing constant in DiceLoss is set to 1.0 (not 1e-5), which stabilizes
+gradients when patches have very little foreground. This follows nnU-Net
+convention.
+
+References:
+- Isensee et al. 2021 (nnU-Net): doi.org/10.1038/s41592-020-01008-z
+- Ma et al. 2021 (Loss Odyssey): arxiv.org/abs/2103.02626
+- Yeung et al. 2022: doi.org/10.1016/j.media.2022.102399
+
 ### Note on EdgeWeightedLoss — needs inspection
 
 The current `EdgeWeightedLoss` implementation (formerly `BoundaryLoss`) has
@@ -414,3 +467,58 @@ boundary loss with scheduled weighting. References:
 - Kervadec et al. 2019: arxiv.org/abs/1812.07032
 - Jadon 2020, survey of segmentation losses: arxiv.org/pdf/2006.14822
 - Loss survey 2023: arxiv.org/html/2312.05391v1
+
+---
+
+## Learning Rate Scheduler (`training/trainer.py`)
+
+### Scheduler selection
+
+With Adam optimizer on a small dataset (19 images, 1900 patches), the scheduler
+must be reactive to actual training dynamics rather than assuming a fixed
+schedule. Key constraints:
+
+1. **Early stopping** makes the total number of epochs unpredictable. Schedulers
+   that back-load their useful behavior (OneCycleLR's final annealing,
+   CosineAnnealing near T_max) may never reach their effective phase.
+
+2. **Small, noisy validation set** (~380 patches). Validation loss oscillates
+   epoch-to-epoch, so the scheduler must tolerate noise without triggering
+   premature LR reductions.
+
+3. **Class imbalance + weighted BCE**. Schedulers that allow LR to spike
+   (OneCycleLR warmup, WarmRestarts) risk destabilizing the fragile foreground
+   predictions — the 1% aggregate class can be "forgotten" during a high-LR
+   restart.
+
+**Schedulers considered and rejected:**
+
+- **OneCycleLR** (Smith 2019): Incompatible with early stopping — designed for
+  a fixed number of steps. The warmup to high LR is risky with severe class
+  imbalance and weighted BCE (amplifies gradient noise from class weights).
+
+- **CosineAnnealingWarmRestarts** (Loshchilov & Hutter 2017): Warm restarts to
+  full LR can cause catastrophic forgetting of rare-class features. Benefits
+  shown mainly on larger datasets.
+
+- **CosineAnnealingLR**: Smooth and predictable, but T_max must match actual
+  training length. With early stopping, T_max is unknown. Setting it too high
+  means the useful low-LR phase is never reached.
+
+- **PolynomialLR** (nnU-Net default, power=0.9): Designed for SGD + fixed 1000
+  epochs without early stopping. With Adam's adaptive per-parameter LR, the
+  scheduler's effect is dampened. Not well suited to our Adam + early stopping
+  regime.
+
+**Selected: ReduceLROnPlateau** (`factor=0.5, patience=10, min_lr=1e-6`).
+
+This is what StarDist uses (Adam + small bioimage datasets). It reacts to actual
+validation loss plateaus rather than following a fixed schedule. With our
+baseline plateauing around epoch 25–30 at constant lr=1e-3, patience=10 triggers
+the first reduction (1e-3 → 5e-4) around epoch 35–40, giving the model a second
+phase of fine-tuning. Subsequent reductions at each new plateau, down to 1e-6.
+
+References:
+- StarDist: doi.org/10.1007/978-3-030-00934-2_30
+- Smith 2019 (1cycle): arxiv.org/abs/1708.07120
+- Loshchilov & Hutter 2017 (SGDR): arxiv.org/abs/1608.03983

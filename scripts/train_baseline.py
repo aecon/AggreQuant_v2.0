@@ -1,19 +1,15 @@
 """Train baseline UNet on annotated aggregate data.
 
 Usage:
-    conda run -n AggreQuant python scripts/train_baseline.py
+    python scripts/train_baseline.py --name baseline
+    python scripts/train_baseline.py --name dice_bce_pw3 --alpha 0.3 --beta 0.7 --pos-weight 3.0
+    python scripts/train_baseline.py --name bce_pw3 --alpha 0.0 --beta 1.0 --pos-weight 3.0
 
-Prerequisite: symlinks must exist in training_output/baseline/symlinks/
-    (images/ and masks/ with matching filenames). Create once with:
-    see project devlog or run the symlink commands manually.
-
-This script:
-1. Extracts 192x192 non-overlapping patches from 19 annotated images
-2. Splits patches 80/20 train/val (shuffled, seed=42)
-3. Trains a baseline UNet with weighted BCE (pos_weight=7.5)
-4. Saves best checkpoint to training_output/baseline/checkpoints/best.pt
+Prerequisite: symlinks must exist in training_output/symlinks/
+    (images/ and masks/ with matching filenames).
 """
 
+import argparse
 from pathlib import Path
 
 import torch
@@ -35,10 +31,9 @@ logger = get_logger(__name__)
 TRAINING_ROOT = Path(__file__).resolve().parent.parent / "training_output"
 SYMLINK_DIR = TRAINING_ROOT / "symlinks"
 PATCH_DIR = TRAINING_ROOT / "patches"
-CHECKPOINT_DIR = TRAINING_ROOT / "baseline" / "checkpoints"
 
 # ---------------------------------------------------------------------------
-# Hyperparameters
+# Fixed hyperparameters
 # ---------------------------------------------------------------------------
 
 PATCH_SIZE = 192
@@ -46,15 +41,30 @@ BATCH_SIZE = 16
 EPOCHS = 200
 LEARNING_RATE = 1e-3
 EARLY_STOPPING_PATIENCE = 20
-POS_WEIGHT = 7.5       # matches old weighted BCE (agg=7.5, bkg=1.0)
 VAL_SPLIT = 0.2
 SEED = 42
 NUM_WORKERS = 4
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train baseline UNet")
+    parser.add_argument("--name", type=str, required=True,
+                        help="Experiment name (output goes to training_output/<name>/)")
+    parser.add_argument("--alpha", type=float, default=0.5,
+                        help="Dice loss weight (default: 0.5)")
+    parser.add_argument("--beta", type=float, default=0.5,
+                        help="BCE loss weight (default: 0.5)")
+    parser.add_argument("--pos-weight", type=float, default=None,
+                        help="BCE positive class weight (default: None)")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    checkpoint_dir = TRAINING_ROOT / args.name / "checkpoints"
+
     logger.info("=" * 60)
-    logger.info("Training baseline UNet on aggregate data")
+    logger.info(f"Training baseline UNet — experiment: {args.name}")
     logger.info("=" * 60)
 
     # Check symlinks exist
@@ -103,13 +113,12 @@ def main():
     logger.info(f"Model parameters: {n_params:,}")
 
     # 4. Setup loss, optimizer, scheduler
-    criterion = DiceBCELoss(alpha=0.0, beta=1.0, pos_weight=POS_WEIGHT)
+    criterion = DiceBCELoss(alpha=args.alpha, beta=args.beta, pos_weight=args.pos_weight)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=10, min_lr=1e-6,
     )
 
-    # Metrics: dice and IoU computed on sigmoid outputs
     metrics = {
         "dice": lambda preds, targets: dice_score(preds, targets),
         "iou": lambda preds, targets: iou_score(preds, targets),
@@ -118,8 +127,13 @@ def main():
     }
 
     # 5. Train
+    loss_desc = f"Dice(alpha={args.alpha}) + BCE(beta={args.beta}"
+    if args.pos_weight is not None:
+        loss_desc += f", pos_weight={args.pos_weight}"
+    loss_desc += ")"
+
     logger.info("Step 5: Training...")
-    logger.info(f"  Loss: BCE with pos_weight={POS_WEIGHT}")
+    logger.info(f"  Loss: {loss_desc}")
     logger.info(f"  Optimizer: Adam, lr={LEARNING_RATE}")
     logger.info(f"  Scheduler: ReduceLROnPlateau (factor=0.5, patience=10, min_lr=1e-6)")
     logger.info(f"  Epochs: {EPOCHS}, early stopping patience: {EARLY_STOPPING_PATIENCE}")
@@ -132,7 +146,7 @@ def main():
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        checkpoint_dir=CHECKPOINT_DIR,
+        checkpoint_dir=checkpoint_dir,
         metrics=metrics,
         verbose=True,
     )
@@ -152,8 +166,8 @@ def main():
     if "iou" in history.val_metrics:
         best_iou = history.val_metrics["iou"][history.best_epoch - 1]
         logger.info(f"Best val_iou: {best_iou:.4f}")
-    logger.info(f"Checkpoint: {CHECKPOINT_DIR / 'best.pt'}")
-    logger.info(f"History: {CHECKPOINT_DIR / 'history.json'}")
+    logger.info(f"Checkpoint: {checkpoint_dir / 'best.pt'}")
+    logger.info(f"History: {checkpoint_dir / 'history.json'}")
     logger.info("=" * 60)
 
 
