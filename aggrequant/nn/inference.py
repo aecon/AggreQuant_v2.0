@@ -7,20 +7,17 @@ Provides two inference modes for large microscopy images:
 Auto-detect mode tries full-resolution first and falls back to tiled on OOM.
 
 Example:
-    >>> from aggrequant.nn.inference import predict
-    >>> from aggrequant.nn.architectures.registry import create_model
+    >>> from aggrequant.nn.inference import load_model, predict
     >>>
-    >>> model = create_model("resunet")
-    >>> model.load_state_dict(
-    ...     torch.load("weights.pt", weights_only=True)["model_state_dict"]
-    ... )
-    >>>
-    >>> # Auto-detect best mode
+    >>> model = load_model("checkpoints/best.pt")
     >>> prob_map = predict(model, image)
     >>>
     >>> # Force tiled inference
     >>> prob_map = predict_tiled(model, image, tile_size=256, stride=128)
 """
+
+from pathlib import Path
+from typing import Union
 
 import numpy as np
 import torch
@@ -31,6 +28,49 @@ from aggrequant.common.logging import get_logger
 from aggrequant.nn.utils import get_device
 
 logger = get_logger(__name__)
+
+
+def load_model(
+    checkpoint_path: Union[str, Path],
+    device: torch.device = None,
+) -> nn.Module:
+    """Load a trained model from a self-contained checkpoint.
+
+    Checkpoints saved by the Trainer contain both the architecture config
+    (from ``UNet.get_config()``) and the trained weights, so no external
+    information is needed to reconstruct the model.
+
+    Arguments:
+        checkpoint_path: Path to a ``.pt`` checkpoint file
+        device: Device to load the model onto (default: auto-detect)
+
+    Returns:
+        Model in eval mode, ready for inference
+
+    Example:
+        >>> model = load_model("training_output/baseline/checkpoints/best.pt")
+        >>> prob_map = predict(model, image)
+    """
+    from aggrequant.nn.architectures.unet import UNet
+
+    checkpoint = torch.load(
+        checkpoint_path, map_location="cpu", weights_only=False,
+    )
+
+    if "model_config" not in checkpoint:
+        raise ValueError(
+            f"Checkpoint {checkpoint_path} does not contain 'model_config'. "
+            "Was it saved by the Trainer?"
+        )
+
+    model = UNet(**checkpoint["model_config"])
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    if device is not None:
+        model = model.to(get_device(device))
+
+    return model
 
 
 def _to_tensor(image: np.ndarray) -> torch.Tensor:
