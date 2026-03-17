@@ -20,8 +20,7 @@ from aggrequant.segmentation.aggregates.filter_based import FilterBasedSegmenter
 from aggrequant.segmentation.aggregates.neural_network import NeuralNetworkSegmenter
 from aggrequant.segmentation.postprocessing import (
     remove_border_objects,
-    filter_aggregates_by_cells,
-    relabel_consecutive,
+    filter_aggregates_by_cells
 )
 
 
