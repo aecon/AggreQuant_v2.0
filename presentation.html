@@ -637,22 +637,17 @@
     <div class="overview-item">
       <div class="num">III</div>
       <h3>Segmentation &amp; Benchmarks</h3>
-      <p>Nuclei (4 models, 13 configs), cell (5 models, 10 configs), and aggregate segmentation with model benchmarks</p>
+      <p>Nuclei, cell, and aggregate segmentation &mdash; model benchmarks across 4 frameworks</p>
     </div>
     <div class="overview-item">
       <div class="num">IV</div>
-      <h3>Deep Learning Platform</h3>
-      <p>Modular UNet with 7 architecture variants, attention mechanisms, and training infrastructure</p>
+      <h3>Deep Learning for Aggregates</h3>
+      <p>Training, loss functions, DL vs filter comparison, architecture ablation, error analysis</p>
     </div>
     <div class="overview-item">
       <div class="num">V</div>
-      <h3>Ablations &amp; Comparisons</h3>
-      <p>Loss functions, DL vs filter-based, architecture ablation, annotation quality analysis</p>
-    </div>
-    <div class="overview-item">
-      <div class="num">VI</div>
-      <h3>Paper &amp; Validation</h3>
-      <p>Biological validation on CRISPR screen controls, data quality, manuscript figure plan</p>
+      <h3>Manuscript Writeup</h3>
+      <p>Paper figures, biological validation plan, supplementary</p>
     </div>
   </div>
 </div>
@@ -2078,13 +2073,13 @@ process(dataset, verbose, debug)
       </div>
     </div>
 
-    <!-- Right: precision-recall scatter + metrics comparison -->
-    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
-        <img src="training_output/fig2_dl_vs_filter/precision_recall_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Precision-recall scatter: UNet vs Filter">
-      </div>
+    <!-- Right: metrics comparison + precision-recall scatter (revealed on click) -->
+    <div class="fragment" style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
       <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
         <img src="training_output/fig2_dl_vs_filter/metrics_comparison.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Metrics comparison: UNet vs Filter">
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="training_output/fig2_dl_vs_filter/precision_recall_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Precision-recall scatter: UNet vs Filter">
       </div>
     </div>
 
@@ -2223,6 +2218,11 @@ process(dataset, verbose, debug)
   <h2>Paper Figures</h2>
   <div style="flex:1; display:flex; flex-direction:column; gap:0.6em; justify-content:center;">
 
+    <!-- Paper narrative -->
+    <div class="card card-accent" style="padding:0.7em 1.2em;">
+      <p>AggreQuant 2.0 is the <strong>first deep learning-based, end-to-end pipeline</strong> for quantification and morphological profiling of &alpha;-synuclein aggregates in high-content fluorescence microscopy screens. No existing tool applies DL to aggregate segmentation in this modality &mdash; current alternatives rely on classical filters that overestimate aggregate area by ~4&times;. Target journal: <strong>Cell Reports Methods</strong>. Zero published competition in DL-based &alpha;-synuclein aggregate segmentation for fluorescence HCS.</p>
+    </div>
+
     <!-- 5 figure cards -->
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6em;">
 
@@ -2262,104 +2262,24 @@ process(dataset, verbose, debug)
 
     </div>
 
-    <!-- Paper narrative -->
-    <div class="card card-accent" style="padding:0.8em 1.2em;">
-      <p><strong>Paper narrative:</strong> AggreQuant 2.0 is the first DL-based, end-to-end pipeline for &alpha;-synuclein aggregate quantification and morphological profiling in fluorescence HCS. The contribution is <strong>the tool and the trained model</strong> &mdash; not the architecture search. Architecture ablation (7 variants, &lt;1.1% Dice spread) and loss comparison &rarr; Methods + Supplementary.</p>
+    <!-- Supplementary -->
+    <div class="card" style="padding:0.6em 1em; border-left:3px solid var(--text-dim);">
+      <h3 style="color:var(--text-dim);">Supplementary (S1&ndash;S7)</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.1em 1.5em; margin-top:0.3em; font-size:0.9em;">
+        <div>S1: Loss/architecture ablation tables</div>
+        <div>S2: 19-image DL vs filter gallery</div>
+        <div>S3: Focus metrics comparison</div>
+        <div>S4: Error analysis (annotation quality)</div>
+        <div>S5: Extended biological validation</div>
+        <div>S6: GUI walkthrough</div>
+      </div>
     </div>
 
-  </div>
-</div>
-
-<!-- ===================== SLIDE 28: MANUSCRIPT ===================== -->
-<div class="slide" id="slide-37">
-  <h2>Manuscript in Preparation</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div>
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>Paper Narrative</h3>
-        <p>AggreQuant 2.0 is the <span class="highlight">first deep learning-based, end-to-end pipeline</span> for quantification and morphological profiling of &alpha;-synuclein aggregates in high-content fluorescence microscopy screens.</p>
-        <p style="margin-top: 10px;">No existing tool applies DL to aggregate segmentation in this modality &mdash; current alternatives (AggreCount, Xia et al.) rely on classical filters that overestimate aggregate area by ~4&times;, making morphological profiling unreliable.</p>
-      </div>
-      <div class="card card-green">
-        <h3>Target: Cell Reports Methods</h3>
-        <p>Also considering: Nature Methods, Bioinformatics</p>
-        <ul class="green" style="margin-top: 10px;">
-          <li><strong>Zero published competition</strong> in DL-based &alpha;-synuclein aggregate segmentation for fluorescence HCS</li>
-          <li>Closest competitor (Dereure 2025) operates on <em>brightfield histopathology</em> &mdash; completely different modality</li>
-          <li>Tools like AggreCount (Klickstein 2020) and Xia et al. (2023) are all filter-based</li>
-        </ul>
-      </div>
-    </div>
-    <div>
-      <div class="card card-orange" style="margin-bottom: 16px;">
-        <h3>Revised Focus (2026-03-17)</h3>
-        <p>The paper's contribution is <strong>the tool and the trained model</strong>, not the architecture search. The architecture ablation showed that model choice doesn't matter &mdash; this becomes a Methods paragraph, not a Results figure.</p>
-        <p style="margin-top: 8px;">Key insight from U-Bench (2025): simpler models often win. Our 7-variant flat plateau confirms this at our scale.</p>
-      </div>
-      <div class="card">
-        <h3>Results Sections</h3>
-        <ol style="list-style: decimal; padding-left: 22px;">
-          <li style="margin-bottom: 8px; padding-left: 4px;"><strong>Fig 1:</strong> Pipeline overview (plate &rarr; channels &rarr; segmentation &rarr; quantification)</li>
-          <li style="margin-bottom: 8px; padding-left: 4px;"><strong>Fig 2:</strong> DL vs filter-based segmentation &mdash; the core technical validation</li>
-          <li style="margin-bottom: 8px; padding-left: 4px;"><strong>Fig 3:</strong> Dual-domain focus quality control &mdash; methodological contribution</li>
-          <li style="margin-bottom: 8px; padding-left: 4px;"><strong>Fig 4:</strong> Biological validation on CRISPR screen controls &mdash; real-world proof</li>
-          <li style="padding-left: 4px;"><strong>Fig 5:</strong> Software availability and usability &mdash; community resource</li>
-        </ol>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 29: MANUSCRIPT FIGURES ===================== -->
-<div class="slide" id="slide-38">
-  <h2>Manuscript Figure Plan</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div>
-      <div class="card" style="margin-bottom: 14px;">
-        <h3 style="color: var(--accent2);">Fig 1: Pipeline Overview</h3>
-        <p>Plate schematic &rarr; raw 3-channel images &rarr; segmentation cascade (StarDist &rarr; Cellpose &rarr; UNet) &rarr; colocalization &rarr; plate-level statistics heatmap</p>
-        <p class="small" style="margin-top: 4px;">Status: Needs generating from pipeline outputs</p>
-      </div>
-      <div class="card" style="margin-bottom: 14px;">
-        <h3 style="color: var(--accent);">Fig 2: DL vs Filter-Based</h3>
-        <p>Qualitative gallery (crops with overlays) + quantitative bar chart + size distributions + boundary fidelity zooms. The figure that justifies why DL matters.</p>
-        <p class="small" style="margin-top: 4px;">Status: Data exists, scripts ready</p>
-      </div>
-      <div class="card" style="margin-bottom: 14px;">
-        <h3 style="color: var(--accent3);">Fig 3: Focus Quality Control</h3>
-        <p>PLLS + VoL dual-domain approach, the A-24 counterexample, scatter plot, patch-level blur mask</p>
-        <p class="small" style="margin-top: 4px;">Status: LaTeX section written, mostly ready</p>
-      </div>
-    </div>
-    <div>
-      <div class="card" style="margin-bottom: 14px;">
-        <h3 style="color: var(--accent4);">Fig 4: Biological Validation</h3>
-        <p>NT vs RAB13 FOVs + quantification (SSMD, Z-factor) + morphological profiling radar + DL vs filter profiling comparison &mdash; the "killer panel"</p>
-        <p class="small" style="margin-top: 4px;">Status: Needs pipeline runs on control plates</p>
-      </div>
-      <div class="card" style="margin-bottom: 14px;">
-        <h3 style="color: var(--text-dim);">Fig 5: Software &amp; Usability</h3>
-        <p>Architecture block diagram + annotated GUI screenshot + YAML config + processing time benchmark</p>
-        <p class="small" style="margin-top: 4px;">Status: Needs screenshots and benchmarking</p>
-      </div>
-      <div class="card card-accent">
-        <h3>Supplementary (S1&ndash;S7)</h3>
-        <ul >
-          <li>S1: Loss/architecture ablation tables + training curves</li>
-          <li>S2: Complete 19-image DL vs filter gallery</li>
-          <li>S3: All focus metrics comparison</li>
-          <li>S4: Error analysis (annotation quality, confidence, core vs edge)</li>
-          <li>S5: Extended biological validation (UMAP, correlations)</li>
-          <li>S6: GUI walkthrough, export format examples</li>
-          <li>S7: Annotation examples &amp; inter-annotator agreement</li>
-        </ul>
-      </div>
-    </div>
   </div>
 </div>
 
 <!-- ===================== SLIDE 30: SUMMARY ===================== -->
-<div class="slide" id="slide-39">
+<div class="slide" id="slide-37">
   <h2>Summary &amp; Looking Ahead</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2410,7 +2330,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 31: THANK YOU ===================== -->
-<div class="slide title-slide" id="slide-40">
+<div class="slide title-slide" id="slide-38">
   <div class="title-decoration d1"></div>
   <div class="title-decoration d2"></div>
   <div>
@@ -2439,35 +2359,33 @@ process(dataset, verbose, debug)
     'Development Timeline',
     'What\'s New in AggreQuant 2.0',
     '\u2014 II. Usability & Interfaces \u2014',
-    'Old Configuration \u2014 Manual & Fragile',
-    'Configuration & Validation',
-    '\u2014 III. Segmentation Algorithms \u2014',
-    'Segmentation Pipeline',
-    'Nuclei: StarDist 2D',
-    'Cells: Cellpose 3',
-    'Aggregates: Filter-Based',
-    'Aggregates: UNet Deep Learning',
-    '\u2014 IV. Deep Learning Platform \u2014',
+    'Old Configuration',
+    'AggreQuant 2.0 \u2014 Usage',
+    'AggreQuant 2.0 \u2014 Web GUI',
+    '\u2014 III. Segmentation & Benchmarks \u2014',
+    'Nuclei: Model Benchmark',
+    'Nuclei Benchmark: Design',
+    'Nuclei Benchmark: Results',
+    'Nuclei Benchmark: Mask Gallery',
+    'Nuclei: Normalization Effect',
+    'Cell: Model Benchmark',
+    'Cell Benchmark: Results',
+    'Cell: Nuclear Channel Preprocessing',
+    'AggreQuant 2.0 \u2014 Aggregate Segmentation',
+    '\u2014 IV. Deep Learning for Aggregates \u2014',
+    'How Do We Train a Neural Network?',
+    'Training Dataset & Class Imbalance',
+    'Loss Function Effect',
+    'Loss Function: Training Curves',
+    'Loss Function: Metrics Comparison',
+    'How Certain Is the NN When Wrong?',
+    'FPs and FNs on Aggregate Edges',
+    'DL vs Filter-Based Segmentation',
+    'DL vs Filter: Visual Comparison',
     'UNet Architecture & Building Blocks',
-    '\u2014 V. Benchmarks & Ablations \u2014',
-    'Benchmark: Loss Function Comparison',
-    'Benchmark: DL vs Filter-Based',
-    'Visual: DL vs Filter',
-    'Benchmark: Architecture Ablation',
-    'Training Curves: Ablation',
-    'Benchmark: Nuclei Segmentation',
-    'Benchmark: Illumination Normalization',
-    'Benchmark: Cell Segmentation',
-    'Cellpose Preprocessing: Detail',
-    'Annotation Quality Analysis',
-    '\u2014 VI. Paper Figures & Validation \u2014',
-    'Biological Validation: CRISPR Controls',
-    'Data Quality: Imaging Reproducibility',
-    'Model Confidence & Error Characterization',
-    'Visual: Architecture Variants',
-    'Visual: Loss Function Variants',
-    'Manuscript in Preparation',
-    'Manuscript Figure Plan',
+    'Architecture Ablation (7 Variants)',
+    '\u2014 V. Manuscript Writeup \u2014',
+    'Paper Figures',
     'Summary & Looking Ahead',
     'Thank You',
   ];
