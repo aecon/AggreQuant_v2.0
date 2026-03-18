@@ -2096,8 +2096,8 @@ process(dataset, verbose, debug)
       <img src="training_output/fig2_dl_vs_filter/overlay_grid.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="TP/FP/FN overlay grid: UNet vs Filter">
     </div>
 
-    <!-- Right: size distributions + conclusions -->
-    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+    <!-- Right: size distributions + conclusions (revealed on click) -->
+    <div class="fragment" style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
       <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
         <img src="training_output/fig2_dl_vs_filter/size_distributions.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Aggregate size distributions: GT vs UNet vs Filter">
       </div>
@@ -2278,54 +2278,39 @@ process(dataset, verbose, debug)
   </div>
 </div>
 
-<!-- ===================== SLIDE 30: SUMMARY ===================== -->
+<!-- ===================== SLIDE: SUMMARY ===================== -->
 <div class="slide" id="slide-37">
-  <h2>Summary &amp; Looking Ahead</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div>
-      <div class="card card-green" style="margin-bottom: 16px;">
-        <h3>What We Built</h3>
-        <ul class="green">
-          <li>Complete, modular pipeline from raw HCS images to per-cell quantification</li>
-          <li>Three segmentation stages: StarDist nuclei, Cellpose cells, UNet/filter aggregates</li>
-          <li>Deep learning platform with 7 architecture variants and 7 loss functions</li>
-          <li>Focus quality assessment for automated image rejection</li>
-          <li>Three interfaces: CLI, web GUI, Python API</li>
-          <li>194 unit tests, validated configuration, structured logging</li>
+  <h2>Summary</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:1em; justify-content:center;">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1em;">
+      <div class="card card-green" style="padding:1.2em 1.4em;">
+        <h3 style="font-size:1.2em;">What We Built</h3>
+        <ul class="green" style="margin-top:0.5em; font-size:1.05em;">
+          <li>End-to-end pipeline: raw HCS images &rarr; per-cell quantification</li>
+          <li>StarDist nuclei + Cellpose cells + UNet/filter aggregates</li>
+          <li>7 architecture variants, 7 loss functions</li>
+          <li>Focus quality assessment with automatic rejection</li>
+          <li>CLI, web GUI, and Python API</li>
         </ul>
       </div>
-      <div class="card card-accent">
-        <h3>Key Scientific Findings</h3>
-        <ul>
-          <li>UNet achieves <span class="highlight">Dice 0.83</span> vs filter <span class="highlight-red">0.58</span> for aggregates</li>
-          <li>UNet preserves morphology (median area: 32 px vs GT 30 px); filter inflates 4&times;</li>
-          <li>Architecture ablation: only 1.1% Dice span across 7 variants &mdash; <strong>data, not architecture, is the bottleneck</strong></li>
-          <li>~70% of reported FPs are annotation misses; true performance is higher than reported</li>
-          <li>DL segmentation is <strong>required for reliable morphological profiling</strong></li>
+      <div class="card card-accent" style="padding:1.2em 1.4em;">
+        <h3 style="font-size:1.2em;">Key Findings</h3>
+        <ul style="margin-top:0.5em; font-size:1.05em;">
+          <li>UNet Dice 0.83 vs filter 0.58 for aggregates</li>
+          <li>UNet preserves morphology; filter inflates area ~4&times;</li>
+          <li>Architecture ablation: 1.1% Dice span &mdash; dataset size is the limiting factor</li>
+          <li>~70% of FPs are likely annotation misses</li>
         </ul>
       </div>
     </div>
-    <div>
-      <div class="card card-orange" style="margin-bottom: 16px;">
-        <h3>What's Next</h3>
-        <ul class="orange">
-          <li>Plate-level statistics and QC metrics (SSMD, Z-factor)</li>
-          <li>Full biological validation on CRISPR screen plates</li>
-          <li>Morphological profiling across genetic perturbations</li>
-          <li>Expanded training dataset for improved annotation quality</li>
-          <li>Manuscript preparation for publication</li>
-        </ul>
-      </div>
-      <div class="card" style="background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)); border: none; text-align: center; padding: 30px;">
-        <h3 style="color: var(--text-bright); margin-bottom: 10px;">The Takeaway</h3>
-        <p style="font-size: 1.1em; color: var(--text-bright);">
-          Accurate segmentation is not a luxury &mdash; it is a <em>prerequisite</em> for meaningful biological discovery in high-content screens.
-        </p>
-        <p style="margin-top: 14px; font-size: 0.95em; color: var(--accent);">
-          AggreQuant 2.0 makes this accessible, reproducible, and scalable.
-        </p>
-      </div>
+
+    <div class="card" style="background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)); border: none; text-align: center; padding:1.4em 2em;">
+      <p style="font-size: 1.2em; color: var(--text-bright);">
+        AggreQuant 2.0 provides accurate, reproducible aggregate segmentation for high-content fluorescence screens.
+      </p>
     </div>
+
   </div>
 </div>
 
@@ -2339,7 +2324,6 @@ process(dataset, verbose, debug)
       AggreQuant 2.0 &mdash; From pixels to biology
     </p>
     <div class="title-meta" style="margin-top: 30px;">
-      Questions &amp; Discussion
     </div>
   </div>
 </div>
