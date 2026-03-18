@@ -1672,44 +1672,25 @@ process(dataset, verbose, debug)
 <!-- ===================== SLIDE: CELLPOSE PREPROCESSING BENCHMARK ===================== -->
 <div class="slide" id="slide-21">
   <h2>Cell Segmentation &mdash; Nuclear Channel Preprocessing</h2>
-  <div style="flex:1; display:grid; grid-template-columns:3fr 2fr; gap:0.8em; min-height:0;">
+  <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:0.6em; min-height:0;">
 
-    <!-- Left: scatter + counts -->
-    <div style="display:flex; flex-direction:column; gap:0.6em; min-height:0;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_E_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="StarDist seeds vs raw DAPI cell counts">
-      </div>
-      <div style="display:flex; gap:0.5em;">
-        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
-          <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_A_counts.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Cell counts by variant">
-        </div>
-        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
-          <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_B_pairwise_diff.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Pairwise differences">
-        </div>
-      </div>
+    <!-- Left: scatter plot (large) -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_E_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="StarDist seeds vs raw DAPI cell counts">
     </div>
 
-    <!-- Right: conclusions -->
-    <div style="display:flex; flex-direction:column; gap:0.6em; justify-content:center;">
-      <div class="card card-accent" style="padding:0.8em 1em;">
-        <h3>Three Variants Tested</h3>
-        <ul style="margin-top:0.4em;">
-          <li><strong>Cell only</strong> &mdash; FarRed, no nuclear input</li>
-          <li><strong>Raw DAPI</strong> &mdash; FarRed + raw DAPI image</li>
-          <li><strong>StarDist seeds</strong> &mdash; FarRed + binary mask from StarDist</li>
-        </ul>
+    <!-- Right: counts plot + conclusions -->
+    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_A_counts.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Cell counts by variant">
       </div>
-      <div class="card card-green" style="padding:0.8em 1em;">
-        <h3>Key Findings</h3>
-        <ul class="green" style="margin-top:0.4em;">
-          <li><strong>StarDist seeds dominate</strong> &mdash; points above diagonal show seeds consistently detect more cells than raw DAPI</li>
-          <li><strong>High confluency &amp; clustered</strong>: cell-only and raw DAPI detect near-zero cells; seeds recover &gt;1,400</li>
-          <li><strong>Solidity</strong>: seeds yield consistent shape quality (0.91&ndash;0.93) across all categories; other variants collapse on dense images</li>
-          <li><strong>+760 cells/image</strong> on average vs cell-only</li>
+      <div class="card card-accent" style="padding:0.6em 0.8em;">
+        <h3 style="font-size:0.9em;">Key Findings</h3>
+        <ul style="margin-top:0.3em; font-size:0.85em;">
+          <li><strong>StarDist seeds dominate</strong> &mdash; points above diagonal; +760 cells/image vs cell-only</li>
+          <li><strong>High confluency &amp; clustered</strong>: raw DAPI detects near-zero; seeds recover &gt;1,400</li>
+          <li style="color:var(--accent);"><strong>Adopted as default</strong> in AggreQuant 2.0</li>
         </ul>
-      </div>
-      <div class="card" style="padding:0.6em 1em; border-left:3px solid var(--accent);">
-        <p><strong style="color:var(--accent);">Conclusion:</strong> Pre-segmented StarDist nuclei masks as seeds are essential for reliable Cellpose cell segmentation &mdash; adopted as default in AggreQuant 2.0.</p>
       </div>
     </div>
 
@@ -1717,7 +1698,7 @@ process(dataset, verbose, debug)
 </div>
 
 <div class="slide" id="slide-22">
-  <h2>Aggregate Segmentation &mdash; Two Methods</h2>
+  <h2><span style="color:var(--accent2);">AggreQuant 2.0</span> &mdash; Aggregate Segmentation</h2>
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8em; align-self:center;">
 
     <!-- Filter-Based -->
@@ -1777,8 +1758,8 @@ process(dataset, verbose, debug)
 <div class="slide" id="slide-23">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">IV</div>
-    <h1 style="font-size:2.8em; margin-bottom:0.5em;">Deep Learning Platform</h1>
-    <p style="font-size:1.2em; color:var(--text-dim); max-width:70%;">Modular UNet with 7 architecture variants, attention mechanisms, and training infrastructure</p>
+    <h1 style="font-size:2.8em; margin-bottom:0.5em;">Deep Learning for Aggregates</h1>
+    <p style="font-size:1.2em; color:var(--text-dim); max-width:70%;">Training a neural network for aggregate segmentation &mdash; architecture, loss functions, and what we learned</p>
   </div>
 </div>
 
@@ -1788,7 +1769,7 @@ process(dataset, verbose, debug)
   <div style="flex:1; display:flex; flex-direction:column; gap:0.8em; justify-content:center;">
 
     <!-- The training loop as a visual story -->
-    <div style="display:flex; align-items:center; justify-content:center; gap:0.4em; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:0.8em; flex-wrap:wrap;">
 
       <div style="background:var(--bg-card); border:2px solid var(--accent3); border-radius:1em; padding:1em 1.2em; text-align:center; min-width:8em;">
         <div style="font-size:1.8em;">&#x1F4F7;</div>
@@ -1826,44 +1807,325 @@ process(dataset, verbose, debug)
     </div>
 
     <!-- Key ingredients grid -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.6em;">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:1em;">
 
-      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent3);">
+      <div class="card" style="padding:1em 1em; border-left:3px solid var(--accent3);">
         <h3 style="color:var(--accent3);">Training Data</h3>
-        <p>Pairs of images + hand-drawn masks. The network learns by comparing its output to the &ldquo;correct answer.&rdquo;</p>
-        <p style="margin-top:0.3em; color:var(--text-dim);">We have <strong>19 annotated images</strong></p>
+        <p style="margin-top:0.4em;">Pairs of images + hand-drawn masks. The network learns by comparing its output to the &ldquo;correct answer.&rdquo;</p>
+        <p style="margin-top:0.5em; color:var(--text-dim);">19 images &rarr; <strong>~1,900 patches</strong> of 192&times;192 px</p>
       </div>
 
-      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent);">
+      <div class="card" style="padding:1em 1em; border-left:3px solid var(--accent);">
         <h3 style="color:var(--accent);">Architecture</h3>
-        <p>The network&rsquo;s structure &mdash; how many layers, what operations. Like choosing the <em>shape</em> of the brain.</p>
-        <p style="margin-top:0.3em; color:var(--text-dim);">We tested <strong>7 variants</strong></p>
+        <p style="margin-top:0.4em;">The network&rsquo;s structure &mdash; how many layers, what operations. Like choosing the <em>shape</em> of the brain.</p>
+        <p style="margin-top:0.5em; color:var(--text-dim);">We tested <strong>7 variants</strong></p>
       </div>
 
-      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent4);">
+      <div class="card" style="padding:1em 1em; border-left:3px solid var(--accent4);">
         <h3 style="color:var(--accent4);">Loss Function</h3>
-        <p>The &ldquo;scoring rubric&rdquo; &mdash; tells the network <em>what</em> to care about. Boundary accuracy? Small objects?</p>
-        <p style="margin-top:0.3em; color:var(--text-dim);">We tested <strong>7 loss functions</strong></p>
+        <p style="margin-top:0.4em;">The &ldquo;scoring rubric&rdquo; &mdash; tells the network <em>what</em> to care about. Boundary accuracy? Small objects?</p>
+        <p style="margin-top:0.5em; color:var(--text-dim);">We tested <strong>7 loss functions</strong></p>
       </div>
 
-      <div class="card" style="padding:0.8em; border-left:3px solid var(--accent2);">
+      <div class="card" style="padding:1em 1em; border-left:3px solid var(--accent2);">
         <h3 style="color:var(--accent2);">Augmentation</h3>
-        <p>Artificially expand training data by flipping, rotating, adjusting brightness &mdash; so the network doesn&rsquo;t memorize.</p>
-        <p style="margin-top:0.3em; color:var(--text-dim);">Flip, rotate, affine, gamma, noise</p>
+        <p style="margin-top:0.4em;">Artificially expand training data by flipping, rotating, adjusting brightness &mdash; so the network doesn&rsquo;t memorize.</p>
+        <p style="margin-top:0.5em; color:var(--text-dim);">Flip, rotate, affine, gamma, noise</p>
       </div>
 
     </div>
 
     <!-- Punchline -->
-    <div style="text-align:center; color:var(--text-dim); font-size:1.05em; padding:0.4em;">
+    <div style="text-align:center; color:var(--text-dim); font-size:1.1em; padding:0.8em 0;">
       The goal: a network that can segment aggregates it has <strong style="color:var(--text);">never seen before</strong> &mdash; not just memorize the training examples.
     </div>
 
   </div>
 </div>
 
-<!-- ===================== SLIDE: UNET BUILDING BLOCKS ===================== -->
+<!-- ===================== SLIDE: TRAINING DATASET & SETUP ===================== -->
 <div class="slide" id="slide-25">
+  <h2>Training Dataset &amp; The Class Imbalance Challenge</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:1em; justify-content:center;">
+
+    <!-- Dataset overview -->
+    <div style="display:flex; gap:1em; align-items:stretch;">
+      <div class="card" style="flex:1; padding:1em 1.2em; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:2.8em; font-weight:700; color:var(--accent);">19</div>
+        <div>annotated images</div>
+        <div style="color:var(--text-dim); margin-top:0.3em;">2040 &times; 2040 px each</div>
+      </div>
+      <div class="card" style="flex:1; padding:1em 1.2em; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:2.8em; font-weight:700; color:var(--accent);">~1,900</div>
+        <div>training patches</div>
+        <div style="color:var(--text-dim); margin-top:0.3em;">192 &times; 192 px, non-overlapping</div>
+      </div>
+      <div class="card" style="flex:1; padding:1em 1.2em; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:2.8em; font-weight:700; color:var(--accent4);">&lt; 5%</div>
+        <div>foreground pixels</div>
+        <div style="color:var(--text-dim); margin-top:0.3em;">aggregates are tiny &amp; sparse</div>
+      </div>
+      <div class="card" style="flex:1; padding:1em 1.2em; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:2.8em; font-weight:700; color:var(--accent2);">80/20</div>
+        <div>train / validation split</div>
+        <div style="color:var(--text-dim); margin-top:0.3em;">fixed seed for reproducibility</div>
+      </div>
+    </div>
+
+    <!-- The problem -->
+    <div class="card" style="padding:1em 1.4em; border-left:3px solid var(--accent4);">
+      <h3 style="color:var(--accent4);">Why Does Class Imbalance Matter?</h3>
+      <p style="margin-top:0.4em;">Most pixels are background. A naive model could predict &ldquo;no aggregate&rdquo; everywhere and still be &gt;95% accurate. The <strong>loss function</strong> must force the network to care about the rare foreground pixels &mdash; but how much?</p>
+      <div style="display:flex; gap:2em; margin-top:0.6em;">
+        <div><span style="color:var(--accent4); font-weight:600;">Too much weight on foreground</span> &rarr; high recall, but many false positives (hallucinated aggregates)</div>
+        <div><span style="color:var(--accent2); font-weight:600;">Balanced weight</span> &rarr; fewer false positives, but might miss faint aggregates</div>
+      </div>
+    </div>
+
+    <!-- Training setup -->
+    <div style="display:flex; gap:1em;">
+      <div class="card" style="flex:1; padding:0.8em 1em; border-left:3px solid var(--accent);">
+        <h3 style="color:var(--accent);">Training Setup</h3>
+        <p style="margin-top:0.3em;">Adam optimizer (lr=1e-3) &bull; ReduceLROnPlateau (halves lr after 10 stagnant epochs) &bull; early stopping (patience 20, max 200 epochs) &bull; augmentation (flip, rotate, affine, gamma, noise)</p>
+      </div>
+      <div class="card" style="flex:1; padding:0.8em 1em; border-left:3px solid var(--accent3);">
+        <h3 style="color:var(--accent3);">What We Compared</h3>
+        <p style="margin-top:0.3em;"><strong>4 loss configurations</strong> varying the foreground weight (pos_weight 7.5 vs 3.0) and whether to add a Dice overlap term. Same architecture (baseline UNet, 31M params) for all runs.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: LOSS FUNCTION EFFECT ===================== -->
+<div class="slide" id="slide-26">
+  <h2>Loss Function Effect</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:0.7em; justify-content:center;">
+
+    <!-- Loss function descriptions -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.7em;">
+
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent4);">
+        <h3 style="color:var(--accent4);">BCE (pw=7.5)</h3>
+        <p style="margin-top:0.3em;">Each pixel scored independently. Foreground errors cost <strong>7.5&times;</strong> more than background.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Pushes hard for recall &mdash; &ldquo;don&rsquo;t miss anything&rdquo; &mdash; but tolerates many false positives.</p>
+        <p style="margin-top:0.3em; font-size:0.85em; color:var(--text-dim);">Used in AggreQuant v1 (TensorFlow)</p>
+      </div>
+
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent3);">
+        <h3 style="color:var(--accent3);">BCE (pw=3.0)</h3>
+        <p style="margin-top:0.3em;">Same idea, but foreground only <strong>3&times;</strong> more important. Rebalances the recall-precision trade-off.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Single change: +0.08 Dice, +0.15 precision, &minus;0.07 recall vs pw=7.5.</p>
+      </div>
+
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent2);">
+        <h3 style="color:var(--accent2);">DiceBCE (0.3 / 0.7, pw=3.0)</h3>
+        <p style="margin-top:0.3em;">Adds <strong>Dice loss</strong> (overlap ratio) to BCE. Dice penalizes false positives structurally &mdash; every extra pixel hurts the score.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">BCE-heavy mix (0.7) limits Dice&rsquo;s sensitivity to noisy annotation boundaries.</p>
+      </div>
+
+    </div>
+
+    <!-- Results table -->
+    <div class="card" style="padding:0.8em 1.2em;">
+      <table style="width:100%; border-collapse:collapse; text-align:center;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left; padding:0.4em 0.6em;">Configuration</th>
+            <th style="padding:0.4em 0.6em;">Dice</th>
+            <th style="padding:0.4em 0.6em;">IoU</th>
+            <th style="padding:0.4em 0.6em;">Precision</th>
+            <th style="padding:0.4em 0.6em;">Recall</th>
+            <th style="padding:0.4em 0.6em;">Core Dice</th>
+            <th style="padding:0.4em 0.6em;">Obj Prec</th>
+            <th style="padding:0.4em 0.6em;">Obj Recall</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border); color:var(--text-dim);">
+            <td style="text-align:left; padding:0.4em 0.6em;">BCE pw=7.5 (no sched.)</td>
+            <td>0.707</td><td>0.546</td><td>0.574</td><td style="color:var(--accent3);">0.919</td><td>0.511</td><td>0.709</td><td>0.857</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border); color:var(--text-dim);">
+            <td style="text-align:left; padding:0.4em 0.6em;">BCE pw=7.5 + scheduler</td>
+            <td>0.710</td><td>0.550</td><td>0.573</td><td style="color:var(--accent3);"><strong>0.932</strong></td><td>0.509</td><td>0.745</td><td><strong>0.872</strong></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="text-align:left; padding:0.4em 0.6em;">BCE pw=3.0 + scheduler</td>
+            <td>0.785</td><td>0.646</td><td>0.721</td><td>0.862</td><td>0.639</td><td>0.792</td><td>0.861</td>
+          </tr>
+          <tr style="background:rgba(129,199,132,0.08);">
+            <td style="text-align:left; padding:0.4em 0.6em; font-weight:600; color:var(--accent2);">DiceBCE (0.3/0.7) pw=3.0</td>
+            <td style="color:var(--accent2);"><strong>0.810</strong></td><td style="color:var(--accent2);"><strong>0.681</strong></td><td style="color:var(--accent2);"><strong>0.815</strong></td><td>0.806</td><td style="color:var(--accent2);"><strong>0.713</strong></td><td style="color:var(--accent2);"><strong>0.862</strong></td><td>0.854</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Conclusion -->
+    <div style="display:flex; gap:0.7em;">
+      <div class="card card-accent" style="flex:1; padding:0.7em 1em;">
+        <p><strong>Biggest gain:</strong> reducing pos_weight from 7.5 to 3.0 (+0.08 Dice). The old v1 loss was over-weighting foreground, causing the model to hallucinate aggregates.</p>
+      </div>
+      <div class="card card-green" style="flex:1; padding:0.7em 1em;">
+        <p><strong>Selected:</strong> DiceBCE (&alpha;=0.3, &beta;=0.7, pw=3.0) &mdash; highest Dice (0.81), best precision (0.82), with a graceful recall trade-off. False positives drop 4&times; vs the v1 loss.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: LOSS FUNCTION TRAINING CURVES ===================== -->
+<div class="slide" id="slide-27">
+  <h2>Loss Function &mdash; Training Curves</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+
+    <!-- 3 columns: training curves on top, prediction maps below -->
+    <div style="display:flex; gap:0.5em; flex:1; min-height:0;">
+
+      <!-- Column 1: BCE pw=7.5 -->
+      <div style="flex:1; display:flex; flex-direction:column; gap:0.3em; min-height:0;">
+        <div style="text-align:center; font-weight:600; color:var(--accent4); font-size:0.85em;">BCE pw=7.5 (baseline)</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/baseline/checkpoints/history.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Baseline training curves">
+        </div>
+        <div style="flex:0.6; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/baseline/prediction_image_0000.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Baseline prediction overlay">
+        </div>
+      </div>
+
+      <!-- Column 2: BCE pw=3.0 -->
+      <div style="flex:1; display:flex; flex-direction:column; gap:0.3em; min-height:0;">
+        <div style="text-align:center; font-weight:600; color:var(--accent3); font-size:0.85em;">BCE pw=3.0</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/bce_pw3/checkpoints/history.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="BCE pw=3 training curves">
+        </div>
+        <div style="flex:0.6; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/bce_pw3/prediction_image_0000.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="BCE pw=3 prediction overlay">
+        </div>
+      </div>
+
+      <!-- Column 3: DiceBCE -->
+      <div style="flex:1; display:flex; flex-direction:column; gap:0.3em; min-height:0;">
+        <div style="text-align:center; font-weight:600; color:var(--accent2); font-size:0.85em;">DiceBCE (0.3/0.7) pw=3.0</div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/dice03_bce07_pw3/checkpoints/history.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="DiceBCE training curves">
+        </div>
+        <div style="flex:0.6; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+          <img src="training_output/loss_function/dice03_bce07_pw3/prediction_image_0000.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="DiceBCE prediction overlay">
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: LOSS FUNCTION METRICS ===================== -->
+<div class="slide" id="slide-28">
+  <h2>Loss Function &mdash; Metrics Comparison</h2>
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+    <img src="training_output/loss_function/comparison/metrics_comparison.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Loss function metrics comparison">
+  </div>
+</div>
+
+<!-- ===================== SLIDE: CONFIDENCE WHEN WRONG ===================== -->
+<div class="slide" id="slide-29">
+  <h2>How Certain Is the Network When It&rsquo;s Wrong?</h2>
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+    <img src="training_output/loss_function/comparison/confidence_histograms.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="FP and FN confidence distributions">
+  </div>
+</div>
+
+<!-- ===================== SLIDE: CORE VS EDGE ERRORS ===================== -->
+<div class="slide" id="slide-30">
+  <h2>Most FPs and FNs Are on Aggregate Edges</h2>
+  <div style="flex:1; display:grid; grid-template-columns:3fr 2fr; gap:0.8em; min-height:0;">
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="training_output/loss_function/comparison/core_edge_errors.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Core vs edge error breakdown">
+    </div>
+    <div style="display:flex; align-items:center;">
+      <div class="card card-accent" style="padding:1em 1.2em;">
+        <h3>Annotation Uncertainty at Edges</h3>
+        <p style="margin-top:0.5em;">Aggregate boundaries are inherently ambiguous &mdash; annotators are uncertain about where the aggregate ends and the background begins.</p>
+        <p style="margin-top:0.5em;">This means edge FPs and FNs are <strong>not true errors</strong> &mdash; they reflect annotation noise, not model failure.</p>
+        <ul style="margin-top:0.5em;">
+          <li><strong>71% of UNet FPs</strong> are edge pixels &mdash; boundary disagreements with the annotator</li>
+          <li><strong>91% of FNs</strong> are also on edges &mdash; the model drew a slightly tighter boundary</li>
+          <li>Only <strong>29% of FPs</strong> are core (hallucinated) &mdash; many of these are likely annotation misses</li>
+        </ul>
+        <p style="margin-top:0.5em; color:var(--accent2); font-weight:500;">Reported Dice (0.81) likely <em>underestimates</em> true model performance.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== SLIDE: DL VS FILTER ===================== -->
+<div class="slide" id="slide-31">
+  <h2>Deep Learning vs Filter-Based Segmentation</h2>
+  <div style="flex:1; display:grid; grid-template-columns:2fr 3fr; gap:0.8em; min-height:0;">
+
+    <!-- Left: introduction -->
+    <div style="display:flex; flex-direction:column; gap:0.6em; justify-content:center;">
+      <div class="card card-accent" style="padding:1em 1.2em;">
+        <h3>Why Compare?</h3>
+        <p style="margin-top:0.4em;">Classical filters detect aggregates by thresholding pixel intensity above a local background. This is fast and intuitive &mdash; but filters have no concept of <em>shape</em>. They draw boundaries wherever intensity drops, regardless of whether that&rsquo;s the true edge of an aggregate or just noise.</p>
+        <p style="margin-top:0.5em;">The result: filters <strong>over-segment</strong> &mdash; they make aggregates look bigger than they are, merge nearby ones, and hallucinate objects in noisy regions. This distorts every downstream measurement: area, count, shape, eccentricity.</p>
+        <p style="margin-top:0.5em;">A deep learning model (UNet) learns what aggregates <em>actually look like</em> from annotated examples. Can it do better?</p>
+      </div>
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent2);">
+        <p><strong style="color:var(--accent2);">Experiment:</strong> Same 19 annotated images, evaluated with the same metrics. UNet (DiceBCE, pw=3.0) vs classical filter (threshold 1.60).</p>
+      </div>
+    </div>
+
+    <!-- Right: precision-recall scatter + metrics comparison -->
+    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="training_output/fig2_dl_vs_filter/precision_recall_scatter.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Precision-recall scatter: UNet vs Filter">
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="training_output/fig2_dl_vs_filter/metrics_comparison.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Metrics comparison: UNet vs Filter">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: DL VS FILTER VISUAL ===================== -->
+<div class="slide" id="slide-32">
+  <h2>DL vs Filter &mdash; Visual Comparison</h2>
+  <div style="flex:1; display:grid; grid-template-columns:3fr 2fr; gap:0.6em; min-height:0;">
+
+    <!-- Left: overlay grid -->
+    <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="training_output/fig2_dl_vs_filter/overlay_grid.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="TP/FP/FN overlay grid: UNet vs Filter">
+    </div>
+
+    <!-- Right: size distributions + conclusions -->
+    <div style="display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="training_output/fig2_dl_vs_filter/size_distributions.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Aggregate size distributions: GT vs UNet vs Filter">
+      </div>
+      <div class="card card-green" style="padding:0.7em 0.9em;">
+        <h3 style="font-size:0.95em;">Conclusions</h3>
+        <ul class="green" style="margin-top:0.3em; font-size:0.9em;">
+          <li><strong>UNet Dice 0.83</strong> vs Filter 0.58 &mdash; wins on every metric except raw recall (+2%)</li>
+          <li><strong>Morphology:</strong> UNet median area 32 px (GT: 30 px); Filter inflates ~4&times; (122 px)</li>
+          <li><strong>Objects:</strong> UNet 18,549 vs GT 19,524; Filter merges &rarr; only 10,415</li>
+          <li><strong>Filter FPs:</strong> 1.2M px (37% hallucinated); UNet: 193K px (71% edge-only)</li>
+        </ul>
+        <p style="margin-top:0.3em; font-size:0.9em; color:var(--accent2); font-weight:500;">Filter-based profiling is unreliable &mdash; UNet is essential for morphological measurements.</p>
+      </div>
+      <div class="card" style="padding:0.5em 0.9em; border-left:3px solid var(--accent3);">
+        <p style="font-size:0.85em;"><strong style="color:var(--accent3);">Note:</strong> GT was created by correcting filter predictions &mdash; filter recall is artificially inflated. Despite this bias, UNet still wins.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== SLIDE: UNET BUILDING BLOCKS ===================== -->
+<div class="slide" id="slide-33">
   <h2>UNet Architecture &amp; Building Blocks</h2>
   <div class="columns col-3" style="flex:1;">
     <div>
@@ -1920,496 +2182,96 @@ process(dataset, verbose, debug)
 </div>
 
 
-<!-- ===================== SECTION V DIVIDER ===================== -->
-<div class="slide" id="slide-26">
-  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-    <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">V</div>
-    <h1 style="font-size:2.8em; margin-bottom:0.5em;">Benchmarks &amp; Ablations</h1>
-    <p style="font-size:1.2em; color:var(--text-dim); max-width:70%;">Loss functions, DL vs filter comparison, architecture ablation, nuclei &amp; cell benchmarks</p>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 13: LOSS FUNCTION BENCHMARK ===================== -->
-<div class="slide" id="slide-27">
-  <h2>Benchmark: Loss Function Comparison</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div>
-      <div class="img-container" style="height: 340px; margin-bottom: 12px;">
-        <img src="training_output/loss_function/comparison/metrics_comparison.png" alt="Loss function comparison metrics">
-      </div>
-      <div class="img-caption">Metrics comparison across 4 loss configurations on baseline UNet</div>
-    </div>
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 14px;">
-        <h3>4 Configurations Tested</h3>
-        <table >
-          <tr><th>Config</th><th>Dice</th><th>Prec.</th><th>Recall</th></tr>
-          <tr><td>BCE pw=7.5 (no sched)</td><td>0.725</td><td>0.591</td><td class="best">0.949</td></tr>
-          <tr><td>BCE pw=7.5</td><td>0.742</td><td>0.613</td><td class="best">0.950</td></tr>
-          <tr><td>BCE pw=3.0</td><td>0.804</td><td>0.726</td><td>0.909</td></tr>
-          <tr><td class="best">Dice+BCE pw=3.0</td><td class="best">0.827</td><td class="best">0.799</td><td>0.868</td></tr>
-        </table>
-      </div>
-      <div class="card card-green">
-        <h3>Key Findings</h3>
-        <ul class="green">
-          <li><strong>Lowering pos_weight</strong> (7.5&rarr;3.0) had the largest single effect: +0.06 Dice, +0.11 precision</li>
-          <li><strong>Adding Dice loss</strong> further improved precision by +0.07 by penalizing false positives structurally</li>
-          <li>~70% of "false positives" are bright, sharp objects &mdash; likely <em>real aggregates the annotator missed</em></li>
-          <li>The recall trade-off is mostly at <strong>edges, not cores</strong> &mdash; the model correctly tightens boundaries</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 14: DL VS FILTER ===================== -->
-<div class="slide" id="slide-28">
-  <h2>Benchmark: Deep Learning vs Filter-Based Segmentation</h2>
-  <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
-    <div class="columns col-2" style="gap: 16px;">
-      <div class="img-container" style="height: 260px;">
-        <img src="training_output/fig2_dl_vs_filter/metrics_comparison.png" alt="DL vs Filter metrics">
-      </div>
-      <div class="img-container" style="height: 260px;">
-        <img src="training_output/fig2_dl_vs_filter/precision_recall_scatter.png" alt="Precision-Recall scatter">
-      </div>
-    </div>
-    <div class="columns col-3" style="gap: 16px;">
-      <div class="card card-accent">
-        <h3>UNet Wins Decisively</h3>
-        <table style="font-size: 0.82em;">
-          <tr><th>Metric</th><th>UNet</th><th>Filter</th></tr>
-          <tr><td>Dice</td><td class="best">0.826</td><td>0.578</td></tr>
-          <tr><td>Precision</td><td class="best">0.811</td><td>0.440</td></tr>
-          <tr><td>Recall</td><td>0.849</td><td class="best">0.871</td></tr>
-          <tr><td>Core Dice</td><td class="best">0.725</td><td>0.336</td></tr>
-        </table>
-      </div>
-      <div class="card card-green">
-        <h3>Morphology Preserved</h3>
-        <p>UNet aggregate size matches ground truth (median 32 vs 30 px). Filter inflates <span class="highlight-red">~4&times;</span> (median 122 px) and merges adjacent objects.</p>
-        <p style="margin-top: 8px;">UNet object count: 18,549 vs GT: 19,524. Filter: only 10,415.</p>
-      </div>
-      <div class="card card-orange">
-        <h3>Error Analysis</h3>
-        <p><strong>71%</strong> of UNet FPs are edge disagreements (benign).</p>
-        <p style="margin-top: 6px;">Filter has <span class="highlight-red">456K core FP pixels</span> vs UNet's 57K &mdash; hallucinated aggregates far from any ground truth.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 15: DL VS FILTER VISUAL ===================== -->
-<div class="slide" id="slide-29">
-  <h2>Visual Comparison: DL vs Filter Segmentation</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 400px;">
-        <img src="training_output/fig2_dl_vs_filter/overlay_grid.png" alt="Overlay comparison grid">
-      </div>
-      <div class="img-caption">TP (yellow) / FP (magenta) / FN (cyan) overlays &mdash; UNet shows tight boundaries while filter shows thick magenta halos</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 240px; margin-bottom: 14px;">
-        <img src="training_output/fig2_dl_vs_filter/size_distributions.png" alt="Size distributions">
-      </div>
-      <div class="img-caption" style="margin-bottom: 14px;">Aggregate area distributions: UNet matches GT, filter inflates ~4&times;</div>
-      <div class="img-container" style="height: 140px;">
-        <img src="training_output/fig2_dl_vs_filter/core_edge_errors.png" alt="Core vs edge errors">
-      </div>
-      <div class="img-caption">Core vs edge error breakdown &mdash; filter has massive core FP volume</div>
-    </div>
-  </div>
-</div>
-
 <!-- ===================== SLIDE 16: ARCHITECTURE ABLATION ===================== -->
-<div class="slide" id="slide-30">
-  <h2>Benchmark: Architecture Ablation (7 Variants)</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div>
-      <div class="img-container" style="height: 280px; margin-bottom: 12px;">
-        <img src="training_output/ablation/comparison/metrics_comparison.png" alt="Ablation metrics comparison">
-      </div>
-      <div class="img-caption">Metrics comparison across all 7 UNet architecture variants</div>
-      <div class="img-container" style="height: 180px; margin-top: 12px;">
-        <img src="training_output/ablation/comparison/core_edge_errors.png" alt="Ablation core edge errors">
-      </div>
-    </div>
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 14px;">
-        <h3>Results</h3>
-        <table style="font-size: 0.82em;">
-          <tr><th>Variant</th><th>Params</th><th>Dice</th><th>IoU</th><th>Epoch</th></tr>
-          <tr><td class="best">resunet</td><td>31.9M</td><td class="best">0.829</td><td class="best">0.711</td><td>146</td></tr>
-          <tr><td>attention_resunet</td><td>32.3M</td><td>0.828</td><td>0.710</td><td>138</td></tr>
-          <tr><td>baseline</td><td>31.0M</td><td>0.828</td><td>0.709</td><td>118</td></tr>
-          <tr><td>eca_attention</td><td>32.3M</td><td>0.826</td><td>0.707</td><td>113</td></tr>
-          <tr><td>convnext_unet</td><td>29.7M</td><td>0.824</td><td>0.704</td><td>164</td></tr>
-          <tr><td>se_attention</td><td>32.3M</td><td>0.824</td><td>0.703</td><td>84</td></tr>
-          <tr><td>aspp_se_attention</td><td>31.7M</td><td>0.818</td><td>0.695</td><td>94</td></tr>
-        </table>
-      </div>
-      <div class="card card-orange">
-        <h3>Key Insight</h3>
-        <p>All 7 variants span only <span class="highlight-orange">1.1% Dice</span> (0.818&ndash;0.829). The top 3 are within 0.1% of each other. <strong>Architecture is not the bottleneck.</strong></p>
-        <p style="margin-top: 10px;">More complex models actually overfit faster on the small (19-image) dataset. The ASPP+SE variant is the worst performer.</p>
-        <p style="margin-top: 10px;">Limiting factors: <strong>dataset size</strong> and <strong>annotation quality</strong>, not model capacity.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 17: ABLATION TRAINING CURVES ===================== -->
-<div class="slide" id="slide-31">
-  <h2>Training Curves: Architecture Ablation</h2>
-  <div class="columns col-3" style="flex:1; gap: 14px;">
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/baseline/checkpoints/history.png" alt="Baseline training">
-      </div>
-      <div class="img-caption">Baseline UNet (DoubleConv)</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/resunet/checkpoints/history.png" alt="ResUNet training">
-      </div>
-      <div class="img-caption">ResUNet (best Dice: 0.829)</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/attention_resunet/checkpoints/history.png" alt="Attention ResUNet training">
-      </div>
-      <div class="img-caption">Attention ResUNet</div>
-    </div>
-  </div>
-  <div class="columns col-3" style="gap: 14px; margin-top: 14px;">
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/se_attention_resunet/checkpoints/history.png" alt="SE Attention training">
-      </div>
-      <div class="img-caption">SE Attention ResUNet (early stop: epoch 84)</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/convnext_unet/checkpoints/history.png" alt="ConvNeXt UNet training">
-      </div>
-      <div class="img-caption">ConvNeXt UNet</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 200px;">
-        <img src="training_output/ablation/aspp_se_attention_resunet/checkpoints/history.png" alt="ASPP SE training">
-      </div>
-      <div class="img-caption">ASPP+SE (worst, most complex)</div>
-    </div>
-  </div>
-  <p class="small center" style="margin-top: 12px;">All variants plateau at similar validation loss (~0.077&ndash;0.082). Simpler architectures generalize longer before early stopping.</p>
-</div>
-
-<!-- ===================== SLIDE 18: NUCLEI BENCHMARK ===================== -->
-<div class="slide" id="slide-32">
-  <h2>Benchmark: Nuclei Segmentation Robustness</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 240px; margin-bottom: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results/figures/panel_A_counts.png" alt="Nuclei counts">
-      </div>
-      <div class="img-caption">Nuclei count distributions across conditions</div>
-      <div class="img-container" style="height: 240px; margin-top: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results/figures/panel_B_agreement.png" alt="Nuclei agreement">
-      </div>
-      <div class="img-caption">Inter-condition agreement</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 240px; margin-bottom: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results/figures/panel_F_masks_partA.png" alt="Nuclei masks">
-      </div>
-      <div class="img-caption">Example segmentation masks</div>
-      <div class="card card-accent" style="margin-top: 14px;">
-        <h3>Nuclei Benchmark</h3>
-        <p>StarDist with background normalization tested across multiple imaging conditions to assess reproducibility of nuclei counts. Panels show count distributions, inter-replicate agreement, timing, and per-image breakdown.</p>
-        <p style="margin-top: 8px;">Background normalization corrects for flat-field illumination inhomogeneity, improving count consistency across the field of view.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 19: NUCLEI NORMALIZATION ===================== -->
-<div class="slide" id="slide-33">
-  <h2>Benchmark: Illumination Normalization Effect</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results_comparison/delta_count_per_model.png" alt="Delta count per model">
-      </div>
-      <div class="img-caption">Count differences: raw vs normalized preprocessing</div>
-      <div class="img-container" style="height: 220px; margin-top: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results_comparison/area_shift.png" alt="Area shift">
-      </div>
-      <div class="img-caption">Area distribution shift with normalization</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 12px;">
-        <img src="benchmarks/nuclei_segmentation/results_comparison/cv_scatter.png" alt="CV scatter">
-      </div>
-      <div class="img-caption">Coefficient of variation: raw vs normalized</div>
-      <div class="card card-green" style="margin-top: 14px;">
-        <h3>Normalization Impact</h3>
-        <p>Background normalization (dividing by a large-&sigma; Gaussian estimate of illumination) reduces the effect of flat-field inhomogeneity on nuclei detection.</p>
-        <ul class="green" style="margin-top: 8px;">
-          <li>Reduced count variability across the field of view</li>
-          <li>More consistent nuclear areas</li>
-          <li>Better reproducibility between replicates</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 20: CELL BENCHMARK ===================== -->
 <div class="slide" id="slide-34">
-  <h2>Benchmark: Cell Segmentation &amp; Preprocessing</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 12px;">
-        <img src="benchmarks/cell_segmentation/results/figures/panel_A_counts.png" alt="Cell counts">
-      </div>
-      <div class="img-caption">Cell count distributions</div>
-      <div class="img-container" style="height: 220px; margin-top: 12px;">
-        <img src="benchmarks/cell_segmentation/results/figures/panel_F_masks_partA_with_nuc.png" alt="Cell masks with nuclei">
-      </div>
-      <div class="img-caption">Cell segmentation masks with nuclei overlay</div>
+  <h2>Benchmark: Architecture Ablation (7 Variants)</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:0.5em; min-height:0;">
+
+    <!-- Top: metrics comparison (full width) -->
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+      <img src="training_output/ablation/comparison/metrics_comparison.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Ablation metrics comparison">
     </div>
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 12px;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_A_counts.png" alt="Preprocessing cellpose counts">
+
+    <!-- Bottom: core/edge errors + key insight -->
+    <div style="flex:1; display:grid; grid-template-columns:3fr 2fr; gap:0.5em; min-height:0;">
+      <div style="display:flex; align-items:center; justify-content:center; background:var(--bg-card); border-radius:0.5em; overflow:hidden; min-height:0;">
+        <img src="training_output/ablation/comparison/core_edge_errors.png" style="max-width:100%; max-height:100%; object-fit:contain;" alt="Ablation core edge errors">
       </div>
-      <div class="img-caption">Effect of preprocessing on Cellpose cell counts</div>
-      <div class="card card-accent" style="margin-top: 14px;">
-        <h3>Preprocessing Benchmark <span class="tag tag-new">new</span></h3>
-        <p>Systematic comparison of preprocessing strategies before Cellpose inference. Tests the effect of contrast enhancement, normalization, and filtering on:</p>
-        <ul style="margin-top: 8px;">
-          <li>Cell count consistency</li>
-          <li>Cell area distributions</li>
-          <li>Cell shape metrics (solidity)</li>
-          <li>Per-image pairwise differences</li>
-        </ul>
+      <div style="display:flex; align-items:center;">
+        <div class="card card-accent" style="padding:0.8em 1em;">
+          <h3>Key Insight</h3>
+          <p style="margin-top:0.4em;">All 7 variants span only <strong style="color:var(--accent3);">1.1% Dice</strong> (0.818&ndash;0.829). Top 3 within 0.1% of each other.</p>
+          <p style="margin-top:0.4em;"><strong>Architecture is not the bottleneck.</strong> More complex models overfit faster on 19 images. Limiting factors: <strong>dataset size</strong> and <strong>annotation quality</strong>.</p>
+        </div>
       </div>
     </div>
+
   </div>
 </div>
-
-<!-- ===================== SLIDE 21: CELLPOSE PREPROCESSING DETAIL ===================== -->
-<div class="slide" id="slide-35">
-  <h2>Cellpose Preprocessing: Detailed Results</h2>
-  <div class="columns col-3" style="flex:1; gap: 14px;">
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 10px;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_B_pairwise_diff.png" alt="Pairwise differences">
-      </div>
-      <div class="img-caption">Pairwise count differences between preprocessing methods</div>
-      <div class="img-container" style="height: 220px; margin-top: 12px;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_E_scatter.png" alt="Scatter plot">
-      </div>
-      <div class="img-caption">Per-image agreement scatter</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 220px; margin-bottom: 10px;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_C_area.png" alt="Cell area">
-      </div>
-      <div class="img-caption">Cell area distributions by preprocessing method</div>
-      <div class="img-container" style="height: 220px; margin-top: 12px;">
-        <img src="benchmarks/preprocessing_cellpose_segmentation/results/figures/panel_D_solidity.png" alt="Cell solidity">
-      </div>
-      <div class="img-caption">Cell solidity (shape regularity) by method</div>
-    </div>
-    <div class="v-center">
-      <div class="card card-green">
-        <h3>Implications</h3>
-        <p>Preprocessing choices affect both cell counts and morphological measurements. The benchmark ensures the pipeline uses the most robust combination for consistent downstream quantification.</p>
-        <p style="margin-top: 10px;">Cellpose 3's <code>cyto3</code> model benefits from consistent normalization but is robust to moderate preprocessing variations.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== SLIDE 22: ANNOTATION QUALITY ===================== -->
-<div class="slide" id="slide-36">
-  <h2>Annotation Quality Analysis</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 260px; margin-bottom: 12px;">
-        <img src="training_output/ablation/comparison/annotation_quality_scatter.png" alt="Annotation quality scatter">
-      </div>
-      <div class="img-caption">FP/FN classification: annotation misses vs model errors</div>
-      <div class="img-container" style="height: 220px; margin-top: 10px;">
-        <img src="training_output/ablation/comparison/annotation_quality_histograms.png" alt="Annotation quality histograms">
-      </div>
-    </div>
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>A Ceiling on Reported Metrics</h3>
-        <p>Each false positive / false negative component was classified as "aggregate-like" or not, based on intensity and sharpness relative to true positive components.</p>
-      </div>
-      <div class="card card-orange" style="margin-bottom: 16px;">
-        <h3>~70% of FPs Are Annotation Misses</h3>
-        <p>Most "false positives" are bright, sharp objects that look like real aggregates the annotator did not include. The ground truth was created by correcting filter-based predictions &mdash; aggregates the filter missed were likely also missed by annotators.</p>
-      </div>
-      <div class="card card-green">
-        <h3>What This Means</h3>
-        <ul class="green">
-          <li>Reported Dice of 0.83 <strong>underestimates</strong> true model performance</li>
-          <li>Further improvement requires <strong>better annotations</strong>, not better models</li>
-          <li>The model has effectively learned the biology beyond annotator effort</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
 
 <!-- ===================== SECTION VI DIVIDER ===================== -->
-<div class="slide" id="slide-37">
+<div class="slide" id="slide-35">
   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:3em; font-weight:700; color:var(--accent); opacity:0.3; margin-bottom:0.3em;">VI</div>
-    <h1 style="font-size:2.8em; margin-bottom:0.5em;">Paper Figures &amp; Validation</h1>
-    <p style="font-size:1.2em; color:var(--text-dim); max-width:70%;">Quantitative DL vs filter analysis, biological validation on CRISPR screen controls</p>
+    <h1 style="font-size:2.8em; margin-bottom:0.5em;">Manuscript Writeup</h1>
+    <p style="font-size:1.2em; color:var(--text-dim); max-width:70%;">Biological validation, data quality, figure plan, and next steps</p>
   </div>
 </div>
 
-<!-- ===================== SLIDE 23: BIOLOGICAL VALIDATION ===================== -->
-<div class="slide" id="slide-38">
-  <h2>Biological Validation: CRISPR Screen Controls</h2>
-  <div class="columns col-2" style="flex:1;">
-    <div class="v-center">
-      <div class="card card-accent" style="margin-bottom: 16px;">
-        <h3>Experimental Design (Paper Figure 4)</h3>
-        <p>Demonstrates that AggreQuant 2.0 produces <strong>biologically meaningful readouts</strong> on real CRISPR activation screen data.</p>
-        <ul style="margin-top: 10px;">
-          <li><strong>Negative control:</strong> NT (non-targeting sgRNA)</li>
-          <li><strong>Positive control:</strong> RAB13 (known aggregate inducer)</li>
-          <li>2&ndash;3 plates, 16 wells per condition per plate</li>
-          <li>9 FOVs per well (&sim;144 images per condition)</li>
-        </ul>
-      </div>
-      <div class="card card-orange">
-        <h3>Assay Quality Metrics</h3>
-        <ul class="orange">
-          <li><strong>SSMD</strong> (Strictly Standardized Mean Difference) &mdash; standard HCS metric. |SSMD| &gt; 3 = excellent assay</li>
-          <li><strong>Z-factor</strong> &mdash; Z' &gt; 0.5 = excellent separation between controls</li>
-          <li>All comparisons <em>within-plate</em> to avoid batch effects</li>
-        </ul>
-      </div>
-    </div>
-    <div class="v-center">
-      <div class="card card-green" style="margin-bottom: 16px;">
-        <h3>Four Analysis Panels</h3>
-        <ul class="green">
-          <li><strong>Panel A:</strong> Representative FOV composites (NT vs RAB13) showing visible aggregate burden differences</li>
-          <li><strong>Panel B:</strong> Quantification &mdash; % positive cells, aggregate count/area/intensity per cell</li>
-          <li><strong>Panel C:</strong> Morphological profiling radar chart (z-scored features: area, count, eccentricity, solidity, nuclear distance)</li>
-          <li><strong>Panel D:</strong> DL vs filter profiling comparison &mdash; filter inflates area, collapsing shape discrimination</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>Per-Cell Features</h3>
-        <p>aggregate count, burden (area/cell area), mean area, mean intensity, mean eccentricity, mean solidity, mean distance to nucleus centroid</p>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- ===================== SLIDE: PAPER FIGURES ===================== -->
+<div class="slide" id="slide-36">
+  <h2>Paper Figures</h2>
+  <div style="flex:1; display:flex; flex-direction:column; gap:0.6em; justify-content:center;">
 
-<!-- ===================== SLIDE 24: DATA QUALITY ===================== -->
-<div class="slide" id="slide-39">
-  <h2>Data Quality: Imaging Reproducibility</h2>
-  <div class="columns col-3" style="flex:1; gap: 16px;">
-    <div>
-      <div class="img-container" style="height: 320px;">
-        <img src="data/intensity_stats_NTcontrols/boxplot_mean_intensity.png" alt="Mean intensity boxplot">
-      </div>
-      <div class="img-caption">Mean intensity per replicate</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 320px;">
-        <img src="data/intensity_stats_NTcontrols/within_plate_cv.png" alt="Within plate CV">
-      </div>
-      <div class="img-caption">Within-plate coefficient of variation</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 320px;">
-        <img src="data/intensity_stats_NTcontrols/replicate_agreement.png" alt="Replicate agreement">
-      </div>
-      <div class="img-caption">Cross-replicate agreement</div>
-    </div>
-  </div>
-  <div class="card card-accent" style="margin-top: 16px;">
-    <p>Intensity statistics from NT control wells across plates. Understanding imaging variability is essential for setting robust normalization parameters and interpreting quantification results. Within-plate CV and replicate agreement confirm that the imaging setup provides sufficiently reproducible data for automated analysis.</p>
-  </div>
-</div>
+    <!-- 5 figure cards -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6em;">
 
-<!-- ===================== SLIDE 25: CONFIDENCE ANALYSIS ===================== -->
-<div class="slide" id="slide-40">
-  <h2>Model Confidence &amp; Error Characterization</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 260px; margin-bottom: 12px;">
-        <img src="training_output/ablation/comparison/confidence_histograms.png" alt="Confidence histograms">
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent);">
+        <h3 style="color:var(--accent);">Fig 1: Pipeline Overview</h3>
+        <p style="margin-top:0.3em;">Plate &rarr; raw channels &rarr; segmentation cascade (StarDist &rarr; Cellpose &rarr; UNet) &rarr; colocalization &rarr; plate-level heatmap</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">The anchor figure &mdash; shows the full end-to-end workflow</p>
       </div>
-      <div class="img-caption">Prediction confidence distributions across architecture variants</div>
-      <div class="img-container" style="height: 220px; margin-top: 10px;">
-        <img src="training_output/ablation/comparison/intensity_distributions.png" alt="Intensity distributions">
-      </div>
-      <div class="img-caption">Intensity distributions of TP, FP, FN components</div>
-    </div>
-    <div>
-      <div class="img-container" style="height: 260px; margin-bottom: 12px;">
-        <img src="training_output/ablation/comparison/intensity_correlation.png" alt="Intensity correlation">
-      </div>
-      <div class="img-caption">Intensity vs prediction confidence correlation</div>
-      <div class="card card-accent" style="margin-top: 14px;">
-        <h3>What the Models Are Confident About</h3>
-        <p>Confidence histograms show that all architecture variants produce well-calibrated predictions &mdash; high confidence on true positives, low confidence on background. False positives tend to cluster at intermediate confidence, confirming they are boundary disagreements rather than wholesale hallucinations.</p>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- ===================== SLIDE 26: VISUAL OVERLAYS ===================== -->
-<div class="slide" id="slide-41">
-  <h2>Visual Comparison: Architecture Variants</h2>
-  <div style="flex:1; display: flex; flex-direction: column; gap: 16px;">
-    <div class="img-container" style="flex:1;">
-      <img src="training_output/ablation/comparison/overlay_grid.png" alt="Architecture overlay grid">
-    </div>
-    <div class="img-caption">TP (yellow) / FP (magenta) / FN (cyan) overlays for all architecture variants on selected test images. Visually, all variants produce near-identical results &mdash; confirming the quantitative finding that architecture choice has minimal impact at this dataset scale.</div>
-  </div>
-</div>
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent2);">
+        <h3 style="color:var(--accent2);">Fig 2: DL vs Filter</h3>
+        <p style="margin-top:0.3em;">Gallery + metrics + size distributions + boundary fidelity. Filter inflates area ~4&times;, merges aggregates, hallucinates in noise.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Core technical validation &mdash; why DL matters for this task</p>
+      </div>
 
-<!-- ===================== SLIDE 27: LOSS FUNCTION VISUALS ===================== -->
-<div class="slide" id="slide-42">
-  <h2>Visual Comparison: Loss Function Variants</h2>
-  <div class="columns col-2" style="flex:1; gap: 20px;">
-    <div>
-      <div class="img-container" style="height: 380px;">
-        <img src="training_output/loss_function/comparison/overlay_grid.png" alt="Loss function overlay grid">
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent3);">
+        <h3 style="color:var(--accent3);">Fig 3: Focus QC</h3>
+        <p style="margin-top:0.3em;">PLLS + VoL dual-domain approach. Quality spectrum examples, the A-24 counterexample, scatter plot, patch-level blur mask.</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Methodological contribution &mdash; automatic defocus rejection</p>
       </div>
-      <div class="img-caption">TP/FP/FN overlays: from high-recall/low-precision (BCE pw=7.5) to balanced (Dice+BCE pw=3.0)</div>
+
     </div>
-    <div>
-      <div class="img-container" style="height: 180px; margin-bottom: 12px;">
-        <img src="training_output/loss_function/comparison/core_edge_errors.png" alt="Loss core edge errors">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6em;">
+
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent4);">
+        <h3 style="color:var(--accent4);">Fig 4: Biological Validation</h3>
+        <p style="margin-top:0.3em;"><strong>A:</strong> NT vs RAB13 composite FOVs &nbsp; <strong>B:</strong> Quantification (% positive, area, count) with SSMD/Z-factor &nbsp; <strong>C:</strong> Morphological profiling radar chart &nbsp; <strong>D:</strong> DL vs filter profiling &mdash; filter collapses shape discrimination</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Real-world proof on CRISPR screen data</p>
       </div>
-      <div class="img-caption">Core vs edge errors by loss configuration</div>
-      <div class="img-container" style="height: 180px; margin-top: 12px;">
-        <img src="training_output/loss_function/comparison/confidence_histograms.png" alt="Loss confidence histograms">
+
+      <div class="card" style="padding:0.8em 1em; border-left:3px solid var(--accent);">
+        <h3 style="color:var(--accent);">Fig 5: Software &amp; Usability</h3>
+        <p style="margin-top:0.3em;"><strong>A:</strong> Architecture block diagram &nbsp; <strong>B:</strong> GUI screenshot &nbsp; <strong>C:</strong> YAML config + CLI output &nbsp; <strong>D:</strong> Processing time benchmark (filter vs UNet-CPU vs UNet-GPU)</p>
+        <p style="margin-top:0.3em; color:var(--text-dim);">Community resource &mdash; three interfaces, reproducible configs</p>
       </div>
-      <div class="img-caption">Confidence distributions shift from liberal (pw=7.5) to conservative (Dice+BCE)</div>
+
     </div>
+
+    <!-- Paper narrative -->
+    <div class="card card-accent" style="padding:0.8em 1.2em;">
+      <p><strong>Paper narrative:</strong> AggreQuant 2.0 is the first DL-based, end-to-end pipeline for &alpha;-synuclein aggregate quantification and morphological profiling in fluorescence HCS. The contribution is <strong>the tool and the trained model</strong> &mdash; not the architecture search. Architecture ablation (7 variants, &lt;1.1% Dice spread) and loss comparison &rarr; Methods + Supplementary.</p>
+    </div>
+
   </div>
 </div>
 
 <!-- ===================== SLIDE 28: MANUSCRIPT ===================== -->
-<div class="slide" id="slide-43">
+<div class="slide" id="slide-37">
   <h2>Manuscript in Preparation</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2449,7 +2311,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 29: MANUSCRIPT FIGURES ===================== -->
-<div class="slide" id="slide-44">
+<div class="slide" id="slide-38">
   <h2>Manuscript Figure Plan</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2497,7 +2359,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 30: SUMMARY ===================== -->
-<div class="slide" id="slide-45">
+<div class="slide" id="slide-39">
   <h2>Summary &amp; Looking Ahead</h2>
   <div class="columns col-2" style="flex:1;">
     <div>
@@ -2548,7 +2410,7 @@ process(dataset, verbose, debug)
 </div>
 
 <!-- ===================== SLIDE 31: THANK YOU ===================== -->
-<div class="slide title-slide" id="slide-46">
+<div class="slide title-slide" id="slide-40">
   <div class="title-decoration d1"></div>
   <div class="title-decoration d2"></div>
   <div>
