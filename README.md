@@ -1,7 +1,9 @@
 # AggreQuant v.2.0
 
-A refactoring of the [AggreQuant](https://github.com/aecon/AggreQuant) codebase.
-**WORK IN PROGRESS**
+**!! WORK IN PROGRESS !!**
+
+
+A refactoring of the [AggreQuant](https://github.com/aecon/AggreQuant) codebase.  
 
 
 
