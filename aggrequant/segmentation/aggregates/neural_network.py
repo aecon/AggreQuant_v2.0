@@ -33,7 +33,6 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         fill_holes_below: int = 6000,
         device: Optional[str] = None,
         verbose: bool = False,
-        debug: bool = False,
     ):
         """Initialize neural network segmenter.
 
@@ -45,9 +44,8 @@ class NeuralNetworkSegmenter(BaseSegmenter):
             fill_holes_below: Fill holes smaller than this (pixels)
             device: Device to use ('cuda', 'cpu', or None for auto)
             verbose: Print progress messages
-            debug: Print detailed debug information
         """
-        super().__init__(verbose=verbose, debug=debug)
+        super().__init__(verbose=verbose)
 
         self._model = model
         self.weights_path = Path(weights_path) if weights_path else None
@@ -55,8 +53,6 @@ class NeuralNetworkSegmenter(BaseSegmenter):
         self.remove_objects_below = remove_objects_below
         self.fill_holes_below = fill_holes_below
         self.device = get_device(device)
-
-        self._debug(f"Using device: {self.device}")
 
     @property
     def name(self) -> str:
@@ -115,8 +111,6 @@ class NeuralNetworkSegmenter(BaseSegmenter):
             0 = background, 1+ = individual aggregates.
         """
         from aggrequant.nn.inference import predict, postprocess_predictions
-
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
 
         prob_map = predict(self.model, image, device=self.device)
 

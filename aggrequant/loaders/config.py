@@ -122,7 +122,6 @@ class PipelineConfig:
     n_workers: int = 4
     use_gpu: bool = True
     verbose: bool = False
-    debug: bool = False
 
     def __post_init__(self):
         if isinstance(self.input_dir, str):
@@ -217,7 +216,6 @@ class PipelineConfig:
             "n_workers": self.n_workers,
             "use_gpu": self.use_gpu,
             "verbose": self.verbose,
-            "debug": self.debug,
         }
 
         path.parent.mkdir(parents=True, exist_ok=True)

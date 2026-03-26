@@ -46,7 +46,6 @@ class FilterBasedSegmenter(BaseSegmenter):
         small_hole_area: int = SMALL_HOLE_AREA_THRESHOLD,
         min_aggregate_area: int = MIN_AGGREGATE_AREA,
         verbose: bool = False,
-        debug: bool = False,
     ):
         """
         Initialize filter-based segmenter.
@@ -60,9 +59,8 @@ class FilterBasedSegmenter(BaseSegmenter):
             small_hole_area: Area threshold for hole filling
             min_aggregate_area: Minimum aggregate area in pixels
             verbose: Print progress messages
-            debug: Print detailed debug information
         """
-        super().__init__(verbose=verbose, debug=debug)
+        super().__init__(verbose=verbose)
 
         self.median_filter_size = median_filter_size
         self.sigma_noise_reduction = sigma_noise_reduction
@@ -89,9 +87,6 @@ class FilterBasedSegmenter(BaseSegmenter):
             labels: Instance segmentation labels (uint32)
                     0 = background, 1+ = individual aggregates
         """
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
-        self._debug(f"Input range: [{image.min()}, {image.max()}], median: {np.median(image):.1f}")
-
         # Step 1: Background normalization
         normalized = self._normalize_background(image)
 
@@ -109,7 +104,6 @@ class FilterBasedSegmenter(BaseSegmenter):
         # Step 5: Connected components - must be done after small hole removal - see recommendation in scikit-image:
         # https://github.com/scikit-image/scikit-image/blob/main/src/skimage/morphology/misc.py#L257
         labels = skimage.morphology.label(no_holes, connectivity=2)
-        self._debug(f"Initial connected components: {labels.max()}")
 
         # Step 6: Remove small objects
         no_small = remove_small_objects(
@@ -121,29 +115,9 @@ class FilterBasedSegmenter(BaseSegmenter):
         lut = np.zeros(int(unique.max()) + 1, dtype=np.uint32)
         lut[unique] = np.arange(len(unique), dtype=np.uint32)
         labels = lut[no_small]
-        self._debug(f"After removing small objects: {labels.max()}")
 
         self._log(f"Detected {labels.max()} aggregates")
         return labels.astype(np.uint32)
-
-
-    def segment_probability(self, image: np.ndarray) -> np.ndarray:
-        """
-        Return normalized intensity as a "probability" map.
-
-        Arguments:
-            image: Input grayscale image
-
-        Returns:
-            probability: Normalized intensity scaled to [0, 1]
-        """
-        normalized = self._normalize_background(image)
-
-        # Scale to approximate probability
-        # Values above threshold -> high probability
-        prob = np.clip(normalized / (self.normalized_threshold * 1.5), 0, 1)
-
-        return prob.astype(np.float32)
 
 
     def _normalize_background(self, image: np.ndarray) -> np.ndarray:
@@ -172,7 +146,6 @@ class FilterBasedSegmenter(BaseSegmenter):
             normalized, sigma=self.sigma_noise_reduction, mode='reflect', preserve_range=True
         )
 
-        self._debug(f"Normalized range: [{normalized.min():.3f}, {normalized.max():.3f}]")
         return normalized
 
 
@@ -181,7 +154,6 @@ class FilterBasedSegmenter(BaseSegmenter):
         segmented = np.zeros(normalized.shape, dtype=np.uint8)
         segmented[normalized > self.normalized_threshold] = 1
 
-        self._debug(f"Threshold {self.normalized_threshold}: {segmented.sum()} pixels")
         return segmented
 
 

@@ -23,7 +23,6 @@ class CellposeSegmenter(BaseSegmenter):
         gpu: bool = True,
         model_type: str = "cyto3",
         verbose: bool = False,
-        debug: bool = False,
     ):
         """
         Initialize Cellpose segmenter.
@@ -32,9 +31,8 @@ class CellposeSegmenter(BaseSegmenter):
             gpu: Whether to use GPU
             model_type: Cellpose model type (e.g., "cyto3", "nuclei")
             verbose: Print progress messages
-            debug: Print detailed debug information
         """
-        super().__init__(verbose=verbose, debug=debug)
+        super().__init__(verbose=verbose)
         self.gpu = gpu
         self.model_type = model_type
         self._model = None
@@ -67,8 +65,6 @@ class CellposeSegmenter(BaseSegmenter):
                     0 = background, 1+ = individual cells
                     Cell labels match their corresponding nucleus labels
         """
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
-
         # Run Cellpose with nuclei information
         cell_labels = self._segment_with_nuclei(image, nuclei_labels)
 
@@ -109,7 +105,6 @@ class CellposeSegmenter(BaseSegmenter):
             diameter=None   # for automated diameter estimation
         )
 
-        self._debug(f"Cellpose detected {masks.max()} cells")
         return masks
 
     def _match_cells_to_nuclei(
@@ -156,11 +151,6 @@ class CellposeSegmenter(BaseSegmenter):
                 output[cell_labels == cell_id] = nuc_id
                 assigned_cells.add(cell_id)
                 assigned_nuclei.add(nuc_id)
-
-        n_cells = int(np.sum(np.unique(cell_labels) > 0))
-        n_matched = len(assigned_cells)
-        if n_cells > n_matched:
-            self._debug(f"Dropped {n_cells - n_matched} unmatched cells/nuclei")
 
         return output
 

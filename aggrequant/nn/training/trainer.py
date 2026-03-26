@@ -92,7 +92,6 @@ class Trainer:
         checkpoint_dir: Directory for saving checkpoints
         metrics: Dictionary of metric functions {name: fn(pred, target)}
         verbose: Print training progress
-        debug: Print detailed debug information
 
     Example:
         >>> model = UNet(in_channels=1, out_channels=1)
@@ -120,7 +119,6 @@ class Trainer:
         checkpoint_dir: Optional[Union[str, Path]] = None,
         metrics: Optional[Dict[str, Callable]] = None,
         verbose: bool = True,
-        debug: bool = False,
     ) -> None:
         self.model = model
         self.train_loader = train_loader
@@ -130,7 +128,6 @@ class Trainer:
         self.scheduler = scheduler
         self.metrics = metrics or {}
         self.verbose = verbose
-        self.debug = debug
 
         # Auto-detect device
         self.device = get_device(device)
@@ -387,9 +384,6 @@ class Trainer:
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
 
         torch.save(checkpoint, self.checkpoint_dir / filename)
-
-        if self.debug:
-            logger.debug(f"Saved checkpoint: {self.checkpoint_dir / filename}")
 
     def load_checkpoint(self, path: Union[str, Path]) -> None:
         """Load model checkpoint.

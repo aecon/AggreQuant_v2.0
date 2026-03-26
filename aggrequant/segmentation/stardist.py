@@ -34,7 +34,6 @@ class StarDistSegmenter(BaseSegmenter):
         min_area: int = MIN_NUCLEUS_AREA,
         max_area: int = MAX_NUCLEUS_AREA,
         verbose: bool = False,
-        debug: bool = False,
     ):
         """
         Initialize StarDist segmenter.
@@ -46,9 +45,8 @@ class StarDistSegmenter(BaseSegmenter):
             min_area: Minimum nucleus area in pixels
             max_area: Maximum nucleus area in pixels
             verbose: Print progress messages
-            debug: Print detailed debug information
         """
-        super().__init__(verbose=verbose, debug=debug)
+        super().__init__(verbose=verbose)
 
         self.model_name = model_name
         self.sigma_denoise = sigma_denoise
@@ -82,14 +80,11 @@ class StarDistSegmenter(BaseSegmenter):
             labels: Instance segmentation labels (uint16)
                     0 = background, 1+ = individual nuclei
         """
-        self._debug(f"Input image shape: {image.shape}, dtype: {image.dtype}")
-
         # Pre-processing
         preprocessed = self._preprocess(image)
 
         # StarDist inference
         labels = self._segment_stardist(preprocessed)
-        self._debug(f"StarDist detected {labels.max()} nuclei")
 
         # Post-processing
         labels_ = self._postprocess_size_exclusion(labels)
@@ -128,7 +123,6 @@ class StarDistSegmenter(BaseSegmenter):
         # Normalize
         normalized = denoised / (background + 1e-8)
 
-        self._debug(f"Preprocessed range: [{normalized.min():.3f}, {normalized.max():.3f}]")
         return normalized
 
     def _segment_stardist(self, image: np.ndarray) -> np.ndarray:
@@ -154,9 +148,6 @@ class StarDistSegmenter(BaseSegmenter):
             elif area > self.max_area:
                 labels[labels == label_id] = 0
                 removed_large += 1
-
-        if removed_small > 0 or removed_large > 0:
-            self._debug(f"Removed {removed_small} small, {removed_large} large nuclei")
 
         return labels
 

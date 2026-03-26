@@ -13,16 +13,14 @@ class BaseSegmenter(ABC):
     Provides common functionality and enforces the interface.
     """
 
-    def __init__(self, verbose: bool = False, debug: bool = False):
+    def __init__(self, verbose: bool = False):
         """
         Initialize segmenter.
 
         Arguments:
             verbose: Print progress messages
-            debug: Print detailed debug information
         """
         self.verbose = verbose
-        self.debug = debug
 
     @property
     @abstractmethod
@@ -49,12 +47,6 @@ class BaseSegmenter(ABC):
         if self.verbose:
             logger = get_logger(f"segmentation.{self.name}")
             logger.info(message)
-
-    def _debug(self, message: str):
-        """Log debug message if debug is enabled."""
-        if self.debug:
-            logger = get_logger(f"segmentation.{self.name}")
-            logger.debug(message)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}')"
