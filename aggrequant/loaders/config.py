@@ -119,9 +119,7 @@ class PipelineConfig:
     # Example: {"negative": ["A01", "A02"], "positive": ["H11", "H12"]}
 
     # Processing options
-    n_workers: int = 4
     use_gpu: bool = True
-    verbose: bool = False
 
     def __post_init__(self):
         if isinstance(self.input_dir, str):
@@ -213,9 +211,7 @@ class PipelineConfig:
                 "overwrite_masks": self.output.overwrite_masks,
             },
             "control_wells": self.control_wells,
-            "n_workers": self.n_workers,
             "use_gpu": self.use_gpu,
-            "verbose": self.verbose,
         }
 
         path.parent.mkdir(parents=True, exist_ok=True)
