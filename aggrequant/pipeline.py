@@ -147,15 +147,60 @@ class SegmentationPipeline:
         """Return True if all 3 label TIFs exist on disk."""
         return all(p.exists() for p in self._mask_paths(well_id, field_id).values())
 
+    def _field_has_results(self, well_id: str, field_id: str) -> bool:
+        """Return True if this field already has a row in _field_results."""
+        fid = int(field_id)
+        return any(
+            r["well_id"] == well_id and r["field"] == fid
+            for r in self._field_results
+        )
+
+    def _recompute_from_masks(self, triplet: FieldTriplet):
+        """Load cached masks from disk and recompute quantification."""
+        well_id, field_id = triplet.well_id, triplet.field_id
+        paths = self._mask_paths(well_id, field_id)
+
+        nuclei_labels = tifffile.imread(paths["nuclei"])
+        cell_labels = tifffile.imread(paths["cells"])
+        aggregate_labels = tifffile.imread(paths["aggregates"])
+
+        measurements = quantify_field(
+            cell_labels, aggregate_labels, nuclei_labels,
+            min_aggregate_area=self.config.segmentation.aggregate_min_size,
+        )
+        row = {
+            "plate_name": self._plate_name,
+            "well_id": well_id,
+            "field": int(field_id),
+            **measurements,
+        }
+        self._field_results.append(row)
+        logger.info(f"    Recomputed from masks: {measurements['n_cells']} cells, "
+                    f"{measurements['n_aggregates']} aggregates, "
+                    f"{measurements['pct_aggregate_positive_cells']:.1f}% agg-positive")
+
     def _process_field(self, triplet: FieldTriplet):
         """Process a single field of view."""
         well_id, field_id = triplet.well_id, triplet.field_id
 
-        # Skip entirely if masks already exist (previous run completed this field)
+        # Skip if masks already exist (previous run completed this field)
         if not self.config.output.overwrite_masks and self._masks_exist(well_id, field_id):
-            logger.info(f"  Skipping {well_id}/f{field_id} (cached)")
+            # Recompute quantification if missing from CSV
+            if not self._segmentation_only and not self._field_has_results(well_id, field_id):
+                logger.info(f"  Recomputing {well_id}/f{field_id} (masks cached, CSV missing)")
+                self._recompute_from_masks(triplet)
+            else:
+                logger.info(f"  Skipping {well_id}/f{field_id} (cached)")
             return
 
+        try:
+            self._segment_field(triplet)
+        except Exception as e:
+            logger.error(f"  Failed {well_id}/f{field_id}: {e}")
+
+    def _segment_field(self, triplet: FieldTriplet):
+        """Run segmentation, quantification, and mask saving for one field."""
+        well_id, field_id = triplet.well_id, triplet.field_id
         logger.info(f"  Processing {well_id}/f{field_id}")
 
         # Load images directly from triplet paths
