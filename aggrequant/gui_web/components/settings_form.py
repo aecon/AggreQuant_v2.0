@@ -164,21 +164,75 @@ def build_settings_layout():
                         dcc.Input(id="aggregate-min-size", type="number", value=9,
                                   step=1, style={"width": "80px", "padding": "5px"}),
                     ),
-                    html.Div(id="filter-threshold-row", children=[
+                    html.Div(id="filter-params-row", children=[
                         _row(
                             _label("Intensity threshold:"),
                             dcc.Input(id="aggregate-intensity-threshold", type="number",
                                       value=1.6, step=0.1,
                                       style={"width": "80px", "padding": "5px"}),
                         ),
+                        html.Details([
+                            html.Summary("Filter Advanced Parameters", style={
+                                "fontSize": "14px", "cursor": "pointer",
+                                "color": "#7f8c8d", "padding": "4px 0",
+                                "userSelect": "none",
+                            }),
+                            html.Div([
+                                _row(
+                                    _label("Median filter size:"),
+                                    dcc.Input(id="filter-median-size", type="number",
+                                              value=4, step=1,
+                                              style={"width": "80px", "padding": "5px"}),
+                                    _label("Noise sigma:", width="140px"),
+                                    dcc.Input(id="filter-sigma-noise", type="number",
+                                              value=1.0, step=0.1,
+                                              style={"width": "80px", "padding": "5px"}),
+                                ),
+                                _row(
+                                    _label("Background sigma:"),
+                                    dcc.Input(id="filter-sigma-background", type="number",
+                                              value=20.0, step=1,
+                                              style={"width": "80px", "padding": "5px"}),
+                                    _label("Intensity cap:", width="140px"),
+                                    dcc.Input(id="filter-intensity-cap", type="number",
+                                              value=3500, step=100,
+                                              style={"width": "80px", "padding": "5px"}),
+                                ),
+                                _row(
+                                    _label("Small hole area:"),
+                                    dcc.Input(id="filter-small-hole-area", type="number",
+                                              value=6000, step=100,
+                                              style={"width": "80px", "padding": "5px"}),
+                                ),
+                            ], style={"paddingLeft": "16px", "paddingTop": "4px"}),
+                        ], style={"marginTop": "4px"}),
                     ]),
-                    html.Div(id="unet-model-row", children=[
+                    html.Div(id="unet-params-row", children=[
                         _row(
                             _label("UNet model path:"),
                             dcc.Input(id="aggregate-model-path", type="text",
                                       placeholder="/path/to/best.pt",
                                       style={"flex": "1", "padding": "5px"}),
                         ),
+                        html.Details([
+                            html.Summary("UNet Advanced Parameters", style={
+                                "fontSize": "14px", "cursor": "pointer",
+                                "color": "#7f8c8d", "padding": "4px 0",
+                                "userSelect": "none",
+                            }),
+                            html.Div([
+                                _row(
+                                    _label("Prob. threshold:"),
+                                    dcc.Input(id="unet-threshold", type="number",
+                                              value=0.5, step=0.05,
+                                              style={"width": "80px", "padding": "5px"}),
+                                    _label("Fill holes below:", width="140px"),
+                                    dcc.Input(id="unet-fill-holes-below", type="number",
+                                              value=6000, step=100,
+                                              style={"width": "80px", "padding": "5px"}),
+                                ),
+                            ], style={"paddingLeft": "16px", "paddingTop": "4px"}),
+                        ], style={"marginTop": "4px"}),
                     ]),
                 ]),
 

@@ -26,6 +26,13 @@ from aggrequant.gui_web.components.settings_form import _channel_row
     Output("aggregate-min-size", "value"),
     Output("aggregate-intensity-threshold", "value"),
     Output("aggregate-model-path", "value"),
+    Output("filter-median-size", "value"),
+    Output("filter-sigma-noise", "value"),
+    Output("filter-sigma-background", "value"),
+    Output("filter-intensity-cap", "value"),
+    Output("filter-small-hole-area", "value"),
+    Output("unet-threshold", "value"),
+    Output("unet-fill-holes-below", "value"),
     Output("focus-compute-on", "value"),
     Output("focus-patch-metrics", "value"),
     Output("focus-global-metrics", "value"),
@@ -48,7 +55,7 @@ def load_config(n_clicks, config_path):
     try:
         path = Path(config_path)
         if not path.exists():
-            return [None] * 22 + [f"File not found: {config_path}"]
+            return [None] * 29 + [f"File not found: {config_path}"]
 
         with open(path) as f:
             data = yaml.safe_load(f)
@@ -84,6 +91,13 @@ def load_config(n_clicks, config_path):
             seg.get("aggregate_min_size", 9),
             seg.get("aggregate_intensity_threshold", 1.6),
             str(seg.get("aggregate_model_path", "")) if seg.get("aggregate_model_path") else "",
+            seg.get("aggregate_median_filter_size", 4),
+            seg.get("aggregate_sigma_noise_reduction", 1.0),
+            seg.get("aggregate_sigma_background", 20.0),
+            seg.get("aggregate_intensity_cap", 3500),
+            seg.get("aggregate_small_hole_area", 6000),
+            seg.get("aggregate_unet_threshold", 0.5),
+            seg.get("aggregate_unet_fill_holes_below", 6000),
             quality.get("compute_on", ["nuclei"]),
             quality.get("patch_metrics", ["VarianceLaplacian"]),
             quality.get("global_metrics", ["power_log_log_slope"]),
@@ -96,7 +110,7 @@ def load_config(n_clicks, config_path):
             f"Loaded: {path.name}",
         )
     except Exception as e:
-        return [None] * 22 + [f"Error: {e}"]
+        return [None] * 29 + [f"Error: {e}"]
 
 
 @callback(
@@ -116,6 +130,13 @@ def load_config(n_clicks, config_path):
     State("aggregate-min-size", "value"),
     State("aggregate-intensity-threshold", "value"),
     State("aggregate-model-path", "value"),
+    State("filter-median-size", "value"),
+    State("filter-sigma-noise", "value"),
+    State("filter-sigma-background", "value"),
+    State("filter-intensity-cap", "value"),
+    State("filter-small-hole-area", "value"),
+    State("unet-threshold", "value"),
+    State("unet-fill-holes-below", "value"),
     State("focus-compute-on", "value"),
     State("focus-patch-metrics", "value"),
     State("focus-global-metrics", "value"),
@@ -131,6 +152,8 @@ def save_config(n_clicks, config_path,
                 input_dir, output_subdir, plate_name, plate_format,
                 nuc_sigma_d, nuc_sigma_b, nuc_min, nuc_max,
                 cell_model, agg_method, agg_min, agg_thresh, agg_model,
+                filt_median, filt_sigma_noise, filt_sigma_bg, filt_int_cap,
+                filt_hole_area, unet_thresh, unet_fill_holes,
                 focus_on, focus_patch, focus_global, patch_h, patch_w,
                 output_opts, use_gpu, verbose, ctrl_assignments):
     """Save the current form state to a YAML config file."""
@@ -159,6 +182,13 @@ def save_config(n_clicks, config_path,
             "aggregate_model_path": agg_model if agg_model else None,
             "aggregate_min_size": int(agg_min or 9),
             "aggregate_intensity_threshold": float(agg_thresh or 1.6),
+            "aggregate_median_filter_size": int(filt_median or 4),
+            "aggregate_sigma_noise_reduction": float(filt_sigma_noise or 1.0),
+            "aggregate_sigma_background": float(filt_sigma_bg or 20.0),
+            "aggregate_intensity_cap": int(filt_int_cap or 3500),
+            "aggregate_small_hole_area": int(filt_hole_area or 6000),
+            "aggregate_unet_threshold": float(unet_thresh or 0.5),
+            "aggregate_unet_fill_holes_below": int(unet_fill_holes or 6000),
         },
         "quality": {
             "compute_on": focus_on or [],
@@ -191,8 +221,8 @@ def save_config(n_clicks, config_path,
 # ---- Show/hide fields based on aggregate method ----
 
 @callback(
-    Output("unet-model-row", "style"),
-    Output("filter-threshold-row", "style"),
+    Output("unet-params-row", "style"),
+    Output("filter-params-row", "style"),
     Input("aggregate-method", "value"),
 )
 def toggle_aggregate_fields(method):

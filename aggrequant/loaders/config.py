@@ -33,11 +33,22 @@ class SegmentationConfig:
     # Cell segmentation (Cellpose)
     cell_model: str = "cyto3"
 
-    # Aggregate segmentation
+    # Aggregate segmentation (shared)
     aggregate_method: str = "filter"  # "filter" or "unet"
     aggregate_model_path: Optional[Path] = None
     aggregate_min_size: int = 10  # pixels
+
+    # Filter-based aggregate parameters
     aggregate_intensity_threshold: float = 0.5
+    aggregate_median_filter_size: int = 4
+    aggregate_sigma_noise_reduction: float = 1.0
+    aggregate_sigma_background: float = 20.0
+    aggregate_intensity_cap: int = 3500
+    aggregate_small_hole_area: int = 6000
+
+    # UNet aggregate parameters
+    aggregate_unet_threshold: float = 0.5
+    aggregate_unet_fill_holes_below: int = 6000
 
 
 VALID_FOCUS_CHANNELS = {"nuclei", "cells"}
@@ -196,6 +207,13 @@ class PipelineConfig:
                 "aggregate_model_path": str(self.segmentation.aggregate_model_path) if self.segmentation.aggregate_model_path else None,
                 "aggregate_min_size": self.segmentation.aggregate_min_size,
                 "aggregate_intensity_threshold": self.segmentation.aggregate_intensity_threshold,
+                "aggregate_median_filter_size": self.segmentation.aggregate_median_filter_size,
+                "aggregate_sigma_noise_reduction": self.segmentation.aggregate_sigma_noise_reduction,
+                "aggregate_sigma_background": self.segmentation.aggregate_sigma_background,
+                "aggregate_intensity_cap": self.segmentation.aggregate_intensity_cap,
+                "aggregate_small_hole_area": self.segmentation.aggregate_small_hole_area,
+                "aggregate_unet_threshold": self.segmentation.aggregate_unet_threshold,
+                "aggregate_unet_fill_holes_below": self.segmentation.aggregate_unet_fill_holes_below,
             },
             "quality": {
                 "compute_on": self.quality.compute_on,

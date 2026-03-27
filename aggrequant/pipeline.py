@@ -74,12 +74,19 @@ class SegmentationPipeline:
             self._aggregate_segmenter = FilterBasedSegmenter(
                 normalized_threshold=seg.aggregate_intensity_threshold,
                 min_aggregate_area=seg.aggregate_min_size,
+                median_filter_size=seg.aggregate_median_filter_size,
+                sigma_noise_reduction=seg.aggregate_sigma_noise_reduction,
+                sigma_background=seg.aggregate_sigma_background,
+                intensity_cap=seg.aggregate_intensity_cap,
+                small_hole_area=seg.aggregate_small_hole_area,
                 verbose=verbose,
             )
         elif seg.aggregate_method == "unet":
             self._aggregate_segmenter = NeuralNetworkSegmenter(
                 weights_path=seg.aggregate_model_path,
                 remove_objects_below=seg.aggregate_min_size,
+                threshold=seg.aggregate_unet_threshold,
+                fill_holes_below=seg.aggregate_unet_fill_holes_below,
                 device="cuda" if self.config.use_gpu else "cpu",
                 verbose=verbose,
             )
