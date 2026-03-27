@@ -19,7 +19,7 @@ except ImportError:
 
 
 # Supported image file extensions
-SUPPORTED_IMAGE_EXTENSIONS = (".tif",)
+SUPPORTED_IMAGE_EXTENSIONS = (".tif", ".tiff")
 
 
 def find_image_files(

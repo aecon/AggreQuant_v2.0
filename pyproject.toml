@@ -33,7 +33,6 @@ dependencies = [
 
     # Data handling
     "pandas>=2.0",
-    "pyarrow>=14.0",
 
     # Configuration
     "pyyaml>=6.0",

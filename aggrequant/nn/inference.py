@@ -213,9 +213,13 @@ def predict_tiled(
         percentile_low=percentile_low, percentile_high=percentile_high,
     )
 
-    # Pad so tiles cover the entire image
+    # Pad so tiles cover the entire image (ensure at least tile_size)
     pad_h = (tile_size - h % stride) % stride
     pad_w = (tile_size - w % stride) % stride
+    if h + pad_h < tile_size:
+        pad_h = tile_size - h
+    if w + pad_w < tile_size:
+        pad_w = tile_size - w
     padded = np.pad(normalized, ((0, pad_h), (0, pad_w)), mode="reflect")
     ph, pw = padded.shape
 

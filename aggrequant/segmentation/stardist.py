@@ -164,7 +164,10 @@ class StarDistSegmenter(BaseSegmenter):
         objects = labels.copy()
         objects[fat_edges] = 0
 
-        # assert that no nuclei were accidentally removed (eroded)
-        assert( len(np.unique(objects)) == len(np.unique(labels)) )
+        if len(np.unique(objects)) != len(np.unique(labels)):
+            raise ValueError(
+                f"Border thickening eroded "
+                f"{len(np.unique(labels)) - len(np.unique(objects))} nuclei"
+            )
 
         return objects

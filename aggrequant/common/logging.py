@@ -79,7 +79,10 @@ def get_logger(name: str) -> logging.Logger:
     """
     global _logging_configured
 
-    logger = logging.getLogger(f"aggrequant.{name}")
+    if name.startswith("aggrequant."):
+        logger = logging.getLogger(name)
+    else:
+        logger = logging.getLogger(f"aggrequant.{name}")
 
     # Ensure at least basic logging is configured
     if not _logging_configured:
